@@ -7,14 +7,14 @@ long-lived application.
 ## Images
 Different docker images are available:
 
-| Base distribution  | Tag            | Size |
-|--------------------|----------------|------|
-| [Alpine 3.5]       | alpine-3.5     | [![](https://images.microbadger.com/badges/image/jlesage/baseimage:alpine-3.5.svg)](http://microbadger.com/#/images/jlesage/baseimage:alpine-3.5 "Get your own image badge on microbadger.com") |
-| [Alpine 3.6]       | alpine-3.6     | [![](https://images.microbadger.com/badges/image/jlesage/baseimage:alpine-3.5.svg)](http://microbadger.com/#/images/jlesage/baseimage:alpine-3.6 "Get your own image badge on microbadger.com") |
-| [Alpine 3.5]       | alpine-3.5-glibc     | [![](https://images.microbadger.com/badges/image/jlesage/baseimage:alpine-3.5-glibc.svg)](http://microbadger.com/#/images/jlesage/baseimage:alpine-3.5-glibc "Get your own image badge on microbadger.com") |
-| [Alpine 3.6]       | alpine-3.6-glibc     | [![](https://images.microbadger.com/badges/image/jlesage/baseimage:alpine-3.5-glibc.svg)](http://microbadger.com/#/images/jlesage/baseimage:alpine-3.6-glibc "Get your own image badge on microbadger.com") |
-| [Debian 8]         | debian-8       | [![](https://images.microbadger.com/badges/image/jlesage/baseimage:debian-8.svg)](http://microbadger.com/#/images/jlesage/baseimage:debian-8/ "Get your own image badge on microbadger.com") |
-| [Ubuntu 16.04 LTS] | ubuntu-16.04   | [![](https://images.microbadger.com/badges/image/jlesage/baseimage:ubuntu-16.04.svg)](http://microbadger.com/#/images/jlesage/baseimage:ubuntu-16.04 "Get your own image badge on microbadger.com") |
+| Base distribution  | Tag              | Size |
+|--------------------|------------------|------|
+| [Alpine 3.5]       | alpine-3.5       | [![](https://images.microbadger.com/badges/image/jlesage/baseimage:alpine-3.5.svg)](http://microbadger.com/#/images/jlesage/baseimage:alpine-3.5 "Get your own image badge on microbadger.com") |
+| [Alpine 3.6]       | alpine-3.6       | [![](https://images.microbadger.com/badges/image/jlesage/baseimage:alpine-3.5.svg)](http://microbadger.com/#/images/jlesage/baseimage:alpine-3.6 "Get your own image badge on microbadger.com") |
+| [Alpine 3.5]       | alpine-3.5-glibc | [![](https://images.microbadger.com/badges/image/jlesage/baseimage:alpine-3.5-glibc.svg)](http://microbadger.com/#/images/jlesage/baseimage:alpine-3.5-glibc "Get your own image badge on microbadger.com") |
+| [Alpine 3.6]       | alpine-3.6-glibc | [![](https://images.microbadger.com/badges/image/jlesage/baseimage:alpine-3.5-glibc.svg)](http://microbadger.com/#/images/jlesage/baseimage:alpine-3.6-glibc "Get your own image badge on microbadger.com") |
+| [Debian 8]         | debian-8         | [![](https://images.microbadger.com/badges/image/jlesage/baseimage:debian-8.svg)](http://microbadger.com/#/images/jlesage/baseimage:debian-8/ "Get your own image badge on microbadger.com") |
+| [Ubuntu 16.04 LTS] | ubuntu-16.04     | [![](https://images.microbadger.com/badges/image/jlesage/baseimage:ubuntu-16.04.svg)](http://microbadger.com/#/images/jlesage/baseimage:ubuntu-16.04 "Get your own image badge on microbadger.com") |
 
 [Alpine 3.5]: https://alpinelinux.org
 [Alpine 3.6]: https://alpinelinux.org
@@ -103,48 +103,26 @@ Environment variables can be set directly in your `Dockerfile` via the `ENV`
 instruction or dynamically by adding one or more arguments `-e "<VAR>=<VALUE>"`
 to the `docker run` command.
 
-- **APP_NAME**
-  Name of the application.  Default value is `DockerApp`.
-- **KEEP_APP_RUNNING**
-  When set to `0`, the container terminates when the application exits. When set
-  to `1`, the application is automatically restarted when it terminates.
-  Default is `0`.
-- **TZ**
-  Timezone of the container.  For example: `America/Montreal`.  The complete
-  list can be found on [Wikipedia].
-- **USER_ID**
-  ID of the user the application run as.  Default is `1000`.  See
-  [User/Group IDs](#usergroup-ids) to better understand when this should be set.
-- **GROUP_ID**
-  ID of the group the application run as.  Default is `1000`.  See
-  [User/Group IDs](#usergroup-ids) to better understand when this should be set.
-- **UMASK**
-  Mask that controls how file permissions are set for newly created files. The
-  value of the mask is in octal notation.  By default, this variable is not set
-  and the default umask of `022` is used, meaning that newly created files are
-  readable by everyone, but only writable by the owner.
-  See the following online umask calculator: http://wintelguy.com/umask-calc.pl
-- **SUP_GROUP_IDS**
-  Comma-separated list of supplementary group IDs of the application.  By
-  default, this variable is  not set.
-- **APP_NICENESS**
-  Priority at which the application should run.  A niceness value of −20 is
-  the highest priority and 19 is the lowest priority.  By default, niceness is
-  not set, meaning that the default niceness of 0 is used.
-  **NOTE**: A negative niceness (priority increase) usually requires additional
-  permissions.  In this case, the container should be run with the docker option
-  `--cap-add=SYS_NICE`.
-
+| Variable       | Description                                  | Default |
+|----------------|----------------------------------------------|---------|
+|`APP_NAME`| Name of the application. | `DockerApp` |
+|`USER_ID`| ID of the user the application runs as.  See [User/Group IDs](#usergroup-ids) to better understand when this should be set. | `1000` |
+|`GROUP_ID`| ID of the group the application runs as.  See [User/Group IDs](#usergroup-ids) to better understand when this should be set. | `1000` |
+|`SUP_GROUP_IDS`| Comma-separated list of supplementary group IDs of the application. | (unset) |
+|`UMASK`| Mask that controls how file permissions are set for newly created files. The value of the mask is in octal notation.  By default, this variable is not set and the default umask of `022` is used, meaning that newly created files are readable by everyone, but only writable by the owner. See the following online umask calculator: http://wintelguy.com/umask-calc.pl | (unset) |
+|`TZ`| [TimeZone] of the container.  Timezone can also be set by mapping `/etc/localtime` between the host and the container. | `Etc/UTC` |
+|`KEEP_APP_RUNNING`| When set to `1`, the application will be automatically restarted if it crashes or if user quits it. | `0` |
+|`APP_NICENESS`| Priority at which the application should run.  A niceness value of -20 is the highest priority and 19 is the lowest priority.  By default, niceness is not set, meaning that the default niceness of 0 is used.  **NOTE**: A negative niceness (priority increase) requires additional permissions.  In this case, the container should be run with the docker option `--cap-add=SYS_NICE`. | (unset) |
 
 ## Config Directory
 Inside the container, the application's configuration should be stored in the
 `/config` directory.
 
+
 **NOTE**: During the container startup, the user which runs the application
 (i.e. user defined by `USER_ID`) will claim ownership of the entire content of
 this directory.
 
-[Wikipedia]: http://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 
 ## User/Group IDs
 
@@ -193,3 +171,5 @@ that can help building your image.  For example, the S6 overlay allows you to
 easily add initialization scripts and services.
 
 [S6 overlay documentation]: https://github.com/just-containers/s6-overlay/blob/master/README.md
+
+[TimeZone]: http://en.wikipedia.org/wiki/List_of_tz_database_time_zones
