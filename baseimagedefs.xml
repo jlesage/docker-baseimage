@@ -1,0 +1,146 @@
+<!--
+Definitions for docker-baseimage.
+
+This file is used as data source to generate README.md and unRAID template files
+from Jinja2 templates.
+-->
+<defs>
+  <baseimage>
+    <name>baseimage</name>
+    <title>A minimal docker baseimage to ease creation of long-lived application containers</title>
+    <description>
+This is a docker baseimage that can be used to create containers for any
+long-lived application.
+    </description>
+    <gui>False</gui>
+    <!-- Changelog -->
+    <history>
+      <release>
+        <version>1.0.0</version>
+        <date>2017-07-11</date>
+        <change>Initial release.</change>
+      </release>
+    </history>
+  </baseimage>
+  <container>
+    <!-- Environment variables -->
+    <environment_variables>
+      <environment_variable>
+        <name>APP_NAME</name>
+        <description>Name of the application.</description>
+        <default>DockerApp</default>
+        <limit_doc_to>baseimage</limit_doc_to>
+      </environment_variable>
+      <environment_variable>
+        <name>USER_ID</name>
+        <description>ID of the user the application runs as.  See [User/Group IDs](#usergroup-ids) to better understand when this should be set.</description>
+        <default>1000</default>
+        <unraid_template>
+          <title>User ID</title>
+          <description>ID of the user the application runs as.</description>
+          <default>99</default>
+          <display>advanced-hide</display>
+          <required>true</required>
+          <mask>false</mask>
+        </unraid_template>
+      </environment_variable>
+      <environment_variable>
+        <name>GROUP_ID</name>
+        <description>ID of the group the application runs as.  See [User/Group IDs](#usergroup-ids) to better understand when this should be set.</description>
+        <default>1000</default>
+        <unraid_template>
+          <title>Group ID</title>
+          <description>ID of the group the application runs as.</description>
+          <default>100</default>
+          <display>advanced-hide</display>
+          <required>true</required>
+          <mask>false</mask>
+        </unraid_template>
+      </environment_variable>
+      <environment_variable>
+        <name>SUP_GROUP_IDS</name>
+        <description>Comma-separated list of supplementary group IDs of the application.</description>
+      </environment_variable>
+      <environment_variable>
+        <name>UMASK</name>
+        <description>Mask that controls how file permissions are set for newly created files. The value of the mask is in octal notation.  By default, this variable is not set and the default umask of `022` is used, meaning that newly created files are readable by everyone, but only writable by the owner. See the following online umask calculator: http://wintelguy.com/umask-calc.pl</description>
+        <unraid_template>
+          <title>Umask</title>
+          <description>Mask that controls how file permissions are set for newly created files. The value of the mask is in octal notation.</description>
+          <default>000</default>
+          <display>advanced</display>
+          <required>false</required>
+          <mask>false</mask>
+        </unraid_template>
+      </environment_variable>
+      <environment_variable>
+        <name>TZ</name>
+        <description>[TimeZone] of the container.  Timezone can also be set by mapping `/etc/localtime` between the host and the container.</description>
+        <default>Etc/UTC</default>
+      </environment_variable>
+      <environment_variable>
+        <name>KEEP_APP_RUNNING</name>
+        <description>When set to `1`, the application will be automatically restarted if it crashes or if user quits it.</description>
+        <default>0</default>
+      </environment_variable>
+      <environment_variable>
+        <name>APP_NICENESS</name>
+        <description>Priority at which the application should run.  A niceness value of -20 is the highest priority and 19 is the lowest priority.  By default, niceness is not set, meaning that the default niceness of 0 is used.  **NOTE**: A negative niceness (priority increase) requires additional permissions.  In this case, the container should be run with the docker option `--cap-add=SYS_NICE`.</description>
+        <default/>
+        <unraid_template>
+          <title>Niceness (priority)</title>
+          <description>Priority at which the application should run.  A niceness value of -20 is the highest priority and 19 is the lowest priority.[br][b]NOTE:[/b] Setting a negative value requires additional permissions.  Thus, [i][b]--cap-add=SYS_NICE[/b][/i] must be added in [i]Extra Parameters[/i] (shown when [i]Advanced View[/i] is enabled).</description>
+          <display>advanced</display>
+          <required>false</required>
+          <mask>false</mask>
+        </unraid_template>
+      </environment_variable>
+    </environment_variables>
+    <!-- Volumes -->
+    <volumes>
+      <volume>
+        <container_path>/config</container_path>
+        <host_path_example>/docker/appdata/{{ defs.app.name }}</host_path_example>
+        <description>This is where the application stores its configuration, log and any files needing persistency.</description>
+        <permissions>rw</permissions>
+        <include_in_quick_start>true</include_in_quick_start>
+        <limit_doc_to>app</limit_doc_to>
+        <unraid_template>
+          <title>Config Directory</title>
+          <description>This is where the application stores its configuration, log and any files needing persistency.[br]Container path: /config</description>
+          <default>/mnt/user/appdata/{{ defs.app.name }}</default>
+          <display>advanced-hide</display>
+          <required>true</required>
+          <mask>false</mask>
+        </unraid_template>
+      </volume>
+      <volume>
+        <container_path>/storage</container_path>
+        <host_path_example>$HOME</host_path_example>
+        <description>This location contains files from your host that need to be accessible by the application.</description>
+        <permissions>{{ defs.app.container.storage_permissions }}</permissions>
+        <include_in_quick_start>true</include_in_quick_start>
+        <limit_doc_to>app</limit_doc_to>
+        <unraid_template>
+          <title>Storage</title>
+          <description>This location contains files from your host that need to be accessible by the application.[br]Container path: /storage</description>
+          <default>/mnt/user</default>
+          <display>always-hide</display>
+          <required>true</required>
+          <mask>false</mask>
+        </unraid_template>
+      </volume>
+    </volumes>
+    <!-- Network ports -->
+    <ports/>
+    <!-- Devices -->
+    <devices/>
+  </container>
+  <!-- Extra stuff to be added to the documentation. -->
+  <documentation>
+    <link>
+      <name>TimeZone</name>
+      <url>http://en.wikipedia.org/wiki/List_of_tz_database_time_zones</url>
+    </link>
+  </documentation>
+</defs>
