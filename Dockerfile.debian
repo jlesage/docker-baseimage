@@ -72,7 +72,7 @@ ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=3 \
     GROUP_ID=1000 \
     APP_NAME=DockerApp \
     APP_USER=app \
-    HOME=/home/${APP_USER}/
+    HOME=/home/${APP_USER}
 
 # Define mountable directories.
 VOLUME ["/config"]
