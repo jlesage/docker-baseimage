@@ -19,6 +19,7 @@ long-lived application.
         <version>1.0.0</version>
         <date>2017-07-11</date>
         <change>Initial release.</change>
+        <change level="2">This baseimage is a split of jlesage/baseimage-gui v1.5.0, where all GUI related stuff has been removed.</change>
       </release>
     </history>
   </baseimage>
