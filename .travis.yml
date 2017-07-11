@@ -11,7 +11,7 @@ services:
 
 env:
   global:
-  - DOCKER_REPO=jlesage/baseimage-gui
+  - DOCKER_REPO=jlesage/baseimage
   - SOURCE_BRANCH=dev
   matrix:
   - DOCKER_TAG=alpine-3.6
