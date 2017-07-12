@@ -113,15 +113,18 @@ to the `docker run` command.
 |`TZ`| [TimeZone] of the container.  Timezone can also be set by mapping `/etc/localtime` between the host and the container. | `Etc/UTC` |
 |`KEEP_APP_RUNNING`| When set to `1`, the application will be automatically restarted if it crashes or if user quits it. | `0` |
 |`APP_NICENESS`| Priority at which the application should run.  A niceness value of -20 is the highest priority and 19 is the lowest priority.  By default, niceness is not set, meaning that the default niceness of 0 is used.  **NOTE**: A negative niceness (priority increase) requires additional permissions.  In this case, the container should be run with the docker option `--cap-add=SYS_NICE`. | (unset) |
+|`TAKE_CONFIG_OWNERSHIP`| When set to `1`, owner and group of `/config` (including all its files and subfolders) are automatically set during container startup to `USER_ID` and `GROUP_ID` respectively. | `1` |
 
 ## Config Directory
 Inside the container, the application's configuration should be stored in the
 `/config` directory.
 
 
-**NOTE**: During the container startup, the user which runs the application
-(i.e. user defined by `USER_ID`) will claim ownership of the entire content of
-this directory.
+**NOTE**: By default, during the container startup, the user which runs the
+application (i.e. user defined by `USER_ID`) will claim ownership of the
+entire content of this directory.  This behavior can be changed via the
+`TAKE_CONFIG_OWNERSHIP` environment variable.  See the
+[Environment Variables](#environment-variables) section for more details.
 
 
 ## User/Group IDs

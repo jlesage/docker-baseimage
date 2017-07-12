@@ -96,6 +96,12 @@ long-lived application.
           <mask>false</mask>
         </unraid_template>
       </environment_variable>
+      <environment_variable>
+        <name>TAKE_CONFIG_OWNERSHIP</name>
+        <description>When set to `1`, owner and group of `/config` (including all its files and subfolders) are automatically set during container startup to `USER_ID` and `GROUP_ID` respectively.</description>
+        <default>1</default>
+        <limit_doc_to>baseimage</limit_doc_to>
+      </environment_variable>
     </environment_variables>
     <!-- Volumes -->
     <volumes>
