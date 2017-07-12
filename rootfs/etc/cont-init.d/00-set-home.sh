@@ -1,12 +1,13 @@
 #!/usr/bin/with-contenv sh
 
 #
-# Adjust ownership of files and directories owned by the app user.
+# Handle configured niceness value of the application.
 #
 
 set -e # Exit immediately if a command exits with a non-zero status.
 set -u # Treat unset variables as an error.
 
-chown -R $USER_ID:$GROUP_ID /config
+# Export variable.
+echo > /var/run/s6/container_environment/HOME
 
 # vim: set ft=sh :

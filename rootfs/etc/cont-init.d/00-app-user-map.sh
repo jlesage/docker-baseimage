@@ -8,7 +8,7 @@
 set -e # Exit immediately if a command exits with a non-zero status.
 set -u # Treat unset variables as an error.
 
-echo "$APP_USER:x:$USER_ID:$GROUP_ID::/home/$APP_USER:/sbin/nologin" >> /etc/passwd
+echo "$APP_USER:x:$USER_ID:$GROUP_ID::/dev/null:/sbin/nologin" >> /etc/passwd
 echo "$APP_USER:x:$GROUP_ID:" >> /etc/group
 
 # vim: set ft=sh :
