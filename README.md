@@ -45,6 +45,25 @@ Here are the main components of the baseimage:
 
 [S6-overlay]: https://github.com/just-containers/s6-overlay
 
+### Versioning
+
+Images are versioned.  Version number is in the form `MAJOR.MINOR.PATCH`, where
+an increment of the:
+  - MAJOR version indicates that a backwards-incompatible change has been done.
+  - MINOR version indicates that functionality has been added in a backwards-compatible manner.
+  - PATCH version indicates that a bug fix has been done in a backwards-compatible manner.
+
+### Tags
+
+For each distribution-specific image, multiple tags are available:
+
+| Tag | Description |
+|-----|-------------|
+| distro-vX.Y.Z | Exact version of the image. |
+| distro-vX.Y   | Latest version of a specific minor version of the image. |
+| distro-vX     | Latest version of a specific major version of the image. |
+| distro        | Latest version of the image. |
+
 ## Getting started
 The `Dockerfile` for your application can be very simple, as only three things
 are required:
@@ -168,7 +187,94 @@ See:
 ## Security
 TBD
 
-## Notes
+## Building A Container
+
+This section provides useful tips for building containers based on this
+baseimage.
+
+### Selecting Baseimage Tag
+
+Properly select the baseimage tag to use.  For a better control and prevent
+breaking your container, use a tag for an exact version of the baseimage
+(e.g. `alpine-3.6-v2.0.0`).  Using the latest version of the baseimage
+(`alpine-3.6`) is not recommended, since automatically upgrading between major
+versions will probably break your container build/execution.
+
+### Referencing Linux User/Group
+
+Reference the Linux user/group under which the application is running by its ID
+(`USER_ID`/`GROUP_ID`) instead of its name.  Name could change in different
+baseimage versions while the ID won't.
+
+### Default Configuration Files
+
+Default configuration files should be stored in `/defaults` in the container.
+
+### Modifying Baseimage Content
+
+Try to minimize modifications to files provided by the baseimage.  This
+minimizes to risk of breaking your container after using a new baseimage
+version.
+
+### Application's Data
+
+Applications often needs to write configuration, data, logs, etc.  Always
+make sure they are all written under `/config`.  This directory is a volume
+intended to be mapped to a folder on the host.  The goal is to write stuff
+outside the container and keep these data persistent.
+
+### $HOME Environment Variable
+
+The application is run under a user having its own UID.  This user can't be used
+to login with, has no password, no valid login shell and no home directory.  It
+is effectively a kind of user used by daemons.
+
+Thus, by default, the `$HOME` environment variable is not set.  While this
+should be fine in most case, some applications may expect the `$HOME`
+environment variable to be set (since normally the application is run by a
+logged user) and may not behave correctly otherwise.
+
+To make the application happy, the home directory can be set at the beginning
+of the `startapp.sh` script:
+```
+export HOME=/config
+```
+
+Adjust the location of the home directory to fit your needs.  However, if the
+application uses the home directory to write stuff, make sure it is done in a
+volume mapped to the host (e.g. `/config`),
+
+Note that the same technique can be used by services, by exporting the home
+directory into their `run` script.
+
+### Service Dependencies
+
+When running multiple services, service `srvB` may need to start only after
+service `SrvA`.
+
+This can be easily achieved by adding a call to `s6-waitdeps` at the beginning
+of the `run` script of the service.
+
+Dependencies are defined by touching file in the service's directory, its name
+being the name of the dependent service with the `.dep` extension.  For example,
+touching the file:
+
+    /etc/services.d/srvB/srvA.dep
+
+indicates that service `srvB` depends on service `srvA`.
+
+### Service Readiness
+
+By default, a service is considered as ready when it has been running for 1
+second (as determined by its supervisor).
+
+A custom way of determining service readiness can be implemented in a script
+placed in the service's directory (e.g. `/etc/services.d/myservice/`).  The
+script should be named `ready` and should have execution permission.
+
+Note that this is used only when service dependencies are used.
+
+### S6 Overlay Documentation
 * Make sure to read the [S6 overlay documentation].  It contains information
 that can help building your image.  For example, the S6 overlay allows you to
 easily add initialization scripts and services.
