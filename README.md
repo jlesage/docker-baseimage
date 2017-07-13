@@ -28,8 +28,9 @@ because:
  2. Third party applications may not support `Alpine`.
  3. The `Alpine` distribution uses the [musl] C standard library instead of
  GNU C library ([glibc]).
-  * NOTE: Using the `Alpine` image with glibc integrated (`alpine-3.5-glibc`
-    tag) may ease integration of applications.
+
+Note that using the `Alpine` image with glibc integrated (`alpine-3.5-glibc`
+tag) may ease integration of applications.
 
 The next choice is to use the `Debian` image.  It provides a great compatibility
 and its size is smaller than the `Ubuntu` one.  Finally, if for any reason you
