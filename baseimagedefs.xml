@@ -17,7 +17,7 @@ long-lived application.
     <history>
       <release>
         <version>1.0.0</version>
-        <date>2017-07-13</date>
+        <date>2017-07-14</date>
         <change>Initial release.  This baseimage can be used to build containers running long-lived applications that don't require an X environment.  It is the result of the split of the baseimage `jlesage/baseimage-gui`, from which all non-GUI related stuff has been moved into this new baseimage.</change>
       </release>
     </history>
