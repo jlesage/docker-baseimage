@@ -1,0 +1,133 @@
+#!/bin/sh
+
+set -e # Exit immediately if a command exits with a non-zero status.
+
+usage() {
+    echo "usage: $(basename "$0") [--virtual NAME ] PKG [PKG...]"
+}
+
+trap : TERM QUIT INT
+trap "cleanup" EXIT
+
+#
+# Alpine functions
+#
+
+is_pkg_installed_alpine() {
+    apk info 2>/dev/null | grep -qw "$1"
+}
+
+install_pkg_alpine() {
+    VIRTUAL_PKG="$1"
+    shift
+
+    APK_EXTRA_OPTS=
+    if [ "$VIRTUAL_PKG" -eq 1 ]; then
+        APK_EXTRA_OPTS="--virtual"
+    fi
+
+    apk --no-cache add $APK_EXTRA_OPTS "$@"
+}
+
+cleanup_alpine() {
+    rm -rf /var/cache/misc/*
+}
+
+#
+# Debian functions
+#
+
+is_pkg_installed_debian() {
+    dpkg -l "$1" > /dev/null 2>&1
+}
+
+install_pkg_debian() {
+    VIRTUAL_PKG="$1"
+    shift
+
+    if [ "$VIRTUAL_PKG" -eq 1 ]; then
+        VIRTUAL_PKG_NAME=$1
+        shift
+
+        if [ -f /var/lib/apt/$VIRTUAL_PKG_NAME.virtual ]; then
+            echo "ERROR: Virtual package '$VIRTUAL_PKG_NAME' already exists."
+            exit 1
+        fi
+
+        echo "$*" > /var/lib/apt/$VIRTUAL_PKG_NAME.virtual
+    fi
+
+    if [ -n "$1" ]; then
+        apt-get update
+        apt-get install -y --no-install-recommends "$@"
+    fi
+}
+
+cleanup_debian() {
+    apt-get clean
+        rm -rf /var/lib/apt/lists/* \
+               /var/log/dpkg.log \
+               /var/log/apt/*
+}
+
+#
+# OS agnostic functions
+#
+
+is_pkg_installed() {
+    if [ -n "$(which apk)" ]; then
+        is_pkg_installed_alpine "$@"
+    else
+        is_pkg_installed_debian "$@"
+    fi
+}
+
+install_pkg() {
+    if [ -n "$(which apk)" ]; then
+        install_pkg_alpine "$@"
+    else
+        install_pkg_debian "$@"
+    fi
+}
+
+cleanup() {
+    if [ -n "$(which apk)" ]; then
+        cleanup_alpine
+    else
+        cleanup_debian
+    fi
+}
+
+#
+# Main
+#
+
+if [ -z "$1" ]; then
+    usage
+    exit 1
+fi
+
+VIRTUAL_PKG=
+if [ "$1" = "--virtual" ]; then
+    shift
+    if [ -z "$1" ]; then
+        echo "Virtual package name missing."
+        usage
+        exit 1
+    fi
+    VIRTUAL_PKG="$1"
+    shift
+fi
+
+if [ -n "$VIRTUAL_PKG" ]; then
+    PKGS="$VIRTUAL_PKG"
+    for PKG in "$@"
+    do
+        if ! is_pkg_installed $PKG; then
+            PKGS="$PKGS $PKG"
+        fi
+    done
+    install_pkg 1 $PKGS
+else
+    install_pkg 0 "$@"
+fi

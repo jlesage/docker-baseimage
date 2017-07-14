@@ -20,11 +20,12 @@ ARG TERM=xterm
 # Define working directory.
 WORKDIR /tmp
 
+# Copy helpers.
+COPY helpers/* /usr/local/bin/
+
 # Install s6 overlay.
 RUN \
-    BUILD_PACKAGES="curl ca-certificates" && \
-    apt-get update && apt-get install -y --no-install-recommends \
-        $BUILD_PACKAGES && \
+    add-pkg --virtual build_dependencies curl ca-certificates && \
     curl -sS -L -o s6-overlay.tar.gz ${S6_OVERLAY_URL} && \
     # Workaround for some distro where '/bin' being a symlink to '/usr/bin':
     # extract the tarball in two steps.
@@ -43,24 +44,15 @@ RUN \
     sed -i.bak 's|forx i { "fix-attrs.d" "cont-init.d" "cont-finish.d" "services.d" }|forx i { "fix-attrs.d" "cont-init.d" "cont-finish.d" "cont-prefinish.d" "services.d" }|' /etc/s6/init/init-stage2 && \
         rm /etc/s6/init/init-stage2.bak && \
     # Cleanup
-    apt-get clean && \
-    apt-get purge -y $BUILD_PACKAGES && \
-    apt-get --purge autoremove -y && \
-    rm -rf /var/lib/apt/lists/* \
-           /var/tmp/* \
-           /tmp/*
+    rm /tmp/s6-overlay.tar.gz && \
+    del-pkg build_dependencies
 
 # Make sure VERSION_CODENAME is set in /etc/os-release.
 RUN \
     if ! grep -q "^VERSION_CODENAME=" /etc/os-release; then \
-        apt-get update && apt-get install -y --no-install-recommends lsb-release && \
+        add-pkg lsb-release && \
         echo "VERSION_CODENAME=$(lsb_release -c -s)" >> /etc/os-release && \
-        apt-get clean && \
-        apt-get purge -y lsb-release && \
-        apt-get --purge autoremove -y && \
-        rm -rf /var/lib/apt/lists/* \
-             /var/tmp/* \
-             /tmp/*; \
+        del-pkg lsb-release; \
     fi
 
 # Add files.

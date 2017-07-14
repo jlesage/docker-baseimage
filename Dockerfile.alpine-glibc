@@ -26,9 +26,12 @@ ARG ALPINE_GLIBC_I18N_PACKAGE_FILENAME=glibc-i18n-$ALPINE_GLIBC_PACKAGE_VERSION.
 # Define working directory.
 WORKDIR /tmp
 
+# Copy helpers.
+COPY helpers/* /usr/local/bin/
+
 # Install GNU libc (aka glibc) and set en_US.UTF-8 locale as default.
 RUN \
-    apk --no-cache add --virtual build-dependencies wget ca-certificates && \
+    add-pkg --virtual build-dependencies wget ca-certificates && \
     wget \
         "https://raw.githubusercontent.com/andyshinn/alpine-pkg-glibc/master/sgerrand.rsa.pub" \
         -O "/etc/apk/keys/sgerrand.rsa.pub" && \
@@ -36,7 +39,7 @@ RUN \
         "$ALPINE_GLIBC_BASE_URL/$ALPINE_GLIBC_PACKAGE_VERSION/$ALPINE_GLIBC_BASE_PACKAGE_FILENAME" \
         "$ALPINE_GLIBC_BASE_URL/$ALPINE_GLIBC_PACKAGE_VERSION/$ALPINE_GLIBC_BIN_PACKAGE_FILENAME" \
         "$ALPINE_GLIBC_BASE_URL/$ALPINE_GLIBC_PACKAGE_VERSION/$ALPINE_GLIBC_I18N_PACKAGE_FILENAME" && \
-    apk add --no-cache \
+    add-pkg \
         "$ALPINE_GLIBC_BASE_PACKAGE_FILENAME" \
         "$ALPINE_GLIBC_BIN_PACKAGE_FILENAME" \
         "$ALPINE_GLIBC_I18N_PACKAGE_FILENAME" && \
@@ -45,7 +48,7 @@ RUN \
                                     --charmap ${ALPINE_GLIBC_LOCALE_CHARMAP} \
                                     ${ALPINE_GLIBC_LOCALE} && \
     # Cleanup
-    apk del glibc-i18n build-dependencies && \
+    del-pkg glibc-i18n build-dependencies && \
     rm "/etc/apk/keys/sgerrand.rsa.pub" \
        "/root/.wget-hsts" \
        "$ALPINE_GLIBC_BASE_PACKAGE_FILENAME" \
@@ -54,7 +57,7 @@ RUN \
 
 # Install s6 overlay.
 RUN \
-    apk --no-cache add --virtual build-dependencies curl && \
+    add-pkg --virtual build-dependencies curl && \
     curl -sS -L ${S6_OVERLAY_URL} | tar -xz -C / && \
     # Add the '-s' option to s6-svscan to use our signal handlers.
     sed -i.bak 's|^s6-svscan -t0 /var/run/s6/services$|s6-svscan -s -t0 /var/run/s6/services|' /etc/s6/init-catchall/init-stage1 && \
@@ -65,11 +68,11 @@ RUN \
     sed -i.bak 's|forx i { "fix-attrs.d" "cont-init.d" "cont-finish.d" "services.d" }|forx i { "fix-attrs.d" "cont-init.d" "cont-finish.d" "cont-prefinish.d" "services.d" }|' /etc/s6/init/init-stage2 && \
         rm /etc/s6/init/init-stage2.bak && \
     # Cleanup
-    apk --no-cache del build-dependencies
+    del-pkg build-dependencies
 
 # Install system packages.
 RUN \
-    apk --no-cache add \
+    add-pkg \
         # For timezone support
         tzdata \
         # For 'groupmod' command

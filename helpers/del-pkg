@@ -1,0 +1,67 @@
+#!/bin/sh
+
+set -e # Exit immediately if a command exits with a non-zero status.
+
+usage() {
+    echo "usage: $(basename "$0") PKG [PKG...]"
+}
+
+#
+# Alpine functions
+#
+
+del_pkg_alpine() {
+    apk --no-cache del "$@"
+    rm -rf /var/cache/misc/*
+}
+
+#
+# Debian functions
+#
+
+del_pkg_debian() {
+    PKGS=
+    for PKG in "$@"
+    do
+        if ! dpkg -l "$1" > /dev/null 2>&1; then
+            if [ -f /var/lib/apt/$PKG.virtual ]; then
+                PKGS="$PKGS $(cat /var/lib/apt/$PKG.virtual)"
+                rm /var/lib/apt/$PKG.virtual
+            else
+                PKGS="$PKGS $PKG"
+            fi
+        else
+            PKGS="$PKGS $PKG"
+        fi
+    done
+
+    if [ -n "$PKGS" ]; then
+        apt-get purge -y $PKGS
+        apt-get --purge autoremove -y
+        rm -rf /var/log/dpkg.log \
+               /var/log/apt/*
+    fi
+}
+
+#
+# OS agnostic functions
+#
+
+del_pkg() {
+    if [ -n "$(which apk)" ]; then
+        del_pkg_alpine "$@"
+    else
+        del_pkg_debian "$@"
+    fi
+}
+
+#
+# Main
+#
+
+if [ -z "$1" ]; then
+    usage
+    exit 1
+fi
+
+del_pkg "$@"
