@@ -23,7 +23,7 @@ del_pkg_debian() {
     PKGS=
     for PKG in "$@"
     do
-        if ! dpkg -l "$1" > /dev/null 2>&1; then
+        if ! dpkg --status "$1" 2>&1 | grep -q "^Status: install ok installed"; then
             if [ -f /var/lib/apt/$PKG.virtual ]; then
                 PKGS="$PKGS $(cat /var/lib/apt/$PKG.virtual)"
                 rm /var/lib/apt/$PKG.virtual

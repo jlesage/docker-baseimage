@@ -38,7 +38,7 @@ cleanup_alpine() {
 #
 
 is_pkg_installed_debian() {
-    dpkg -l "$1" > /dev/null 2>&1
+    dpkg --status "$1" 2>&1 | grep -q "^Status: install ok installed"
 }
 
 install_pkg_debian() {
