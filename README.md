@@ -228,15 +228,15 @@ Here is an example of a command that could be added to `Dockerfile` to compile
 a project:
 ```
 RUN \
-    add-pkg --virtual build_dependencies build-base cmake git && \
+    add-pkg --virtual build-dependencies build-base cmake git && \
     # Compile your project here...
     git clone https://myproject.com/myproject.git
     ... && \
-    del-pkg build_dependencies
+    del-pkg build-dependencies
 ```
 
 Supposing that, in the example above, `git` package is already installed,
-running `del-pkg build_dependencies` doesn't remove it.
+running `del-pkg build-dependencies` doesn't remove it.
 
 ### Modifying Baseimage Content
 
