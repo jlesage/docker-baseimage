@@ -29,7 +29,7 @@ if [ "$RC" -eq 0 ]; then
     case $? in
         0)
             # Files are the same.
-            echo "ERROR: No modification applied to $FILE ($SED_EXPRESSION)."
+            echo "ERROR: No modification applied to $FILE."
             RC=1
             ;;
         1)
