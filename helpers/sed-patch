@@ -1,0 +1,51 @@
+#!/bin/sh
+
+usage() {
+    echo "usage: $(basename "$0") SED_EXPRESSION FILE
+
+sed with a patch-like behavior.
+
+This helper returns:
+  - A success when running the sed expression SED_EXPRESSION results in changes
+    applied to file FILE.
+  - An error when running the sed expression SED_EXPRESSION results in no change
+    to file FILE.
+"
+}
+
+SED_EXPRESSION="$1"
+FILE="$2"
+
+if [ -z "$SED_EXPRESSION" ]; then
+    echo "ERROR: sed expression is missing."
+    usage
+    exit 1
+fi 
+
+if [ -z "$FILE" ]; then
+    echo "ERROR: File is missing."
+    usage
+    exit 1
+fi
+
+sed -i.bak "$1" "$2"
+RC="$?"
+if [ "$RC" -eq 0 ]; then
+    diff "$FILE" "$FILE".bak > /dev/null 2>&1
+    case $? in
+        0)
+            # Files are the same.
+            echo "ERROR: No modification applied to $FILE ($SED_EXPRESSION)."
+            RC=1
+            ;;
+        1)
+            # Files differ.
+            RC=0
+            ;;
+        *)
+            ;;
+    esac
+fi
+
+rm -f "$FILE".bak
+exit $RC
