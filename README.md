@@ -238,6 +238,30 @@ RUN \
 Supposing that, in the example above, `git` package is already installed,
 running `del-pkg build-dependencies` doesn't remove it.
 
+### Modifying Files With Sed
+
+`sed` is a useful tool and is often used in container builds to modify files.
+However, one downside of this method is that there is no easy way to determine
+if `sed` actually modified the file or not.
+
+It's for this reason that the baseimage includes a helper that gives `sed` a
+"patch-like" behavior:  if the application of a sed expression results in no
+change on the target file, then an error is reported.  This helper is named
+`sed-patch` and has the following usage:
+
+```
+sed-patch SED_EXPRESSION FILE
+```
+
+It can be used in `Dockerfile`, for example, like this:
+
+```
+RUN sed-patch 's/Replace this/By this/' /etc/myfile
+```
+
+If running this sed expression doesn't bring any change to `/etc/myfiles`, the
+command fails and thus, the Docker build also.
+
 ### Modifying Baseimage Content
 
 Try to minimize modifications to files provided by the baseimage.  This
