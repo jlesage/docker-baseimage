@@ -1,7 +1,7 @@
 #!/bin/sh
 
 usage() {
-    echo "usage: $(basename "$0") SED_EXPRESSION FILE
+    echo "usage: $(basename "$0") [SED_OPT...] SED_EXPRESSION FILE
 
 sed with a patch-like behavior.
 
@@ -10,25 +10,19 @@ This helper returns:
     applied to file FILE.
   - An error when running the sed expression SED_EXPRESSION results in no change
     to file FILE.
+
+NOTE: sed option '-i' is already supplied by this script.
 "
 }
 
-SED_EXPRESSION="$1"
-FILE="$2"
+eval FILE=\${$#}
 
-if [ -z "$SED_EXPRESSION" ]; then
-    echo "ERROR: sed expression is missing."
-    usage
-    exit 1
-fi 
-
-if [ -z "$FILE" ]; then
-    echo "ERROR: File is missing."
-    usage
+if [ "$#" -lt 2 ]; then
+    echo "ERROR: Not enough arguments."
     exit 1
 fi
 
-sed -i.bak "$1" "$2"
+sed -i.bak "$@"
 RC="$?"
 if [ "$RC" -eq 0 ]; then
     diff "$FILE" "$FILE".bak > /dev/null 2>&1

@@ -250,8 +250,11 @@ change on the target file, then an error is reported.  This helper is named
 `sed-patch` and has the following usage:
 
 ```
-sed-patch SED_EXPRESSION FILE
+sed-patch [SED_OPT]... SED_EXPRESSION FILE
 ```
+
+Note that the sed option `-i` (edit files in place) is already supplied by the
+helper.
 
 It can be used in `Dockerfile`, for example, like this:
 
