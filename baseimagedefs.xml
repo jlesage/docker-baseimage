@@ -18,7 +18,7 @@ long-lived application.
       <release>
         <version>1.1.0</version>
         <date>2017-07-17</date>
-        <change>The following environment variables of the *XDG Base Directory Specification* are now set.  Applications following the specification will have their configuration and data stored under `/config`.</change>
+        <change>The following environment variables from the *XDG Base Directory Specification* are now set.  Applications following this specification will have their configuration and data stored under `/config`.</change>
         <change level="2">XDG_DATA_HOME=/config/xdg/data</change>
         <change level="2">XDG_CONFIG_HOME=/config/xdg/config</change>
         <change level="2">XDG_CACHE_HOME=/config/xdg/cache</change>
