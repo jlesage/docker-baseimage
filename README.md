@@ -43,6 +43,8 @@ provided.
 ### Content
 Here are the main components of the baseimage:
   * [S6-overlay], a process supervisor for containers.
+  * Useful tools to ease container building.
+  * Environment to better support dockerized applications.
 
 [S6-overlay]: https://github.com/just-containers/s6-overlay
 
