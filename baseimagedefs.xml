@@ -16,6 +16,14 @@ long-lived application.
     <!-- Changelog -->
     <history>
       <release>
+        <version>1.1.0</version>
+        <date>2017-07-17</date>
+        <change>The following environment variables of the XDG Base Directory Specification are now set.  Applications following the specification will have their configuration and data stored under `/config`/.</change>
+        <change level="2">XDG_DATA_HOME=/config/xdg/data</change>
+        <change level="2">XDG_CONFIG_HOME=/config/xdg/config</change>
+        <change level="2">XDG_CACHE_HOME=/config/xdg/cache</change>
+      </release>
+      <release>
         <version>1.0.0</version>
         <date>2017-07-14</date>
         <change>Initial release.  This baseimage can be used to build containers running long-lived applications that don't require an X environment.  It is the result of the split of the baseimage `jlesage/baseimage-gui`, from which all non-GUI related stuff has been moved into this new baseimage.</change>
