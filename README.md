@@ -280,6 +280,17 @@ make sure they are all written under `/config`.  This directory is a volume
 intended to be mapped to a folder on the host.  The goal is to write stuff
 outside the container and keep these data persistent.
 
+A lot of applications use the environment variables defined in the
+[XDG Base Directory Specification] to determine where to store
+various data.  The baseimage sets these variables so they all fall under
+`/config/`:
+
+  * XDG_DATA_HOME=/config/xdg/data
+  * XDG_CONFIG_HOME=/config/xdg/config
+  * XDG_CACHE_HOME=/config/xdg/cache
+
+[XDG Base Directory Specification]: https://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
+
 ### $HOME Environment Variable
 
 The application is run under a user having its own UID.  This user can't be used

@@ -47,7 +47,10 @@ ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=3 \
     USER_ID=1000 \
     GROUP_ID=1000 \
     APP_NAME=DockerApp \
-    APP_USER=app
+    APP_USER=app \
+    XDG_DATA_HOME=/config/xdg/data \
+    XDG_CONFIG_HOME=/config/xdg/config \
+    XDG_CACHE_HOME=/config/xdg/cache
 
 # Define mountable directories.
 VOLUME ["/config"]
