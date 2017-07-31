@@ -59,6 +59,8 @@ RUN \
 RUN \
     add-pkg --virtual build-dependencies curl && \
     curl -sS -L ${S6_OVERLAY_URL} | tar -xz -C / && \
+    # Clear container environment.
+    sed-patch '/if { s6-mkdir -pm 0755 -- \/var\/run\/s6\/container_environment }/i \    if { s6-rmrf \/var\/run\/s6\/container_environment }' /etc/s6/init/init-stage1 && \
     # Add the '-s' option to s6-svscan to use our signal handlers.
     sed-patch 's|^s6-svscan -t0 /var/run/s6/services$|s6-svscan -s -t0 /var/run/s6/services|' /etc/s6/init-catchall/init-stage1 && \
     sed-patch 's|^s6-svscan -t0 /var/run/s6/services$|s6-svscan -s -t0 /var/run/s6/services|' /etc/s6/init-no-catchall/init-stage1 && \
