@@ -114,6 +114,11 @@ long-lived application.
         <default>1</default>
         <limit_doc_to>baseimage</limit_doc_to>
       </environment_variable>
+      <environment_variable>
+        <name>CLEAN_TMP_DIR</name>
+        <description>When set to `1`, all files in the `/tmp` directory are delete during the container startup.</description>
+        <default>1</default>
+      </environment_variable>
     </environment_variables>
     <!-- Volumes -->
     <volumes>
