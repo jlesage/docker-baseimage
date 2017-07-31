@@ -1,7 +1,7 @@
 #!/usr/bin/with-contenv sh
 
 #
-# Handle configured niceness value of the application.
+# Clear the HOME environment variable.
 #
 
 set -e # Exit immediately if a command exits with a non-zero status.
