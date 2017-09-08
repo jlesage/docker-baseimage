@@ -8,6 +8,9 @@
 set -e # Exit immediately if a command exits with a non-zero status.
 set -u # Treat unset variables as an error.
 
+cp /defaults/passwd /etc/passwd
+cp /defaults/group /etc/group
+
 echo "$APP_USER:x:$USER_ID:$GROUP_ID::/dev/null:/sbin/nologin" >> /etc/passwd
 echo "$APP_USER:x:$GROUP_ID:" >> /etc/group
 
