@@ -16,6 +16,11 @@ long-lived application.
     <!-- Changelog -->
     <history>
       <release>
+        <version>1.1.6</version>
+        <date>2017-09-19</date>
+        <change>Restore default `/etc/shadow` during container startup.</change>
+      </release>
+      <release>
         <version>1.1.5</version>
         <date>2017-09-08</date>
         <change>Fixed duplicated entries in /etc/passwd and /etc/group that were created after a restart of the container.</change>
