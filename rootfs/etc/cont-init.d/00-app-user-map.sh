@@ -10,6 +10,7 @@ set -u # Treat unset variables as an error.
 
 cp /defaults/passwd /etc/passwd
 cp /defaults/group /etc/group
+cp /defaults/shadow /etc/shadow
 
 echo "$APP_USER:x:$USER_ID:$GROUP_ID::/dev/null:/sbin/nologin" >> /etc/passwd
 echo "$APP_USER:x:$GROUP_ID:" >> /etc/group

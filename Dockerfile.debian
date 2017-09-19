@@ -57,8 +57,9 @@ RUN \
 # Save some defaults.
 RUN \
     mkdir /defaults && \
-    cp /etc/passwd /defaults && \
-    cp /etc/group /defaults
+    cp /etc/passwd /defaults/ && \
+    cp /etc/group /defaults/ && \
+    cp /etc/shadow /defaults/
 
 # Add files.
 COPY rootfs/ /
