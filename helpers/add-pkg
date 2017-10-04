@@ -14,7 +14,7 @@ trap "cleanup" EXIT
 #
 
 is_pkg_installed_alpine() {
-    apk info 2>/dev/null | grep -qw "$1"
+    apk info 2>/dev/null | grep -v "^WARNING" | grep -qw "$1"
 }
 
 install_pkg_alpine() {
