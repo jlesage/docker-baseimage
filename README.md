@@ -188,9 +188,6 @@ See:
   * http://wiki.musl-libc.org/wiki/Open_Issues#C_locale_conformance
   * https://github.com/gliderlabs/docker-alpine/issues/144
 
-## Security
-TBD
-
 ## Building A Container
 
 This section provides useful tips for building containers based on this
@@ -238,8 +235,9 @@ RUN \
     del-pkg build-dependencies
 ```
 
-Supposing that, in the example above, `git` package is already installed,
-running `del-pkg build-dependencies` doesn't remove it.
+Supposing that, in the example above, the `git` package is already installed
+when the call to `add-pk` is performed, running `del-pkg build-dependencies`
+doesn't remove it.
 
 ### Modifying Files With Sed
 
@@ -321,12 +319,9 @@ directory into their `run` script.
 When running multiple services, service `srvB` may need to start only after
 service `SrvA`.
 
-This can be easily achieved by adding a call to `s6-waitdeps` at the beginning
-of the `run` script of the service.
-
-Dependencies are defined by touching file in the service's directory, its name
-being the name of the dependent service with the `.dep` extension.  For example,
-touching the file:
+Service dependencies are defined by creating a regular file in the service's
+directory, its name being the name of the dependent service with the `.dep`
+extension.  For example, touching the file:
 
     /etc/services.d/srvB/srvA.dep
 
@@ -334,14 +329,20 @@ indicates that service `srvB` depends on service `srvA`.
 
 ### Service Readiness
 
-By default, a service is considered as ready when it has been running for 1
-second (as determined by its supervisor).
+By default, a service is considered ready when the supervisor successfully
+forked and executed the daemon.  However, some daemons do a lot of
+initialization work before they're actually ready to serve.
 
-A custom way of determining service readiness can be implemented in a script
-placed in the service's directory (e.g. `/etc/services.d/myservice/`).  The
-script should be named `ready` and should have execution permission.
+Hopefully, the S6 supervisor supports [service startup notifications].  This is
+a simple mechanism allowing daemons to notify the supervisor when they are
+ready to serve.
 
-Note that this is used only when service dependencies are used.
+While support for this mechanism can be implemented natively in the daemon, the
+use of the [s6-notifyoncheck program] makes it possible for services to use the
+S6 notification mechanism with any daemon.
+
+[service startup notifications]: https://skarnet.org/software/s6/notifywhenup.html
+[s6-notifyoncheck program]: https://skarnet.org/software/s6/s6-notifyoncheck.html
 
 ### S6 Overlay Documentation
 * Make sure to read the [S6 overlay documentation].  It contains information
