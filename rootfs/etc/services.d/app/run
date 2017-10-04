@@ -2,9 +2,6 @@
 
 set -u # Treat unset variables as an error.
 
-# Wait for dependent services to be up and running.
-s6-waitdeps
-
 echo "[services.d] app: starting "${APP_NAME:-Docker application}"..."
 if [ -e /startapp.sh ]; then 
     chmod a+rw /startapp.sh

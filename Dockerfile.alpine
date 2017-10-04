@@ -8,10 +8,10 @@
 FROM ${BASEIMAGE}
 
 # Define software versions.
-ARG S6_OVERLAY_VERSION=1.20.0.0
+ARG S6_OVERLAY_VERSION=d8ae95a
 
 # Define software download URLs.
-ARG S6_OVERLAY_URL=https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-amd64.tar.gz
+ARG S6_OVERLAY_URL=https://github.com/jlesage/s6-overlay/archive/${S6_OVERLAY_VERSION}.tar.gz
 
 # Define working directory.
 WORKDIR /tmp
@@ -21,17 +21,22 @@ COPY helpers/* /usr/local/bin/
 
 # Install s6 overlay.
 RUN \
-    add-pkg --virtual build-dependencies curl && \
-    curl -sS -L ${S6_OVERLAY_URL} | tar -xz -C / && \
-    # Clear container environment.
-    sed-patch '/if { s6-mkdir -pm 0755 -- \/var\/run\/s6\/container_environment }/i \    if { s6-rmrf \/var\/run\/s6\/container_environment }' /etc/s6/init/init-stage1 && \
-    # Add the '-s' option to s6-svscan to use our signal handlers.
-    sed-patch 's|^s6-svscan -t0 /var/run/s6/services$|s6-svscan -s -t0 /var/run/s6/services|' /etc/s6/init-catchall/init-stage1 && \
-    sed-patch 's|^s6-svscan -t0 /var/run/s6/services$|s6-svscan -s -t0 /var/run/s6/services|' /etc/s6/init-no-catchall/init-stage1 && \
-    # Add support for pre-finish scripts.
-    sed-patch 's|forx i { "fix-attrs.d" "cont-init.d" "cont-finish.d" "services.d" }|forx i { "fix-attrs.d" "cont-init.d" "cont-finish.d" "cont-prefinish.d" "services.d" }|' /etc/s6/init/init-stage2 && \
+    add-pkg --virtual build-dependencies curl bash tar && \
+    echo "Downloading s6-overlay..." && \
+    mkdir s6-overlay && \
+    curl -# -L ${S6_OVERLAY_URL} | tar -xz --strip 1 -C s6-overlay && \
+    echo "Building s6-overlay..." && \
+    cd s6-overlay/builder && \
+    sed-patch '/set -x/d' build-latest && \
+    sed-patch 's/curl -R -L/curl -# -R -L/g' build-latest && \
+    sed-patch "s/targets=( 'amd64' 'armhf' 'x86' 'aarch64' )/targets=( 'amd64' )/" build-latest && \
+    env HOME="$(pwd)" ./build-latest && \
+    cd ../.. && \
+    echo "Installing s6-overlay..." && \
+    tar -xzf s6-overlay/builder/dist/s6-overlay-amd64.tar.gz -C / && \
     # Cleanup
-    del-pkg build-dependencies
+    del-pkg build-dependencies && \
+    rm -rf /tmp/*
 
 # Install system packages.
 RUN \
@@ -53,6 +58,7 @@ COPY rootfs/ /
 
 # Set environment variables.
 ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=3 \
+    S6_SERVICE_DEPS=1 \
     USER_ID=1000 \
     GROUP_ID=1000 \
     APP_NAME=DockerApp \
