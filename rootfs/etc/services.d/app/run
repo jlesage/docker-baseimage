@@ -7,6 +7,7 @@ s6-waitdeps
 
 echo "[services.d] app: starting "${APP_NAME:-Docker application}"..."
 if [ -e /startapp.sh ]; then 
+    chmod a+rw /startapp.sh
     if [ "${UMASK:-UNSET}" != "UNSET" ]; then
         umask "$UMASK"
     fi
