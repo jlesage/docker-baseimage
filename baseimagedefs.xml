@@ -16,6 +16,18 @@ long-lived application.
     <!-- Changelog -->
     <history>
       <release>
+        <version>2.0.0</version>
+        <date>2017-10-04</date>
+        <change>Added better support for service dependencies.</change>
+        <change level="2">Services startup order is automatically determined.</change>
+        <change level="2">Services are stopped in reverse order.</change>
+        <change level="2">The application's service is always started last.</change>
+        <change level="2">The following elements are no longer needed and have been removed:</change>
+        <change level="3">`s6-svrunning` and `s6-waitdeps` programs.</change>
+        <change level="3">Pre-stage3 with pre-finish scripts support.</change>
+        <change level="2">Note that these changes can break building and/or execution of containers based on v2.x or v1.x of this baseimage.</change>
+      </release>
+      <release>
         <version>1.1.6</version>
         <date>2017-09-19</date>
         <change>Restore default `/etc/shadow` during container startup.</change>
