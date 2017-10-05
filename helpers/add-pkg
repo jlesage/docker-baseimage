@@ -67,6 +67,7 @@ cleanup_debian() {
     apt-get clean
         rm -rf /var/lib/apt/lists/* \
                /var/log/dpkg.log \
+               /var/log/alternatives.log \
                /var/log/apt/*
 }
 
