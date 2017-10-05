@@ -47,7 +47,7 @@ RUN \
     fi && \
     # Cleanup
     del-pkg build-dependencies && \
-    rm -rf /tmp/*
+    rm -rf /tmp/* /tmp/.[!.]*
 
 # Make sure VERSION_CODENAME is set in /etc/os-release.
 RUN \

@@ -74,7 +74,7 @@ RUN \
     tar -xzf s6-overlay/builder/dist/s6-overlay-amd64.tar.gz -C / && \
     # Cleanup
     del-pkg build-dependencies && \
-    rm -rf /tmp/*
+    rm -rf /tmp/* /tmp/.[!.]*
 
 # Install system packages.
 RUN \
