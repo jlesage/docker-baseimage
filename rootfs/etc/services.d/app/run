@@ -4,7 +4,6 @@ set -u # Treat unset variables as an error.
 
 echo "[services.d] app: starting "${APP_NAME:-Docker application}"..."
 if [ -e /startapp.sh ]; then 
-    chmod a+rx /startapp.sh
     if [ "${UMASK:-UNSET}" != "UNSET" ]; then
         umask "$UMASK"
     fi
