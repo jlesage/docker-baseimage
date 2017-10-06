@@ -198,7 +198,7 @@ baseimage.
 Properly select the baseimage tag to use.  For a better control and prevent
 breaking your container, use a tag for an exact version of the baseimage
 (e.g. `alpine-3.6-v2.0.0`).  Using the latest version of the baseimage
-(`alpine-3.6`) is not recommended, since automatically upgrading between major
+(`alpine-3.6`) is not recommended, since automatic upgrades between major
 versions will probably break your container build/execution.
 
 ### Referencing Linux User/Group
