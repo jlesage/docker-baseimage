@@ -8,10 +8,10 @@
 FROM ${BASEIMAGE}
 
 # Define software versions.
-ARG S6_OVERLAY_VERSION=49791d6
+ARG S6_OVERLAY_VERSION=1.21.1.1
 
 # Define software download URLs.
-ARG S6_OVERLAY_URL=https://github.com/jlesage/s6-overlay/archive/${S6_OVERLAY_VERSION}.tar.gz
+ARG S6_OVERLAY_URL=https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-amd64.tar.gz
 
 # Define working directory.
 WORKDIR /tmp
@@ -21,19 +21,19 @@ COPY helpers/* /usr/local/bin/
 
 # Install s6 overlay.
 RUN \
-    add-pkg --virtual build-dependencies curl bash tar && \
+    add-pkg --virtual build-dependencies curl bash tar patch && \
     echo "Downloading s6-overlay..." && \
-    mkdir s6-overlay && \
-    curl -# -L ${S6_OVERLAY_URL} | tar -xz --strip 1 -C s6-overlay && \
-    echo "Building s6-overlay..." && \
-    cd s6-overlay/builder && \
-    sed-patch '/set -x/d' build-latest && \
-    sed-patch 's/curl -R -L/curl -# -R -L/g' build-latest && \
-    sed-patch "s/targets=( 'amd64' 'armhf' 'x86' 'aarch64' )/targets=( 'amd64' )/" build-latest && \
-    env HOME="$(pwd)" ./build-latest && \
-    cd ../.. && \
-    echo "Installing s6-overlay..." && \
-    tar -xzf s6-overlay/builder/dist/s6-overlay-amd64.tar.gz -C / && \
+    curl -# -L ${S6_OVERLAY_URL} | tar -xz -C / && \
+    # Services dependencies support.
+    echo "Patching s6-overlay..." && \
+    curl -# -L https://github.com/jlesage/s6-overlay/commit/9a96412.patch | patch -d / -p3 && \
+    chmod +x \
+        /etc/s6/services/.s6-svscan/SIGHUP \
+        /etc/s6/services/.s6-svscan/SIGINT \
+        /etc/s6/services/.s6-svscan/SIGQUIT \
+        /etc/s6/services/.s6-svscan/SIGTERM \
+        /usr/bin/sv-getdeps \
+        && \
     # Cleanup
     del-pkg build-dependencies && \
     rm -rf /tmp/* /tmp/.[!.]*

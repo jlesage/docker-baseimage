@@ -9,6 +9,7 @@ set -u # Treat unset variables as an error.
 
 if [ -e /startapp.sh ] ; then
     chmod 755 /startapp.sh
+    sync
 fi
 
 # vim: set ft=sh :
