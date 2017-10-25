@@ -2,7 +2,7 @@
 
 set -u # Treat unset variables as an error.
 
-echo "[$(basename "$(pwd)")]: starting "${APP_NAME:-Docker application}"..."
+echo "[$(basename "$(pwd)")] starting "${APP_NAME:-Docker application}"..."
 if [ -e /startapp.sh ]; then 
     if [ "${UMASK:-UNSET}" != "UNSET" ]; then
         umask "$UMASK"
