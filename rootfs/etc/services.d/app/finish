@@ -5,7 +5,7 @@ set -u # Treat unset variables as an error.
 # Nothing to do if the container is shutting down.
 # The container is shutting down if the s6-svscan process is not running, i.e.
 # when it is not listening on its control FIFO.
-if ! ls -l /proc/*/fd 2>/dev/null | grep -q '/var/run/s6/services/.s6-svscan/control'
+if ! ls -l /proc/*/fd 2>/dev/null | grep -q '/run/s6/services/.s6-svscan/control'
 then
     exit
 fi
