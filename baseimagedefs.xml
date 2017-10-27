@@ -16,6 +16,13 @@ long-lived application.
     <!-- Changelog -->
     <history>
       <release>
+        <version>2.1.0</version>
+        <date>2017-10-27</date>
+        <change>Upgraded S6 overlay to version 1.21.1.1.</change>
+        <change>Enhanced integration of service dependencies functionality.</change>
+        <change>Added a simple log monitor.</change>
+      </release>
+      <release>
         <version>2.0.0</version>
         <date>2017-10-04</date>
         <change>Added better support for service dependencies.</change>
