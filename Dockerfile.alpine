@@ -21,7 +21,7 @@ COPY helpers/* /usr/local/bin/
 
 # Install s6 overlay.
 RUN \
-    add-pkg --virtual build-dependencies curl bash tar patch && \
+    add-pkg --virtual build-dependencies curl tar patch && \
     echo "Downloading s6-overlay..." && \
     curl -# -L ${S6_OVERLAY_URL} | tar -xz -C / && \
     # Services dependencies support.
