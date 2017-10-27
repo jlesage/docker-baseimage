@@ -21,6 +21,16 @@ ifelse { s6-test ${MONITORING_MODE} != "LOG" -a ${MONITORING_MODE} != "STATUS" }
   exit 1
 }
 
+# Make sure log files exists.
+if
+{
+  forx -o 0 FILE { $@ }
+    importas -u FILE FILE
+    if -t -n { s6-test -f ${FILE} }
+      foreground { s6-echo "File not found: ${FILE}" }
+      exit 1
+}
+
 # Initialize runtime directory.
 foreground
 {
