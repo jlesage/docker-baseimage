@@ -14,6 +14,11 @@ APP_RC="$1"
 
 # App terminated: Bring container down if needed.
 if [ "${KEEP_GUIAPP_RUNNING:-0}" -eq "0" ] && [ "${KEEP_APP_RUNNING:-0}" -eq "0" ]; then
+    # Make sure /var/run/s6/env-stage3/S6_STAGE2_EXITED exists.  The
+    # non-presence of this file indicates that stage2 is not completed yet and
+    # our exit code may be overwritten.
+    s6-maximumtime 5000 sh -c "while [ ! -f /var/run/s6/env-stage3/S6_STAGE2_EXITED ]; do sleep 1; done" 2>/dev/null
+
     # Make sure we are not restarted.
     s6-svc -d /var/run/s6/services/app
 
