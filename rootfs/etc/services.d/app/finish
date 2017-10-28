@@ -20,7 +20,7 @@ if [ "${KEEP_GUIAPP_RUNNING:-0}" -eq "0" ] && [ "${KEEP_APP_RUNNING:-0}" -eq "0"
     s6-maximumtime 5000 sh -c "while [ ! -f /var/run/s6/env-stage3/S6_STAGE2_EXITED ]; do sleep 1; done" 2>/dev/null
 
     # Make sure we are not restarted.
-    s6-svc -d /var/run/s6/services/app
+    s6-svc -xd /var/run/s6/services/app
 
     # Use the forced exit code if needed.
     S6_STAGE2_EXITED=${FORCE_APP_EXIT_CODE:-$APP_RC}
