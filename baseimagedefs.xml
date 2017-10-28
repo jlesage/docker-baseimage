@@ -16,6 +16,11 @@ long-lived application.
     <!-- Changelog -->
     <history>
       <release>
+        <version>2.1.1</version>
+        <date>2017-10-28</date>
+        <change>Fixed race condition where container's exit code would not be the expected one.</change>
+      </release>
+      <release>
         <version>2.1.0</version>
         <date>2017-10-27</date>
         <change>Upgraded S6 overlay to version 1.21.1.1.</change>
