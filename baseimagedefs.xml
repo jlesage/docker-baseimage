@@ -16,6 +16,11 @@ long-lived application.
     <!-- Changelog -->
     <history>
       <release>
+        <version>2.1.2</version>
+        <date>2017-10-31</date>
+        <change>Fixed an issue where a self-disabled service could be restarted.</change>
+      </release>
+      <release>
         <version>2.1.1</version>
         <date>2017-10-28</date>
         <change>Fixed race condition where container's exit code would not be the expected one.</change>
