@@ -8,6 +8,7 @@ ifelse -n
 }
 {
   foreground { s6-echo "[logmonitor] no file to monitor: disabling service..." }
+  foreground { s6-touch /var/run/s6/services/logmonitor/down }
   foreground { s6-svc -xd /var/run/s6/services/logmonitor }
   exit 0
 }
