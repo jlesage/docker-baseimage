@@ -8,7 +8,7 @@
 FROM ${BASEIMAGE}
 
 # Define software versions.
-ARG S6_OVERLAY_VERSION=1.21.1.1
+ARG S6_OVERLAY_VERSION=1.21.2.0
 
 # Define software download URLs.
 ARG S6_OVERLAY_URL=https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-amd64.tar.gz
