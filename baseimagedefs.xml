@@ -16,6 +16,12 @@ long-lived application.
     <!-- Changelog -->
     <history>
       <release>
+        <version>2.1.3</version>
+        <date>2017-11-06</date>
+        <change>Upgraded S6 overlay to version 1.21.2.0.</change>
+        <change>Use a more efficient way to monitor status files.</change>
+      </release>
+      <release>
         <version>2.1.2</version>
         <date>2017-10-31</date>
         <change>Fixed an issue where a self-disabled service could be restarted.</change>
