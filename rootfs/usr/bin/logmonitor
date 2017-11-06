@@ -40,7 +40,7 @@ foreground
 if { s6-mkdir -p /var/run/logmonitor/states }
 
 define LOOP_CMD_LOG "tail -n0 -F"
-define LOOP_CMD_STATUS "loopwhilex -o 0,1 foreground { sleep 5 } cat"
+define LOOP_CMD_STATUS "tailstatusfile"
 backtick -n -i LOOP_CMD { s6-echo ${LOOP_CMD_${MONITORING_MODE}} $@ }
 importas -u LOOP_CMD LOOP_CMD
 
