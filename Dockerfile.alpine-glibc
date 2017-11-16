@@ -8,7 +8,7 @@
 FROM ${BASEIMAGE}
 
 # Define software versions.
-ARG S6_OVERLAY_VERSION=1.21.2.0
+ARG S6_OVERLAY_VERSION=1.21.2.1
 
 # Define software download URLs.
 ARG S6_OVERLAY_URL=https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-amd64.tar.gz
@@ -64,7 +64,7 @@ RUN \
     curl -# -L ${S6_OVERLAY_URL} | tar -xz -C / && \
     # Services dependencies support.
     echo "Patching s6-overlay..." && \
-    curl -# -L https://github.com/jlesage/s6-overlay/commit/9a96412.patch | patch -d / -p3 && \
+    curl -# -L https://github.com/jlesage/s6-overlay/commit/9dff7a4.patch | patch -d / -p3 && \
     chmod +x \
         /etc/s6/services/.s6-svscan/SIGHUP \
         /etc/s6/services/.s6-svscan/SIGINT \
