@@ -16,6 +16,11 @@ long-lived application.
     <!-- Changelog -->
     <history>
       <release>
+        <version>2.2.0</version>
+        <date>2017-12-06</date>
+        <change>Added images based on Alpine Linux 3.7.</change>
+      </release>
+      <release>
         <version>2.1.4</version>
         <date>2017-11-19</date>
         <change>Upgraded S6 overlay to version 1.21.2.1.</change>
