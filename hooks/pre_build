@@ -23,7 +23,7 @@ fi
 source versions/"$BASEIMAGE_DOCKER_TAG"
 
 echo "$(basename "$0") hook environment variables:"
-env | sed 's/^/    /'
+( set -o posix ; set | sort | sed 's/^/    /')
 
 # TODO: Validation disabled, until the version that allows `ARG` instruction
 #       before `FROM` is released.

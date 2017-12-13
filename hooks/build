@@ -20,7 +20,7 @@ else
 fi
 
 echo "$(basename "$0") hook environment variables:"
-env | sed 's/^/    /'
+( set -o posix ; set | sort | sed 's/^/    /')
 
 echo "Starting build of Docker image $BASEIMAGE_DOCKER_IMAGE_NAME..."
 docker build $DOCKER_BUILD_CACHE_OPTS \

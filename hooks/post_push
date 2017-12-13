@@ -11,7 +11,7 @@ set -u # Treat unset variables as an error.
 source hooks/load_vars
 
 echo "$(basename "$0") hook environment variables:"
-env | sed 's/^/    /'
+( set -o posix ; set | sort | sed 's/^/    /')
 
 # For normal versions without a beta/rc suffix, we need to add 3 tags.  For
 # example, for an image version of 2.1.5:
