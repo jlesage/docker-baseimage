@@ -4,14 +4,15 @@
 # https://github.com/jlesage/docker-baseimage
 #
 
+ARG BASEIMAGE
+
 # Pull base image.
 FROM ${BASEIMAGE}
 
-# Define software versions.
+# Define s6 overlay related variables.
+ARG S6_OVERLAY_ARCH=x86_64
 ARG S6_OVERLAY_VERSION=1.21.2.1
-
-# Define software download URLs.
-ARG S6_OVERLAY_URL=https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-amd64.tar.gz
+ARG S6_OVERLAY_URL=https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_OVERLAY_ARCH}.tar.gz
 
 # Variables needed for package installation via APT.
 ARG DEBIAN_FRONTEND=noninteractive
@@ -87,9 +88,10 @@ VOLUME ["/config"]
 CMD ["/init"]
 
 # Metadata.
+ARG IMAGE_VERSION=unknown
 LABEL \
       org.label-schema.name="baseimage" \
       org.label-schema.description="A minimal docker baseimage to ease creation of long-lived application containers" \
-      org.label-schema.version="unknown" \
+      org.label-schema.version="${IMAGE_VERSION}" \
       org.label-schema.vcs-url="https://github.com/jlesage/docker-baseimage" \
       org.label-schema.schema-version="1.0"

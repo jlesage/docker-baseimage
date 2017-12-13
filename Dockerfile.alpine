@@ -4,20 +4,70 @@
 # https://github.com/jlesage/docker-baseimage
 #
 
+ARG BASEIMAGE
+
 # Pull base image.
 FROM ${BASEIMAGE}
 
-# Define software versions.
+# Define s6 overlay related variables.
+ARG S6_OVERLAY_ARCH=x86_64
 ARG S6_OVERLAY_VERSION=1.21.2.1
+ARG S6_OVERLAY_URL=https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_OVERLAY_ARCH}.tar.gz
 
-# Define software download URLs.
-ARG S6_OVERLAY_URL=https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-amd64.tar.gz
+# Define GLIBC related variables.
+ARG GLIBC_INSTALL=0
+ARG GLIBC_ARCH=x86_64
+ARG GLIBC_VERSION=2.26-0
+ARG GLIBC_URL=https://github.com/sgerrand/docker-glibc-builder/releases/download/${GLIBC_VERSION}/glibc-bin-${GLIBC_VERSION}-${GLIBC_ARCH}.tar.gz
+ARG GLIBC_LOCALE_INPUT=en_US
+ARG GLIBC_LOCALE_CHARMAP=UTF-8
+ARG GLIBC_LOCALE=${GLIBC_LOCALE_INPUT}.${GLIBC_LOCALE_CHARMAP}
 
 # Define working directory.
 WORKDIR /tmp
 
 # Copy helpers.
 COPY helpers/* /usr/local/bin/
+
+# Install glibc if needed.
+RUN \
+    test "${GLIBC_INSTALL}" -eq 0 || ( \
+    add-pkg --virtual build-dependencies curl && \
+    # Download and install glibc.
+    curl -# -L ${GLIBC_URL} | tar xz -C / && \
+    # Create /etc/nsswitch.conf.
+    echo -n "hosts: files mdns4_minimal [NOTFOUND=return] dns mdns4" > /etc/nsswitch.conf && \
+    # Create /usr/glibc-compat/etc/ld.so.conf
+    echo "# libc default configuration" >> /usr/glibc-compat/etc/ld.so.conf && \
+    echo "/usr/local/lib" >> /usr/glibc-compat/etc/ld.so.conf && \
+    echo "/usr/glibc-compat/lib" >> /usr/glibc-compat/etc/ld.so.conf && \
+    echo "/usr/lib" >> /usr/glibc-compat/etc/ld.so.conf && \
+    echo "/lib" >> /usr/glibc-compat/etc/ld.so.conf && \
+    # Create required symbolic links.
+    mkdir -p /lib /lib64 /usr/glibc-compat/lib/locale && \
+    ln -s /usr/glibc-compat/lib/ld-linux-x86-64.so.2 /lib/ld-linux-x86-64.so.2 && \
+    ln -s /usr/glibc-compat/lib/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2 && \
+    ln -s /usr/glibc-compat/etc/ld.so.cache /etc/ld.so.cache && \
+    # Generate locale.
+    /usr/glibc-compat/bin/localedef --inputfile ${GLIBC_LOCALE_INPUT} \
+                                    --charmap ${GLIBC_LOCALE_CHARMAP} \
+                                    ${GLIBC_LOCALE} && \
+    # Timezone support.
+    ln -s /usr/share/zoneinfo /usr/glibc-compat/share/zoneinfo && \
+    # Remove unneeded stuff.
+    rm /usr/glibc-compat/etc/rpc && \
+    rm /usr/glibc-compat/lib/*.a && \
+    rm -r /usr/glibc-compat/lib/audit && \
+    rm -r /usr/glibc-compat/lib/gconv && \
+    rm -r /usr/glibc-compat/lib/getconf && \
+    rm -r /usr/glibc-compat/include && \
+    rm -r /usr/glibc-compat/share && \
+    rm -r /usr/glibc-compat/var && \
+    # Run ldconfig.
+    /usr/glibc-compat/sbin/ldconfig && \
+    # Cleanup
+    del-pkg build-dependencies && \
+    rm -rf /tmp/* /tmp/.[!.]* )
 
 # Install s6 overlay.
 RUN \
@@ -57,7 +107,8 @@ RUN \
 COPY rootfs/ /
 
 # Set environment variables.
-ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=3 \
+ENV LANG=${ALPINE_GLIBC_LOCALE} \
+    S6_BEHAVIOUR_IF_STAGE2_FAILS=3 \
     S6_SERVICE_DEPS=1 \
     USER_ID=1000 \
     GROUP_ID=1000 \
@@ -75,9 +126,10 @@ VOLUME ["/config"]
 CMD ["/init"]
 
 # Metadata.
+ARG IMAGE_VERSION=unknown
 LABEL \
       org.label-schema.name="baseimage" \
       org.label-schema.description="A minimal docker baseimage to ease creation of long-lived application containers" \
-      org.label-schema.version="unknown" \
+      org.label-schema.version="${IMAGE_VERSION}" \
       org.label-schema.vcs-url="https://github.com/jlesage/docker-baseimage" \
       org.label-schema.schema-version="1.0"
