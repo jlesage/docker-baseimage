@@ -1,0 +1,3 @@
+DOCKERFILE=Dockerfile.debian
+BASEIMAGE=i386/ubuntu:xenial
+S6_OVERLAY_ARCH=amd64
