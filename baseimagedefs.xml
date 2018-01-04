@@ -16,6 +16,12 @@ long-lived application.
     <!-- Changelog -->
     <history>
       <release>
+        <version>2.2.1</version>
+        <date>2018-01-04</date>
+        <change>Upgraded S6 overlay to version 1.21.2.2.</change>
+        <change>Upgraded glibc to version 2.26 (Alpine Linux glibc images).</change>
+      </release>
+      <release>
         <version>2.2.0</version>
         <date>2017-12-06</date>
         <change>Added images based on Alpine Linux 3.7.</change>
