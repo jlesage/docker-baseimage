@@ -32,9 +32,13 @@ COPY helpers/* /usr/local/bin/
 # Install glibc if needed.
 RUN \
     test "${GLIBC_INSTALL}" -eq 0 || ( \
-    add-pkg --virtual build-dependencies curl && \
+    add-pkg --virtual build-dependencies curl binutils && \
     # Download and install glibc.
     curl -# -L ${GLIBC_URL} | tar xz -C / && \
+    # Strip symbols.
+    find /usr/glibc-compat/bin -type f -exec strip {} ';' && \
+    find /usr/glibc-compat/sbin -type f -exec strip {} ';' && \
+    find /usr/glibc-compat/lib -type f -exec strip {} ';' && \
     # Create /etc/nsswitch.conf.
     echo -n "hosts: files mdns4_minimal [NOTFOUND=return] dns mdns4" > /etc/nsswitch.conf && \
     # Create /usr/glibc-compat/etc/ld.so.conf
