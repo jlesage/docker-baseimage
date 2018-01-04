@@ -25,8 +25,8 @@ source versions/"$BASEIMAGE_DOCKER_TAG"
 echo "$(basename "$0") hook environment variables:"
 ( set -o posix ; set | sort | sed 's/^/    /')
 
-# TODO: Validation disabled, until the version that allows `ARG` instruction
-#       before `FROM` is released.
+# TODO: Validation disabled until the the following issue is resolved:
+#       https://github.com/RedCoolBeans/dockerlint/issues/47
 #echo "Validating Dockerfile..."
 #docker run --rm -v "$(pwd)/$DOCKERFILE:/Dockerfile:ro" redcoolbeans/dockerlint
 
