@@ -11,7 +11,7 @@ FROM ${BASEIMAGE}
 
 # Define s6 overlay related variables.
 ARG S6_OVERLAY_ARCH=x86_64
-ARG S6_OVERLAY_VERSION=1.21.2.1
+ARG S6_OVERLAY_VERSION=1.21.2.2
 ARG S6_OVERLAY_URL=https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_OVERLAY_ARCH}.tar.gz
 
 # Define GLIBC related variables.
