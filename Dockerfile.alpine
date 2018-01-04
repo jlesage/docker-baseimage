@@ -4,7 +4,7 @@
 # https://github.com/jlesage/docker-baseimage
 #
 
-ARG BASEIMAGE
+ARG BASEIMAGE=unknown
 
 # Pull base image.
 FROM ${BASEIMAGE}
