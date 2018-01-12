@@ -32,7 +32,7 @@ COPY helpers/* /usr/local/bin/
 # Install glibc if needed.
 RUN \
     test "${GLIBC_INSTALL}" -eq 0 || ( \
-    add-pkg --virtual build-dependencies curl binutils && \
+    add-pkg --virtual build-dependencies curl binutils alpine-sdk && \
     # Download and install glibc.
     curl -# -L ${GLIBC_URL} | tar xz -C / && \
     # Strip symbols.
@@ -60,6 +60,33 @@ RUN \
                                     ${GLIBC_LOCALE} && \
     # Timezone support.
     ln -s /usr/share/zoneinfo /usr/glibc-compat/share/zoneinfo && \
+    # Add apk trigger.  This is needed so that ldconfig is called automatically
+    # after apk installs libraries.
+    echo 'pkgname=glibc-ldconfig-trigger' >> APKBUILD && \
+    echo 'pkgver=1.0' >> APKBUILD && \
+    echo 'pkgrel=0' >> APKBUILD && \
+    echo 'pkgdesc="Dummy package that installs trigger for glibc ldconfig"' >> APKBUILD && \
+    echo 'url="https://github.com/jlesage/docker-baseimage"' >> APKBUILD && \
+    echo 'arch="noarch"' >> APKBUILD && \
+    echo 'license="GPL"' >> APKBUILD && \
+    echo 'makedepends=""' >> APKBUILD && \
+    echo 'depends=""' >> APKBUILD && \
+    echo 'install=""' >> APKBUILD && \
+    echo 'subpackages=""' >> APKBUILD && \
+    echo 'source=""' >> APKBUILD && \
+    echo 'triggers="$pkgname.trigger=/lib:/usr/lib:/usr/glibc-compat/lib"' >> APKBUILD && \
+    echo 'package() {' >> APKBUILD && \
+    echo '        mkdir -p "$pkgdir"' >> APKBUILD && \
+    echo '}' >> APKBUILD && \
+    echo '#!/bin/sh' >> glibc-ldconfig-trigger.trigger && \
+    echo '/usr/glibc-compat/sbin/ldconfig' >> glibc-ldconfig-trigger.trigger && \
+    chmod +x glibc-ldconfig-trigger.trigger && \
+    adduser -D -G abuild -s /bin/sh abuild && \
+    su abuild -c "abuild-keygen -a -n" && \
+    su abuild -c "abuild" && \
+    cp /home/abuild/packages/*/glibc-ldconfig-trigger-1.0-r0.apk . && \
+    apk --no-cache --allow-untrusted add glibc-ldconfig-trigger-1.0-r0.apk && \
+    deluser --remove-home abuild && \
     # Remove unneeded stuff.
     rm /usr/glibc-compat/etc/rpc && \
     rm /usr/glibc-compat/lib/*.a && \
