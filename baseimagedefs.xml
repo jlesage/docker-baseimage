@@ -16,6 +16,11 @@ long-lived application.
     <!-- Changelog -->
     <history>
       <release>
+        <version>2.2.3</version>
+        <date>2018-01-12</date>
+        <change>For Alpine Linux images with glibc, automatically update dynamic linker's cache after new libraries are installed.</change>
+      </release>
+      <release>
         <version>2.2.2</version>
         <date>2018-01-10</date>
         <change>Adjusted the way ownership of /config is taken to better support cases where the folder is mapped to a network share.</change>
