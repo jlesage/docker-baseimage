@@ -36,8 +36,8 @@ del_pkg_debian() {
     done
 
     if [ -n "$PKGS" ]; then
-        apt-get purge -y $PKGS
-        apt-get --purge autoremove -y
+        apt-get -q purge -y $PKGS
+        apt-get -q --purge autoremove -y
         rm -rf /var/log/dpkg.log \
                /var/log/apt/*
     fi
