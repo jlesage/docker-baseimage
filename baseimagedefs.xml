@@ -16,6 +16,11 @@ long-lived application.
     <!-- Changelog -->
     <history>
       <release>
+        <version>2.2.4</version>
+        <date>2018-01-22</date>
+        <change>Fixed the `LANG` environment variable not being set properly.</change>
+      </release>
+      <release>
         <version>2.2.3</version>
         <date>2018-01-12</date>
         <change>For Alpine Linux images with glibc, automatically update dynamic linker's cache after new libraries are installed.</change>
