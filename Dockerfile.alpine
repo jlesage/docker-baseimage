@@ -138,7 +138,7 @@ RUN \
 COPY rootfs/ /
 
 # Set environment variables.
-ENV LANG=${ALPINE_GLIBC_LOCALE} \
+ENV LANG=${GLIBC_LOCALE} \
     S6_BEHAVIOUR_IF_STAGE2_FAILS=3 \
     S6_SERVICE_DEPS=1 \
     USER_ID=1000 \
