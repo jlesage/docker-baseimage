@@ -4,6 +4,36 @@
 This is a docker baseimage that can be used to create containers for any
 long-lived application.
 
+## Table of Content
+
+   * [A minimal docker baseimage to ease creation of long-lived application containers](#a-minimal-docker-baseimage-to-ease-creation-of-long-lived-application-containers)
+      * [Table of Content](#table-of-content)
+      * [Images](#images)
+         * [Content](#content)
+         * [Versioning](#versioning)
+         * [Tags](#tags)
+      * [Getting started](#getting-started)
+      * [Environment Variables](#environment-variables)
+      * [Config Directory](#config-directory)
+      * [User/Group IDs](#usergroup-ids)
+      * [Locales](#locales)
+      * [Building A Container](#building-a-container)
+         * [Selecting Baseimage Tag](#selecting-baseimage-tag)
+         * [Referencing Linux User/Group](#referencing-linux-usergroup)
+         * [Default Configuration Files](#default-configuration-files)
+         * [Adding/Removing Packages](#addingremoving-packages)
+         * [Modifying Files With Sed](#modifying-files-with-sed)
+         * [Modifying Baseimage Content](#modifying-baseimage-content)
+         * [Application's Data](#applications-data)
+         * [$HOME Environment Variable](#home-environment-variable)
+         * [Service Dependencies](#service-dependencies)
+         * [Service Readiness](#service-readiness)
+         * [Log Monitor](#log-monitor)
+            * [Monitored Files](#monitored-files)
+            * [Notification Definition](#notification-definition)
+            * [Notification Backend](#notification-backend)
+         * [S6 Overlay Documentation](#s6-overlay-documentation)
+
 ## Images
 Different docker images are available:
 
