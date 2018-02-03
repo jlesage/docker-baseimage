@@ -94,7 +94,8 @@ RUN \
     rm -r /usr/glibc-compat/lib/gconv && \
     rm -r /usr/glibc-compat/lib/getconf && \
     rm -r /usr/glibc-compat/include && \
-    rm -r /usr/glibc-compat/share && \
+    rm -r /usr/glibc-compat/share/locale && \
+    rm -r /usr/glibc-compat/share/i18n && \
     rm -r /usr/glibc-compat/var && \
     # Cleanup
     del-pkg build-dependencies && \
