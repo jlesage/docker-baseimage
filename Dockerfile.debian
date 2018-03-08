@@ -39,7 +39,7 @@ RUN \
         tar xzf s6-overlay.tar.gz -C /; \
     fi && \
     echo "Patching s6-overlay..." && \
-    curl -# -L https://github.com/jlesage/s6-overlay/commit/9dff7a4.patch | patch -d / -p3 && \
+    curl -# -L https://github.com/jlesage/s6-overlay/commit/d151c41.patch | patch -d / -p3 && \
     chmod +x \
         /etc/s6/services/.s6-svscan/SIGHUP \
         /etc/s6/services/.s6-svscan/SIGINT \
