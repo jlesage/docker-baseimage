@@ -148,7 +148,8 @@ ENV LANG=${GLIBC_LOCALE} \
     APP_USER=app \
     XDG_DATA_HOME=/config/xdg/data \
     XDG_CONFIG_HOME=/config/xdg/config \
-    XDG_CACHE_HOME=/config/xdg/cache
+    XDG_CACHE_HOME=/config/xdg/cache \
+    XDG_RUNTIME_DIR=/tmp/run/user/app
 
 # Define mountable directories.
 VOLUME ["/config"]
