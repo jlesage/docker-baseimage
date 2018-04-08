@@ -128,7 +128,7 @@ COPY startapp.sh /startapp.sh
 ENV APP_NAME="http-server"
 
 # Expose ports.
-EXPORT 8080
+EXPOSE 8080
 ```
 
 In `startapp.sh`:
