@@ -23,4 +23,4 @@ if [ "${TAKE_CONFIG_OWNERSHIP:-1}" -eq 1 ]; then
     fi
 fi
 
-# vim: set ft=sh :
+# vim:ft=sh:ts=4:sw=4:et:sts=4

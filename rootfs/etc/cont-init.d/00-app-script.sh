@@ -12,4 +12,4 @@ if [ -e /startapp.sh ] ; then
     sync
 fi
 
-# vim: set ft=sh :
+# vim:ft=sh:ts=4:sw=4:et:sts=4

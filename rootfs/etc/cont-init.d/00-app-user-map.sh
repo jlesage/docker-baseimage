@@ -17,4 +17,4 @@ chmod 640 /etc/shadow
 echo "$APP_USER:x:$USER_ID:$GROUP_ID::/dev/null:/sbin/nologin" >> /etc/passwd
 echo "$APP_USER:x:$GROUP_ID:" >> /etc/group
 
-# vim: set ft=sh :
+# vim:ft=sh:ts=4:sw=4:et:sts=4

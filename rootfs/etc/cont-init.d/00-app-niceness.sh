@@ -25,4 +25,4 @@ fi
 # Export variable.
 echo "$APP_NICE_CMD" > /var/run/s6/container_environment/APP_NICE_CMD
 
-# vim: set ft=sh :
+# vim:ft=sh:ts=4:sw=4:et:sts=4

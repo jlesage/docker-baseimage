@@ -10,4 +10,4 @@ set -u # Treat unset variables as an error.
 # Export variable.
 echo > /var/run/s6/container_environment/HOME
 
-# vim: set ft=sh :
+# vim:ft=sh:ts=4:sw=4:et:sts=4

@@ -12,4 +12,4 @@ mkdir -p "$XDG_RUNTIME_DIR"
 chown $USER_ID:$GROUP_ID "$XDG_RUNTIME_DIR"
 chmod 700 "$XDG_RUNTIME_DIR"
 
-# vim: set ft=sh :
+# vim:ft=sh:ts=4:sw=4:et:sts=4
