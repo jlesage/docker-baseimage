@@ -1,0 +1,3 @@
+DOCKERFILE=Dockerfile.debian
+BASEIMAGE=ubuntu:bionic
+S6_OVERLAY_ARCH=amd64

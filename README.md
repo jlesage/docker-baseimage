@@ -50,6 +50,7 @@ Different docker images are available:
 | [Debian 8]         | debian-8         | [![](https://images.microbadger.com/badges/image/jlesage/baseimage:debian-8.svg)](http://microbadger.com/#/images/jlesage/baseimage:debian-8/ "Get your own image badge on microbadger.com") |
 | [Debian 9]         | debian-9         | [![](https://images.microbadger.com/badges/image/jlesage/baseimage:debian-9.svg)](http://microbadger.com/#/images/jlesage/baseimage:debian-9/ "Get your own image badge on microbadger.com") |
 | [Ubuntu 16.04 LTS] | ubuntu-16.04     | [![](https://images.microbadger.com/badges/image/jlesage/baseimage:ubuntu-16.04.svg)](http://microbadger.com/#/images/jlesage/baseimage:ubuntu-16.04 "Get your own image badge on microbadger.com") |
+| [Ubuntu 18.04 LTS] | ubuntu-18.04     | [![](https://images.microbadger.com/badges/image/jlesage/baseimage:ubuntu-18.04.svg)](http://microbadger.com/#/images/jlesage/baseimage:ubuntu-18.04 "Get your own image badge on microbadger.com") |
 
 [Alpine 3.5]: https://alpinelinux.org
 [Alpine 3.6]: https://alpinelinux.org
@@ -58,6 +59,7 @@ Different docker images are available:
 [Debian 8]: https://www.debian.org/releases/jessie/
 [Debian 9]: https://www.debian.org/releases/stretch/
 [Ubuntu 16.04 LTS]: http://releases.ubuntu.com/16.04/
+[Ubuntu 18.04 LTS]: http://releases.ubuntu.com/18:04/
 
 Due to its size, the `Alpine` image is recommended.  However, it may be harder
 to integrate your application (especially third party ones without source code),
@@ -430,7 +432,7 @@ describe files part of the definition:
 | File       | Mandatory? | Description |
 |------------|------------|-------------|
 |`send`      |Yes|Program (script or binary with executable permission) that sends the notification.  It is invoked by the log monitor with the following notification properties as arguments: title, description/message and the severity level.
-|`debouncing`|No|File containg the minimum amount time (in seconds) that must elapse before sending the same notification with the current backend.  A value of `0` means infinite (notification is sent once).  If this file is missing, no debouncing is done.|
+|`debouncing`|No|File containing the minimum amount time (in seconds) that must elapse before sending the same notification with the current backend.  A value of `0` means infinite (notification is sent once).  If this file is missing, no debouncing is done.|
 
 By default, the baseimage contains the following notification backends:
 
