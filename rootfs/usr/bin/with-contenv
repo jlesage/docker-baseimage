@@ -1,0 +1,63 @@
+#!/bin/sh
+
+CONT_ENV_DIR=/var/run/cont-env
+FORCE=0
+
+usage() {
+    echo "usage: $(basename $0) [OPTION]... COMMAND [ARG]...
+
+Add variables defined in $CONT_ENV_DIR to the environment and run COMMAND.
+
+Variables already defined in the environment are not overriden, unless the '-f'
+option is passed.
+
+Options:
+  -f             Override any existing environment variable.
+  -h             Print this help and exit.
+"
+}
+
+valid_var_name() {
+    case "$1" in
+        *[!a-zA-Z0-9_]*|[0-9]*)
+            return 1
+            ;;
+        *)
+            return 0
+            ;;
+    esac
+}
+
+if [ -z "$1" ] || [ "$1" = "-h" ] ; then
+    usage
+    exit 1
+elif [ "$1" = "-f" ]; then
+    FORCE=1
+    shift
+fi
+
+if [ -d "$CONT_ENV_DIR" ];
+then
+    TMPFILE="$(mktemp)"
+
+    find "$CONT_ENV_DIR" -maxdepth 1 -type f | while read FILE
+    do
+        VAR_NAME="$(basename "$FILE")"
+        [ -r "$FILE" ] || continue
+        valid_var_name "$VAR_NAME" || continue
+        if [ "$FORCE" -eq 0 ]; then
+            VAR_VAL="$(eval echo \$\{$VAR_NAME\})"
+            [ -z "$VAR_VAL" ] || continue
+        fi
+        VAR_VAL="$(cat "$FILE" | head -n1)"
+        #echo "Exporting $VAR_NAME=$VAR_VAL"
+        echo "export $VAR_NAME=\"$VAR_VAL\"" >> "$TMPFILE"
+    done
+
+    . "$TMPFILE"
+    rm "$TMPFILE"
+fi
+
+exec "$@"
+
+# vim:ft=sh:ts=4:sw=4:et:sts=4
