@@ -14,6 +14,8 @@ ARG MINIT_VERSION=efcaa46
 ARG MINIT_URL=https://github.com/jlesage/minit/archive/${MINIT_VERSION}.tar.gz
 ARG LIBOWFAT_VERSION=0.31
 ARG LIBOWFAT_URL=https://www.fefe.de/libowfat/libowfat-${LIBOWFAT_VERSION}.tar.xz
+ARG SUEXEC_VERSION=0.2
+ARG SUEXEC_URL=https://github.com/ncopa/su-exec/archive/v${SUEXEC_VERSION}.tar.gz
 
 # Variables needed for package installation via APT.
 ARG DEBIAN_FRONTEND=noninteractive
@@ -48,6 +50,29 @@ RUN \
     cp -v minit/minit /usr/bin/ && \
     cp -v minit/msvc /usr/bin/ && \
     # Cleanup
+    del-pkg build-dependencies && \
+    rm -rf /tmp/* /tmp/.[!.]*
+
+# Compile and install su-exec.
+RUN \
+    add-pkg --virtual build-dependencies \
+        curl \
+        ca-certificates \
+        gcc \
+        make \
+        libc6-dev \
+        && \
+    # Download.
+    mkdir su-exec && \
+    curl -# -L ${SUEXEC_URL} | tar xz --strip 1 -C su-exec && \
+    # Compile.
+    cd su-exec && \
+    make && \
+    cd .. && \
+    # Install.
+    cp -v su-exec/su-exec /usr/bin/ && \
+    strip /usr/bin/su-exec && \
+    # Cleanup.
     del-pkg build-dependencies && \
     rm -rf /tmp/* /tmp/.[!.]*
 

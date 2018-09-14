@@ -136,7 +136,8 @@ RUN \
         # For timezone support
         tzdata \
         # For 'groupmod' command
-        shadow
+        shadow \
+        su-exec
 
 # Save some defaults.
 RUN \
