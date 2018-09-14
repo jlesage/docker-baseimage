@@ -60,7 +60,7 @@ teardown() {
         fi
     done
     [ "$count1" -eq 1 ]
-    [ "$count1" -eq 1 ]
+    [ "$count2" -eq 1 ]
 }
 
 @test "Checking log monitor functionality with status files..." {
