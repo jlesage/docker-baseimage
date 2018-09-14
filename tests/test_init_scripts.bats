@@ -5,7 +5,7 @@ setup() {
 }
 
 @test "Checking that all init scripts terminate successfully..." {
-    run docker run --rm -p 5900:5900 -p 5800:5800 $DOCKER_IMAGE
+    docker_run --rm -p 5900:5900 -p 5800:5800 $DOCKER_IMAGE
     for item in "${lines[@]}"; do
         if [ "$item" == "[cont-init.d] done." ]; then
             break;

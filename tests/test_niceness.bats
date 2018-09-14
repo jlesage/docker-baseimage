@@ -5,7 +5,7 @@ setup() {
 }
 
 @test "Checking that a positive niceness value can be set successfully..." {
-    run docker run --rm -e "APP_NICENESS=19" -e "FORCE_APP_EXIT_CODE=0" $DOCKER_IMAGE
+    docker_run --rm -e "APP_NICENESS=19" -e "FORCE_APP_EXIT_CODE=0" $DOCKER_IMAGE
     script_rc="$(get_init_script_exit_code '00-app-niceness.sh' $lines)"
     echo "====================================================================="
     echo " OUTPUT"
@@ -21,7 +21,7 @@ setup() {
 }
 
 @test "Checking that a negative niceness value fails without the --cap-add=SYS_NICE option..." {
-    run docker run --rm -e "APP_NICENESS=-1" -e "FORCE_APP_EXIT_CODE=0" $DOCKER_IMAGE
+    docker_run --rm -e "APP_NICENESS=-1" -e "FORCE_APP_EXIT_CODE=0" $DOCKER_IMAGE
     script_rc="$(get_init_script_exit_code '00-app-niceness.sh' $lines)"
     echo "====================================================================="
     echo " OUTPUT"
@@ -37,7 +37,7 @@ setup() {
 }
 
 @test "Checking that a negative niceness value succeed with the --cap-add=SYS_NICE option..." {
-    run docker run --rm -e "APP_NICENESS=-1" -e "FORCE_APP_EXIT_CODE=0" --cap-add=SYS_NICE $DOCKER_IMAGE
+    docker_run --rm -e "APP_NICENESS=-1" -e "FORCE_APP_EXIT_CODE=0" --cap-add=SYS_NICE $DOCKER_IMAGE
     script_rc="$(get_init_script_exit_code '00-app-niceness.sh' $lines)"
     echo "====================================================================="
     echo " OUTPUT"

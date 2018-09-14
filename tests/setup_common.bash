@@ -15,6 +15,10 @@ get_init_script_exit_code() {
     return 1
 }
 
+docker_run() {
+    run docker run "$@"
+}
+
 [ -n "$DOCKER_IMAGE" ]
 
 # Make sure the docker image exists.

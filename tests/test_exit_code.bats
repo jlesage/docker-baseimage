@@ -5,7 +5,7 @@ setup() {
 }
 
 @test "Checking container's exit code when /startapp.sh script is missing..." {
-    run docker run --rm $DOCKER_IMAGE
+    docker_run --rm $DOCKER_IMAGE
     echo "====================================================================="
     echo " OUTPUT"
     echo "====================================================================="
@@ -18,7 +18,7 @@ setup() {
 }
 
 @test "Checking container's exit code when forcing application's termination with success..." {
-    run docker run --rm -e "FORCE_APP_EXIT_CODE=0" $DOCKER_IMAGE
+    docker_run --rm -e "FORCE_APP_EXIT_CODE=0" $DOCKER_IMAGE
     echo "====================================================================="
     echo " OUTPUT"
     echo "====================================================================="
@@ -31,7 +31,7 @@ setup() {
 }
 
 @test "Checking container's exit code when forcing application's termination with custom error..." {
-    run docker run --rm -e "FORCE_APP_EXIT_CODE=10" $DOCKER_IMAGE
+    docker_run --rm -e "FORCE_APP_EXIT_CODE=10" $DOCKER_IMAGE
     echo "====================================================================="
     echo " OUTPUT"
     echo "====================================================================="
