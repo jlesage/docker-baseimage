@@ -1,0 +1,69 @@
+#!/usr/bin/with-contenv sh
+
+#
+# Shutdown the container by terminating all services and killing all remaining
+# processes.
+#
+# This script is called by services invoked by minit when it receives a signal
+# (e.g. SIGTERM, SIGINT).
+#
+
+#set -e # Exit immediately if a command exits with a non-zero status.
+set -u # Treat unset variables as an error.
+
+log() {
+    echo "[shutdown] $*"
+}
+
+is_service_running() {
+    msvc -g "$1" > /dev/null 2>&1
+}
+
+# Ignore signals.
+trap '' TERM QUIT INT
+
+# Set the indication that we are shutting down.
+echo 1 > /var/run/cont-env/CONTAINER_IS_SHUTTING_DOWN
+
+log "terminating all services..."
+SVS="$(/etc/minit/getdeps -r)"
+if [ $? -eq 0 ]; then
+    for SV in $SVS; do
+        if ! is_service_running "$SV"; then
+            continue
+        fi
+
+        # Bring down the service.
+        log "stopping $SV..."
+        msvc -d "$SV"
+
+        # Wait until the service is really terminated, as reported by minit.  This
+        # includes the time taken by the service's finish script.
+        while is_service_running "$SV"; do
+            sleep 0.2
+        done
+    done
+    log "all services terminated."
+else
+    log "ERROR: failed to get service dependencies: $SVS"
+fi
+
+# Terminate all processes except the kill process itself and init.
+log "sending all processes the TERM signal..."
+kill -s SIGTERM -1 2>/dev/null
+
+# Wait for a maximum of 5 seconds before sending the KILL signal.
+# Stop waiting when there are 5 running processes: init, ourself, find, wc and
+# the new shell executing the command.
+TIMEOUT=10
+while [ "$TIMEOUT" -gt 0 ] && [ "$(find /proc -type d -name '[0-9]*' -maxdepth 1 | wc -l)" -gt 5 ]
+do
+    TIMEOUT="$(expr "$TIMEOUT" - 1)"
+    sleep 0.5
+done
+
+# Kill all processes except the kill process itself and init.
+log "sending all processes the KILL signal..."
+kill -s SIGKILL -1 2>/dev/null
+
+# vim:ft=sh:ts=4:sw=4:et:sts=4

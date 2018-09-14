@@ -1,0 +1,201 @@
+#!/bin/sh
+
+set -e # Exit immediately if a command exits with a non-zero status.
+set -u # Treat unset variables as an error.
+
+MINITROOT=/var/run/minit
+STAGE=init
+
+log() {
+    echo "[$STAGE] $*"
+}
+
+log_script() {
+    while read OUTPUT; do
+        log "$1: $OUTPUT"
+    done
+}
+
+# http://cfajohnson.com/shell/cus-faq-2.html#Q11
+run() {
+    j=1
+    while eval "\${pipestatus_$j+:} false"; do
+        unset pipestatus_$j
+        j=$(($j+1))
+    done
+    j=1 com= k=1 l=
+    for a; do
+        if [ "x$a" = 'x|' ]; then
+            com="$com { $l "'3>&-
+                          echo "pipestatus_'$j'=$?" >&3
+                      } 4>&- |'
+            j=$(($j+1)) l=
+        else
+            l="$l \"\$$k\""
+        fi
+        k=$(($k+1))
+    done
+    com="$com $l"' 3>&- >&4 4>&-
+        echo "pipestatus_'$j'=$?"'
+    exec 4>&1
+    eval "$(exec 3>&1; eval "$com")"
+    exec 4>&-
+    j=1
+    while eval "\${pipestatus_$j+:} false"; do
+        eval "[ \$pipestatus_$j -eq 0 ] || return 1"
+        j=$(($j+1))
+    done
+    return 0
+}
+
+log "starting..."
+log "initializing supervisor runtime environment..."
+
+# Create and initialize the init root.
+rm -rf "$MINITROOT"
+mkdir "$MINITROOT"
+mkdir "$MINITROOT"/default
+ln -s /etc/minit/exit "$MINITROOT"/exit
+for SRV in sigterm sigint shutdown; do
+    mkdir "$MINITROOT"/"$SRV"
+    # NOTE: No sync flag!
+    ln -s /etc/minit/shutdown "$MINITROOT"/"$SRV"/run
+done
+
+# Create minit fifos.
+mkfifo -m a=rw "$MINITROOT"/in
+mkfifo "$MINITROOT"/out
+
+# Install container environment variables.
+STAGE=cont-env
+log "initializing container environment variables..."
+rm -rf /var/run/cont-env
+mkdir /var/run/cont-env
+if [ -d /etc/cont-env.d ]; then
+    find /etc/cont-env.d -maxdepth 1 -type f | sort | while read FILE
+    do
+        FILENAME="$(basename "$FILE")"
+
+        if [ -x "$FILE" ]; then
+            echo "executing..." | log_script "$FILENAME"
+
+            set +e
+            run "$FILE" 2>&1 \| log_script "$FILENAME"
+            RC=$pipestatus_1
+            set -e
+
+            if [ $RC -eq 0 ]; then
+                echo "terminated successfully." | log_script "$FILENAME"
+            else
+                echo "terminated with error $RC." | log_script "$FILENAME"
+                exit $RC
+            fi
+        else
+            echo "installing..." | log_script "$FILENAME"
+            cp "$FILE" /var/run/cont-env/
+        fi
+    done
+fi
+log "container environment variables initialized."
+
+# Invoke initialization scripts.
+STAGE=cont-init
+log "executing container initialization scripts..."
+if [ -d /etc/cont-init.d ]; then
+    find /etc/cont-init.d -maxdepth 1 -type f | sort | while read FILE
+    do
+        FILENAME="$(basename "$FILE")"
+
+        if [ ! -x "$FILE" ]; then
+            echo "WARNING: not executable, ignoring." | log_script "$FILENAME"
+            continue
+        fi
+        echo "executing..." | log_script "$FILENAME"
+
+        set +e
+        run "$FILE" 2>&1 \| log_script "$FILENAME"
+        RC=$pipestatus_1
+        set -e
+
+        if [ $RC -eq 0 ]; then
+            echo "terminated successfully." | log_script "$FILENAME"
+        else
+            echo "terminated with error $RC." | log_script "$FILENAME"
+            exit $RC
+        fi
+    done
+fi
+log "all container initialization scripts executed."
+
+# Install services.
+STAGE=cont-services
+log "installing container services..."
+if [ -d /etc/services.d ]; then
+    find /etc/services.d -mindepth 1 -maxdepth 1 -type d | while read DIR
+    do
+        SVNAME="$(basename "$DIR")"
+
+        echo "installing..." | log_script "$SVNAME"
+
+        if [ -f "$DIR/run" ] && [ ! -x "$DIR/run" ]; then
+            echo "ERROR: run script not executable." | log_script "$SVNAME"
+            exit 1
+        fi
+
+        # Run the pre-install script.
+        if [ -x "$DIR/pre_install" ]; then
+            set +e
+            run "$DIR/pre_install" \| log_script "$SVNAME"
+            RC=$pipestatus_1
+            set -e
+            if [ "$RC" -ne 0 ]; then
+                echo "not installing service." | log_script "$SVNAME"
+                continue
+            fi
+        fi
+
+        # Create a minit service.
+        mkdir "$MINITROOT"/"$SVNAME"
+        [ ! -x "$DIR/run" ]     || ln -s "$DIR/run" "$MINITROOT"/"$SVNAME"/run
+        [ ! -f "$DIR/sync" ]    || touch "$MINITROOT"/"$SVNAME"/sync
+        [ ! -f "$DIR/respawn" ] || touch "$MINITROOT"/"$SVNAME"/respawn
+        [ ! -f "$DIR/params" ]  || ln -s "$DIR/params" "$MINITROOT"/"$SVNAME"/params
+        [ ! -x "$DIR/check" ]   || ln -s "$DIR/check" "$MINITROOT"/"$SVNAME"/check
+        [ ! -x "$DIR/finish" ]  || ln -s "$DIR/finish" "$MINITROOT"/"$SVNAME"/finish
+        [ ! -f "$DIR/default" ] || echo "$SVNAME" >> "$MINITROOT"/default/depends
+        find "$DIR" -mindepth 1 -maxdepth 1 -type f -name '*.dep' | while read DEP
+        do
+            echo "$(basename "$DEP" .dep)" >> "$MINITROOT"/"$SVNAME"/depends
+        done
+
+        log "$SVNAME: installation terminated."
+    done
+fi
+log "all container services installed."
+
+# Make sure we have some services to start.
+if [ ! -f "$MINITROOT"/default/depends ]; then
+    log "ERROR: no service to start."
+    exit 1
+fi
+
+# Validate service dependencies.
+log "validating service dependencies..."
+DEP_ERR="$(/etc/minit/getdeps -v 2>&1 || true)"
+if [ "${DEP_ERR:-UNSET}" != "UNSET" ]; then
+    log "$DEP_ERR"
+    exit 1
+else
+    log "valid service dependencies."
+fi
+
+# Special case for the 'app' service: it should be started at the end and thus
+# should depend on all services.
+#cat "$MINITROOT"/default/depends | grep -vw "app" || true >> "$MINITROOT"/app/depends
+
+# Finally, invoke minit.
+STAGE=init
+log "giving control to process supervisor."
+exec /usr/bin/minit
+
+# vim:ft=sh:ts=4:sw=4:et:sts=4

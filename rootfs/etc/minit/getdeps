@@ -1,0 +1,96 @@
+#!/bin/sh
+
+set -e # Exit immediately if a command exits with a non-zero status.
+set -u # Treat unset variables as an error.
+
+MINITROOT="/var/run/minit"
+REVERSE=false
+VALIDATE=false
+LOOPS=0
+
+usage() {
+    echo "usage: $(basename "$0") [-r] [-v] [minitroot]"
+}
+
+die() {
+    echo "$@" 1>&2
+    exit 1
+}
+
+get_sv_deps() {
+    if [ ! -d "$MINITROOT"/"$1" ]; then
+        if [ "${2-UNSET}" = "UNSET" ]; then
+            die "ERROR: service '$1' does not exist."
+        else
+            die "ERROR: '$2' depends on unexisting service '$1'."
+        fi
+    fi
+
+    if [ "$LOOPS" -gt 100 ]; then
+        die "ERROR: dependency loop detected."
+    fi
+
+    cat "$MINITROOT/$1/depends" 2>/dev/null | while read DEP
+    do
+        LOOPS="$(expr "$LOOPS" + 1)"
+        get_sv_deps "$DEP" "$1"
+    done
+
+    [ "$1" = "default" ] || echo "$1"
+}
+
+print_sv_deps() {
+    echo "$1" | cat -n | sort -uk2 | sort -nk1 | cut -f2-
+}
+
+# Parse script arguments
+while [ $# -gt 0 ]
+do
+    key="$1"
+
+    case $key in
+        -r)
+            REVERSE=true
+            ;;
+        -v)
+            VALIDATE=true
+            ;;
+        -*)
+            echo "ERROR: invalid option: '$key'."
+            usage
+            exit 1
+            ;;
+        *)
+            if [ "${MINITROOT_SET:-0}" -eq 0 ]; then
+                MINITROOT="$key"
+                MINITROOT_SET=1
+                if [ ! -d "$MINITROOT" ]; then
+                    echo "ERROR: Directory not found: $MINITROOT"
+                    exit 1
+                fi
+            else
+                echo "ERROR: invalid argument: '$key'."
+                usage
+                exit 1
+            fi
+            ;;
+    esac
+    shift
+done
+
+if [ ! -d "$MINITROOT" ]; then
+    die "ERROR: directory not found: '$MINITROOT'."
+fi
+
+DEPS="$(get_sv_deps default)"
+
+if $VALIDATE; then
+    # Validate only: nothing to print.
+    :
+elif $REVERSE; then
+    print_sv_deps "$DEPS"
+else
+    print_sv_deps "$DEPS" | tac
+fi
+
+# vim:ft=sh:ts=4:sw=4:et:sts=4

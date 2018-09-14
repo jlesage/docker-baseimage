@@ -9,10 +9,11 @@ ARG BASEIMAGE=unknown
 # Pull base image.
 FROM ${BASEIMAGE}
 
-# Define s6 overlay related variables.
-ARG S6_OVERLAY_ARCH=x86_64
-ARG S6_OVERLAY_VERSION=1.21.4.0
-ARG S6_OVERLAY_URL=https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_OVERLAY_ARCH}.tar.gz
+# Define software related variables.
+ARG MINIT_VERSION=efcaa46
+ARG MINIT_URL=https://github.com/jlesage/minit/archive/${MINIT_VERSION}.tar.gz
+ARG LIBOWFAT_VERSION=0.31
+ARG LIBOWFAT_URL=https://www.fefe.de/libowfat/libowfat-${LIBOWFAT_VERSION}.tar.xz
 
 # Define GLIBC related variables.
 ARG GLIBC_INSTALL=0
@@ -101,21 +102,30 @@ RUN \
     del-pkg build-dependencies && \
     rm -rf /tmp/* /tmp/.[!.]* )
 
-# Install s6 overlay.
+# Compile and install minit.
 RUN \
-    add-pkg --virtual build-dependencies curl tar patch && \
-    echo "Downloading s6-overlay..." && \
-    curl -# -L ${S6_OVERLAY_URL} | tar -xz -C / && \
-    # Services dependencies support.
-    echo "Patching s6-overlay..." && \
-    curl -# -L https://github.com/jlesage/s6-overlay/commit/d151c41.patch | patch -d / -p3 && \
-    chmod +x \
-        /etc/s6/services/.s6-svscan/SIGHUP \
-        /etc/s6/services/.s6-svscan/SIGINT \
-        /etc/s6/services/.s6-svscan/SIGQUIT \
-        /etc/s6/services/.s6-svscan/SIGTERM \
-        /usr/bin/sv-getdeps \
+    add-pkg --virtual build-dependencies \
+        build-base \
+        curl \
+        tar \
+        xz \
+        linux-headers \
         && \
+    mkdir libowfat minit && \
+    curl -# -L ${LIBOWFAT_URL} | tar xJ --strip 1 -C libowfat && \
+    curl -# -L ${MINIT_URL} | tar xz --strip 1 -C minit && \
+    # Compile libowfat.
+    cd libowfat && \
+    sed-patch 's|$(DIET) $(CCC) -g -o $@ t.o|$(DIET) $(CCC) -no-pie -g -o $@ t.o|' GNUmakefile && \
+    make -j$(nproc) && \
+    cd .. && \
+    # Compile minit.
+    cd minit && \
+    make MINITROOT=/var/run/minit MINIT_LOG_PREFIX="[supervisor] " LOG_SERVICE_STATE=1 && \
+    cd .. && \
+    # Install minit.
+    cp -v minit/minit /usr/bin/ && \
+    cp -v minit/msvc /usr/bin/ && \
     # Cleanup
     del-pkg build-dependencies && \
     rm -rf /tmp/* /tmp/.[!.]*
@@ -155,8 +165,7 @@ ENV LANG=${GLIBC_LOCALE} \
 VOLUME ["/config"]
 
 # Define default command.
-# Use S6 overlay init system.
-CMD ["/init"]
+CMD ["/etc/minit/init"]
 
 # Metadata.
 ARG IMAGE_VERSION=unknown
