@@ -41,7 +41,13 @@ teardown() {
     sleep 5
 
     # Dump docker logs before proceeding to validations.
+    echo "====================================================================="
+    echo " DOCKER LOGS"
+    echo "====================================================================="
     docker logs "$CONTAINER_ID"
+    echo "====================================================================="
+    echo " END DOCKER LOGS"
+    echo "====================================================================="
 
     run docker logs "$CONTAINER_ID"
     count1=0
@@ -84,7 +90,13 @@ teardown() {
     sleep 10
 
     # Dump docker logs before proceeding to validations.
+    echo "====================================================================="
+    echo " DOCKER LOGS"
+    echo "====================================================================="
     docker logs "$CONTAINER_ID"
+    echo "====================================================================="
+    echo " END DOCKER LOGS"
+    echo "====================================================================="
 
     run docker logs "$CONTAINER_ID"
     count1=0
