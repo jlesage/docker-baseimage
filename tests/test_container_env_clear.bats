@@ -10,12 +10,9 @@ teardown() {
 }
 
 @test "Checking that the container's environment is properly cleared after a restart..." {
-    [ -n "$CONTAINER_ID" ]
+    exec_container_daemon sh -c "echo 1 > /var/run/cont-env/TEST_VAR"
 
-    docker exec "$CONTAINER_ID" sh -c "echo 1 > /var/run/s6/container_environment/TEST_VAR"
+    restart_container_daemon
 
-    docker restart "$CONTAINER_ID"
-    sleep 5
-
-    docker exec "$CONTAINER_ID" sh -c "[ ! -f /var/run/s6/container_environment/TEST_VAR ]"
+    exec_container_daemon sh -c "[ ! -f /var/run/cont-env/TEST_VAR ]"
 }
