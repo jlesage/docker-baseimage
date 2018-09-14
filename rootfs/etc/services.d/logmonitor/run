@@ -1,29 +1,33 @@
-#!/bin/execlineb
+#!/usr/bin/with-contenv sh
 
-# Exit and disable service if no file to be monitored.
-ifelse -n
-{
-  pipeline { cat /etc/logmonitor/logmonitor.conf }
-  s6-grep -q "^[ \t]*LOG_FILES=/.\\+"
-}
-{
-  foreground { s6-echo "[logmonitor] no file to monitor: disabling service..." }
-  foreground { s6-touch /var/run/s6/services/logmonitor/down }
-  foreground { s6-svc -xd /var/run/s6/services/logmonitor }
-  exit 0
-}
+set -e # Exit immediately if a command exits with a non-zero status.
+set -u # Treat unset variables as an error.
 
-# Get log files to be monitored from configuration.
-backtick -I -n LOG_FILES
-{
-  pipeline { cat /etc/logmonitor/logmonitor.conf }
-  pipeline { s6-grep "^[ \t]*LOG_FILES=" }
-  s6-cut -d "=" -f2-
-}
-importas -u -sd "," LOG_FILES LOG_FILES
+# Load the logmonitor configuration file.
+. /etc/logmonitor/logmonitor.conf
 
-# Start the log monitor.
-foreground { s6-echo "[logmonitor] starting..." }
-exec /usr/bin/logmonitor ${LOG_FILES}
+CMD="exec /usr/bin/logmonitor"
 
-# vim: set ft=sh :
+if [ "${LOG_FILES:-UNSET}" != "UNSET" ]; then
+    ORIG_IFS="$IFS"
+    IFS=","
+    for FILE in $LOG_FILES
+    do
+        CMD="$CMD \"$FILE\""
+    done
+    IFS="$ORIG_IFS"
+fi
+
+if [ "${STATUS_FILES:-UNSET}" != "UNSET" ]; then
+    ORIG_IFS="$IFS"
+    IFS=","
+    for FILE in $STATUS_FILES
+    do
+        CMD="$CMD \"$FILE\""
+    done
+    IFS="$ORIG_IFS"
+fi
+
+eval "$CMD"
+
+# vim:ft=sh:ts=4:sw=4:et:sts=4

@@ -14,6 +14,8 @@ ARG MINIT_VERSION=efcaa46
 ARG MINIT_URL=https://github.com/jlesage/minit/archive/${MINIT_VERSION}.tar.gz
 ARG LIBOWFAT_VERSION=0.31
 ARG LIBOWFAT_URL=https://www.fefe.de/libowfat/libowfat-${LIBOWFAT_VERSION}.tar.xz
+ARG LOGMONITOR_VERSION=4c7a259
+ARG LOGMONITOR_URL=https://github.com/jlesage/logmonitor/archive/${LOGMONITOR_VERSION}.tar.gz
 ARG SUEXEC_VERSION=0.2
 ARG SUEXEC_URL=https://github.com/ncopa/su-exec/archive/v${SUEXEC_VERSION}.tar.gz
 
@@ -50,6 +52,29 @@ RUN \
     cp -v minit/minit /usr/bin/ && \
     cp -v minit/msvc /usr/bin/ && \
     # Cleanup
+    del-pkg build-dependencies && \
+    rm -rf /tmp/* /tmp/.[!.]*
+
+# Compile and install logmonitor.
+RUN \
+    add-pkg --virtual build-dependencies \
+        curl \
+        ca-certificates \
+        gcc \
+        make \
+        libc6-dev \
+        && \
+    # Download.
+    mkdir logmonitor && \
+    curl -# -L ${LOGMONITOR_URL} | tar xz --strip 1 -C logmonitor && \
+    # Compile.
+    cd logmonitor && \
+    make && \
+    cd .. && \
+    # Install.
+    cp -v logmonitor/logmonitor /usr/bin/ && \
+    strip /usr/bin/logmonitor && \
+    # Cleanup.
     del-pkg build-dependencies && \
     rm -rf /tmp/* /tmp/.[!.]*
 
