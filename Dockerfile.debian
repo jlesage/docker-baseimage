@@ -41,7 +41,6 @@ RUN \
     curl -# -L ${MINIT_URL} | tar xz --strip 1 -C minit && \
     # Compile libowfat.
     cd libowfat && \
-    sed-patch 's|$(DIET) $(CCC) -g -o $@ t.o|$(DIET) $(CCC) -no-pie -g -o $@ t.o|' GNUmakefile && \
     make -j$(nproc) && \
     cd .. && \
     # Compile minit.
