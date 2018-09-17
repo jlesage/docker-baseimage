@@ -113,7 +113,7 @@ if [[ "$DOCKER_IMAGE_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 fi
 
 # Create and push tags.
-for TAG in "${DOCKER_IMAGE_FLAVOR}" "$DOCKER_NEWTAG_LATEST_MAJOR" "$DOCKER_NEWTAG_LATEST_MINOR" "$DOCKER_NEWTAG_EXACT"
+for TAG in "$DOCKER_NEWTAG_LATEST_MAJOR" "$DOCKER_NEWTAG_LATEST_MINOR" "$DOCKER_NEWTAG_EXACT"
 do
     [ "$TAG" != "UNSET" ] || continue
 
@@ -136,15 +136,14 @@ fi
 echo "Generating manifest.yaml..."
 cp "$SCRIPT_DIR"/manifest.yaml.template "$DATA_DIR"/manifest.yaml
 sed -i "s|{repo}|$DOCKER_REPO|g" "$DATA_DIR"/manifest.yaml
-sed -i "s|{tag}|$DOCKER_IMAGE_FLAVOR|g" "$DATA_DIR"/manifest.yaml
 sed -i "s|{majminpatch}|$DOCKER_NEWTAG_EXACT|g" "$DATA_DIR"/manifest.yaml
 if [ "$DOCKER_NEWTAG_LATEST_MAJOR" == "UNSET" ]; then
-    sed -i "s|'{maj}',||" "$DATA_DIR"/manifest.yaml
+    sed -i "s|'{maj}',\?||" "$DATA_DIR"/manifest.yaml
 else
     sed -i "s|{maj}|$DOCKER_NEWTAG_LATEST_MAJOR|g" "$DATA_DIR"/manifest.yaml
 fi
 if [ "$DOCKER_NEWTAG_LATEST_MINOR" == "UNSET" ]; then
-    sed -i "s|'{majmin}',||" "$DATA_DIR"/manifest.yaml
+    sed -i "s|'{majmin}',\?||" "$DATA_DIR"/manifest.yaml
 else
     sed -i "s|{majmin}|$DOCKER_NEWTAG_LATEST_MINOR|g" "$DATA_DIR"/manifest.yaml
 fi
