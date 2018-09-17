@@ -47,5 +47,9 @@ script:
     scripts/build.sh --register-binfmt "$TRAVIS_JOB_ID" "$DOCKER_IMAGE_FLAVOR" "$DOCKER_IMAGE_ARCH" "$TRAVIS_BRANCH" && \
     scripts/test.sh "$TRAVIS_JOB_ID" "$DOCKER_IMAGE_ARCH"
 
-after_success:
-  - scripts/push.sh --dry-run "$TRAVIS_JOB_ID" "$DOCKER_REPO" "$DOCKER_IMAGE_FLAVOR" "$DOCKER_IMAGE_ARCH" "$TRAVIS_BRANCH"
+deploy:
+  provider: script
+  script: scripts/push.sh --dry-run "$TRAVIS_JOB_ID" "$DOCKER_REPO" "$DOCKER_IMAGE_FLAVOR" "$DOCKER_IMAGE_ARCH" "$TRAVIS_TAG"
+  on:
+    all_branches: true
+    condition: "$TRAVIS_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)[0-9]*)?$

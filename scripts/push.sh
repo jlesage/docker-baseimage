@@ -76,10 +76,10 @@ DOCKER_IMAGE_ARCH="${4:-UNSET}"
 DOCKER_IMAGE_VERSION="${5:-UNSET}"
 [ "$DOCKER_IMAGE_VERSION" = "UNSET" ] && usage "ERROR: A Docker image version must be specified." && exit 1
 
-# Do not push image if not a valid version format.
+# Make sure the Docker version is valid.
 if [[ ! "$DOCKER_IMAGE_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)[0-9]*)?$ ]]; then
-    echo "Not pushing Docker image $DOCKER_IMAGE_NAME because of the version: '$DOCKER_IMAGE_VERSION'."
-    exit 0
+    echo "ERROR: Invliad Docker image version '$DOCKER_IMAGE_VERSION'."
+    exit 1
 fi
 
 # Make sure the Docker image flavor is valid.
