@@ -165,6 +165,15 @@ RUN \
 # Add files.
 COPY rootfs/ /
 
+# Make sure all required directory exists.
+RUN \
+    mkdir -p \
+        /defaults \
+        /etc/cont-init.d \
+        /etc/cont-finish.d \
+        /etc/services.d \
+        /etc/cont-env.d
+
 # Set public environment variables.
 # NOTE: Since variables declared here are exposed/visible to the end-users,
 #       they should be meaningful to them, i.e. they should act as a way to
