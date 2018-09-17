@@ -1,0 +1,25 @@
+image: {repo}:{tag}
+tags: ['{maj}','{majmin}','{majminpatch}']
+manifests:
+ -
+   image: {repo}:armhf-{tag}
+   platform:
+     architecture: arm
+     variant: v7
+     os: linux
+ -
+   image: {repo}:arm64-{tag}
+   platform:
+     architecture: arm64
+     variant: v8
+     os: linux
+ -
+   image: {repo}:i386-{tag}
+   platform:
+     architecture: 386
+     os: linux
+ -
+   image: {repo}:amd64-{tag}
+   platform:
+     architecture: amd64
+     os: linux
