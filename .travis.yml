@@ -43,8 +43,8 @@ before_install:
 
 script:
   - |
-    build_baseimage.sh --register-binfmt "$TRAVIS_JOB_ID" "$DOCKER_IMAGE_FLAVOR" "$DOCKER_IMAGE_ARCH" "$TRAVIS_BRANCH" && \
-    test_baseimage.sh "$TRAVIS_JOB_ID"
+    scripts/build.sh --register-binfmt "$TRAVIS_JOB_ID" "$DOCKER_IMAGE_FLAVOR" "$DOCKER_IMAGE_ARCH" "$TRAVIS_BRANCH" && \
+    scripts/test.sh "$TRAVIS_JOB_ID"
 
 after_success:
-  - push_baseimage.sh --dry-run "$TRAVIS_JOB_ID" "$DOCKER_REPO" "$DOCKER_IMAGE_FLAVOR" "$DOCKER_IMAGE_ARCH" "$TRAVIS_BRANCH"
+  - scripts/push.sh --dry-run "$TRAVIS_JOB_ID" "$DOCKER_REPO" "$DOCKER_IMAGE_FLAVOR" "$DOCKER_IMAGE_ARCH" "$TRAVIS_BRANCH"
