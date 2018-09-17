@@ -7,7 +7,7 @@ setup() {
 @test "Checking that all init scripts terminate successfully..." {
     docker_run --rm -p 5900:5900 -p 5800:5800 $DOCKER_IMAGE
     for item in "${lines[@]}"; do
-        if [ "$item" == "[cont-init.d] done." ]; then
+        if [ "$item" == "[cont-init] all container initialization scripts executed." ]; then
             break;
         fi
     done
@@ -18,5 +18,5 @@ setup() {
     echo "====================================================================="
     echo " END OUTPUT"
     echo "====================================================================="
-    [ "$item" == "[cont-init.d] done." ]
+    [ "$item" == "[cont-init] all container initialization scripts executed." ]
 }

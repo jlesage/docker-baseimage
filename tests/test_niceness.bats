@@ -32,7 +32,7 @@ setup() {
     echo "====================================================================="
     echo "STATUS: $status"
     echo "SCRIPT_RC: $script_rc"
-    [ "$status" -eq 1 ]
+    [ "$status" -eq 6 ]
     [ "$script_rc" -eq 6 ]
 }
 

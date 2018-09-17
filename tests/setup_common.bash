@@ -2,10 +2,15 @@
 get_init_script_exit_code() {
     script=$1
     lines=$2
-    regex="^\[cont-init\.d\] $script: exited ([0-9]+)\.$"
+    regex_success="^\[cont-init\] $script: terminated successfully\.$"
+    regex_error="^\[cont-init\] $script: terminated with error ([0-9]+)\.$"
 
     for item in "${lines[@]}"; do
-        if [[ "$item" =~ $regex ]]; then
+        if [[ "$item" =~ $regex_success ]]; then
+            echo 0
+            return 0;
+        fi
+        if [[ "$item" =~ $regex_error ]]; then
             echo ${BASH_REMATCH[1]}
             return 0;
         fi
