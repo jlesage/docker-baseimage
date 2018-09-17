@@ -45,7 +45,7 @@ before_install:
 script:
   - |
     scripts/build.sh --register-binfmt "$TRAVIS_JOB_ID" "$DOCKER_IMAGE_FLAVOR" "$DOCKER_IMAGE_ARCH" "$TRAVIS_BRANCH" && \
-    scripts/test.sh "$TRAVIS_JOB_ID"
+    scripts/test.sh "$TRAVIS_JOB_ID" "$DOCKER_IMAGE_ARCH"
 
 after_success:
   - scripts/push.sh --dry-run "$TRAVIS_JOB_ID" "$DOCKER_REPO" "$DOCKER_IMAGE_FLAVOR" "$DOCKER_IMAGE_ARCH" "$TRAVIS_BRANCH"
