@@ -23,19 +23,11 @@ ARG SUEXEC_URL=https://github.com/ncopa/su-exec/archive/v${SUEXEC_VERSION}.tar.g
 ARG DEBIAN_FRONTEND=noninteractive
 ARG TERM=xterm
 
-# QEMU architecture to use when cross-building image for a platform different
-# from host's one.
-ARG QEMU_ARCH=unknown
-
 # Define working directory.
 WORKDIR /tmp
 
 # Copy helpers.
 COPY helpers/* /usr/local/bin/
-
-# Copy the QEMU static binary, used to build this image for different architectures on x64 hosts.
-# NOTE: This line will be uncommented by the build script if required.
-#COPY qemu-${QEMU_ARCH}-static /usr/bin/
 
 # Compile and install minit.
 RUN \
@@ -129,8 +121,8 @@ RUN \
         /etc/services.d \
         /etc/cont-env.d
 
-# QEMU static binary no longer required, remove it if was installed.
-RUN rm -f /usr/bin/qemu-${QEMU_ARCH}-static
+# Make sure to remove QEMU static binary that may have been installed.
+RUN rm -f /usr/bin/qemu-*-static
 
 # Set public environment variables.
 # NOTE: Since variables declared here are exposed/visible to the end-users,

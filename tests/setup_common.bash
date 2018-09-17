@@ -21,7 +21,11 @@ get_init_script_exit_code() {
 }
 
 docker_run() {
-    run docker run "$@"
+    if [ -n "$QEMU_HANDLER" ] && [ "$QEMU_HANDLER" != "UNSET" ]; then
+        run docker run -v "$QEMU_HANDLER:/usr/bin/$(basename "$QEMU_HANDLER")" "$@"
+    else
+        run docker run "$@"
+    fi
 }
 
 [ -n "$DOCKER_IMAGE" ]
