@@ -160,16 +160,7 @@ RUN \
     add-pkg \
         # For timezone support
         tzdata \
-        # For 'groupmod' command
-        shadow \
         su-exec
-
-# Save some defaults.
-RUN \
-    mkdir /defaults && \
-    cp /etc/passwd /defaults/ && \
-    cp /etc/group /defaults/ && \
-    cp /etc/shadow /defaults/
 
 # Add files.
 COPY rootfs/ /
