@@ -145,7 +145,6 @@ docker build $DOCKER_CMD_OPTS \
          --build-arg IMAGE_VERSION="${DOCKER_IMAGE_BUILD_ARG_VERSION}" \
          --build-arg GLIBC_INSTALL="$DOCKER_IMAGE_BUILD_ARG_GLIBC" \
          --build-arg GLIBC_ARCH="$DOCKER_IMAGE_BUILD_ARG_GLIBC_ARCH" \
-         --build-arg QEMU_ARCH="$DOCKER_IMAGE_BUILD_ARG_QEMU_ARCH" \
          -f "$BUILD_DIR"/Dockerfile.actual \
          -t "$DOCKER_IMAGE_NAME" "$BUILD_DIR"
 
