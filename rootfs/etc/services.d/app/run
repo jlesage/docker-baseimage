@@ -4,14 +4,15 @@ set -u # Treat unset variables as an error.
 
 echo "[$(basename "$(pwd)")] starting "${APP_NAME:-Docker application}"..."
 if [ -e /startapp.sh ]; then 
+    # Set the umask.
     if [ "${UMASK:-UNSET}" != "UNSET" ]; then
         umask "$UMASK"
     fi
-    if [ "${SUP_GROUP_IDS:-UNSET}" != "UNSET" ]; then
-        exec 2>&1 $APP_NICE_CMD s6-applyuidgid -u $USER_ID -g $GROUP_ID -G $SUP_GROUP_IDS /startapp.sh
-    else
-        exec 2>&1 $APP_NICE_CMD s6-setuidgid $USER_ID:$GROUP_ID /startapp.sh
-    fi
+
+    # Start the application.
+    # NOTE: su-exec will take the proper group ID and supplementary groups from
+    #       /etc/group.
+    exec su-exec "$USER_ID" /startapp.sh
 else
     echo ""
     echo "/!\\ No application to start: /startapp.sh is missing. /!\\"
@@ -20,4 +21,4 @@ else
     exit 5
 fi
 
-# vim: set ft=sh :
+# vim:ft=sh:ts=4:sw=4:et:sts=4

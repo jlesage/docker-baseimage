@@ -1,12 +1,16 @@
 #!/usr/bin/with-contenv sh
+#
+# This is the finish script of the 'app' service.  It determines if the 'app'
+# service needs to be restarted or not.  If not, the container is shutted down.
+#
+# NOTE: It is expected that the 'app' service is NOT restarted automatically by
+#       minit (i.e. the 'app' service doesn't have the 'respawn' flag).
+#
 
 set -u # Treat unset variables as an error.
 
 # Nothing to do if the container is shutting down.
-# The container is shutting down if the s6-svscan process is not running, i.e.
-# when it is not listening on its control FIFO.
-if ! ls -l /proc/*/fd 2>/dev/null | grep -q '/run/s6/services/.s6-svscan/control'
-then
+if [ -f /var/run/cont-env/CONTAINER_IS_SHUTTING_DOWN ]; then
     exit
 fi
 
@@ -14,22 +18,17 @@ APP_RC="$1"
 
 # App terminated: Bring container down if needed.
 if [ "${KEEP_GUIAPP_RUNNING:-0}" -eq "0" ] && [ "${KEEP_APP_RUNNING:-0}" -eq "0" ]; then
-    # Make sure /var/run/s6/env-stage3/S6_STAGE2_EXITED exists.  The
-    # non-presence of this file indicates that stage2 is not completed yet and
-    # our exit code may be overwritten.
-    s6-maximumtime 5000 sh -c "while [ ! -f /var/run/s6/env-stage3/S6_STAGE2_EXITED ]; do sleep 1; done" 2>/dev/null
-
-    # Make sure we are not restarted.
-    touch /var/run/s6/services/app/down
-    s6-svc -xd /var/run/s6/services/app
-
     # Use the forced exit code if needed.
-    S6_STAGE2_EXITED=${FORCE_APP_EXIT_CODE:-$APP_RC}
-    echo $S6_STAGE2_EXITED > /var/run/s6/env-stage3/S6_STAGE2_EXITED
+    echo ${FORCE_APP_EXIT_CODE:-$APP_RC} > /var/run/cont-env/CONTAINER_EXIT_CODE
     sync
 
     # Bring the container down.
-    s6-svscanctl -b /var/run/s6/services
+    # NOTE: Make sure to run the command in background to not block indefinitely.
+    msvc -o shutdown &
+else
+    # Restart the app.
+    sleep 2
+    msvc -o app &
 fi
 
-# vim: set ft=sh :
+# vim:ft=sh:ts=4:sw=4:et:sts=4
