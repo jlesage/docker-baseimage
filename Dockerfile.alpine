@@ -30,7 +30,7 @@ ARG GLIBC_LOCALE=${GLIBC_LOCALE_INPUT}.${GLIBC_LOCALE_CHARMAP}
 WORKDIR /tmp
 
 # Copy helpers.
-COPY helpers/* /usr/local/bin/
+COPY helpers/* /usr/bin/
 
 # Install glibc if needed.
 RUN \

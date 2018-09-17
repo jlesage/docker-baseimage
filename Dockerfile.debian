@@ -27,7 +27,7 @@ ARG TERM=xterm
 WORKDIR /tmp
 
 # Copy helpers.
-COPY helpers/* /usr/local/bin/
+COPY helpers/* /usr/bin/
 
 # Compile and install minit.
 RUN \
