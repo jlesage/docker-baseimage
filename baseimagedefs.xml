@@ -16,6 +16,11 @@ long-lived application.
     <!-- Changelog -->
     <history>
       <release>
+        <version>2.4.1</version>
+        <date>2018-09-18</date>
+        <change>Updated installed packages to get latest security fixes.</change>
+      </release>
+      <release>
         <version>2.4.0</version>
         <date>2018-08-13</date>
         <change>Added baseimage based on Ubuntu 18.04.</change>
