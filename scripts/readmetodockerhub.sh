@@ -11,7 +11,7 @@ usage() {
         echo
     fi
 
-    echo "usage: $( basename $0 ) [OPTION]... README REPO
+    echo "usage: $( basename $0 ) [OPTION]... README REPO DOCKERHUB_USERNAME DOCKERHUB_PASSWORD
 
 Arguments:
   README                Path to the README file to push.
