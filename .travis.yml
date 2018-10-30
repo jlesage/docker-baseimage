@@ -52,7 +52,7 @@ deploy:
   script: scripts/push.sh --dry-run "$TRAVIS_JOB_ID" "$DOCKER_REPO" "$DOCKER_IMAGE_TAG_PREFIX" "$DOCKER_IMAGE_ARCH" "$TRAVIS_TAG"
   on:
     all_branches: true
-    condition: "$TRAVIS_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)[0-9]*)?$
+    condition: $TRAVIS_TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)[0-9]*)?$
 
 jobs:
   include:
