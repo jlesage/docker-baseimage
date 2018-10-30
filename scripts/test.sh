@@ -56,9 +56,7 @@ DOCKER_IMAGE="${1:-UNSET}"
 # Get the Docker image architecture.
 DOCKER_IMAGE_ARCH="${2:-UNSET}"
 [ "$DOCKER_IMAGE_ARCH" = "UNSET" ] && usage "ERROR: A Docker image architecture must be specified." && exit 1
-
-# Make sure the Docker image architecture is valid.
-if ! echo "$ALL_DOCKER_ARCHS" | grep -q "^${DOCKER_IMAGE_ARCH}$"; then
+if ! echo "$ALL_DOCKER_ARCHS" | grep -wq "$DOCKER_IMAGE_ARCH"; then
     usage "ERROR: Invalid Docker image architecture '$DOCKER_IMAGE_ARCH'."
     exit 1
 fi

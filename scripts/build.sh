@@ -13,20 +13,20 @@ usage() {
         echo
     fi
 
-    echo "usage: $( basename $0 ) [OPTION]... NAME FLAVOR ARCH [VERSION]
+    echo "usage: $( basename $0 ) [OPTION]... NAME ARCH BASEIMAGE DOCKERFILE [VERSION]
 
 Arguments:
   NAME                  Name of the Docker image to build.
-  FLAVOR                Docker image flavor to build.  Valid values are:
-$(echo "$ALL_DOCKER_FLAVORS" | sed 's/^/                          /')
   ARCH                  Docker image architecture to build.  Valid values are:
 $(echo "$ALL_DOCKER_ARCHS" | sed 's/^/                          /')
+  BASEIMAGE             Docker baseimage to use.
+  DOCKERFILE            Dockerfile to use.
   VERSION               Version of the Docker image to build.
 
 Options:
   -c, --without-cache   Do not use the Docker cache when building.
   -r, --register-binfmt Register binfmt interpreters.  This needs to be done
-                        once.
+                        only once on the same machine.
   -h, --help            Display this help.
 "
 }
@@ -62,36 +62,36 @@ done
 DOCKER_IMAGE_NAME="${1:-UNSET}"
 [ "$DOCKER_IMAGE_NAME" = "UNSET" ] && usage "ERROR: A Docker image name must be specified." && exit 1
 
-# Get the Docker build flavor.
-DOCKER_IMAGE_FLAVOR="${2:-UNSET}"
-[ "$DOCKER_IMAGE_FLAVOR" = "UNSET" ] && usage "ERROR: A Docker image flavor must be specified." && exit 1
-
 # Get the Docker image architecture.
-DOCKER_IMAGE_ARCH="${3:-UNSET}"
+DOCKER_IMAGE_ARCH="${2:-UNSET}"
 [ "$DOCKER_IMAGE_ARCH" = "UNSET" ] && usage "ERROR: A Docker image architecture must be specified." && exit 1
-
-# Get the Docker image version.
-DOCKER_IMAGE_BUILD_ARG_VERSION="${4:-dev}"
-
-# Make sure the Docker image flavor is valid.
-if ! echo "$ALL_DOCKER_FLAVORS" | grep -q "^${DOCKER_IMAGE_FLAVOR}$"; then
-    usage "ERROR: Invalid Docker image flavor '$DOCKER_IMAGE_FLAVOR'."
-    exit 1
-fi
-
-# Make sure the Docker image architecture is valid.
-if ! echo "$ALL_DOCKER_ARCHS" | grep -q "^${DOCKER_IMAGE_ARCH}$"; then
+if ! echo "$ALL_DOCKER_ARCHS" | grep -wq "${DOCKER_IMAGE_ARCH}"; then
     usage "ERROR: Invalid Docker image architecture '$DOCKER_IMAGE_ARCH'."
     exit 1
 fi
 
+# Get the Docker baseimage.
+DOCKER_BASEIMAGE="${3:-UNSET}"
+[ "$DOCKER_BASEIMAGE" = "UNSET" ] && usage "ERROR: A Docker baseimage must be specified." && exit 1
+
+# Get the Dockerfile.
+DOCKERFILE="${4:-UNSET}"
+[ "$DOCKERFILE" = "UNSET" ] && usage "ERROR: A Dockerfile must be specified." && exit 1
+if [ ! -f "$BASE_DIR"/"$DOCKERFILE" ]; then
+    echo "ERROR: Dockerfile '$BASE_DIR/$DOCKERFILE' not found."
+    exit 1
+fi
+
+# Get the Docker image version.
+DOCKER_IMAGE_VERSION="${5:-dev}"
+
 # Adjust the Docker image version.
-if [[ "$DOCKER_IMAGE_BUILD_ARG_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)[0-9]*)?$ ]]; then
+if [[ "$DOCKER_IMAGE_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)[0-9]*)?$ ]]; then
     # Remove the leading 'v' from the version.
-    DOCKER_IMAGE_BUILD_ARG_VERSION="${DOCKER_IMAGE_BUILD_ARG_VERSION:1}"
-elif  [[ "$DOCKER_IMAGE_BUILD_ARG_VERSION" = "master" ]]; then
+    DOCKER_IMAGE_VERSION="${DOCKER_IMAGE_VERSION:1}"
+elif  [[ "$DOCKER_IMAGE_VERSION" = "master" ]]; then
     # Special case for Travis/development builds.
-    DOCKER_IMAGE_BUILD_ARG_VERSION="dev"
+    DOCKER_IMAGE_VERSION="dev"
 fi
 
 # Register binfmt handlers if needed.
@@ -99,26 +99,10 @@ if [ "${REGISTER_BINFMT_HANDLERS:-0}" -eq 1 ]; then
     register_binfmt_handlers
 fi
 
-# Build image.
-
-# Get build variables.
-ENV_FILE="$(mktemp)"
-"$SCRIPT_DIR"/defs.py print-build-env "$DOCKER_IMAGE_FLAVOR" "$DOCKER_IMAGE_ARCH" > "$ENV_FILE"
-
-# Load build variables
-. "$ENV_FILE"
-rm "$ENV_FILE"
-
-# Print build variables
-echo "Docker image build variables:"
-echo "##############################################################"
-( set -o posix ; set ) | grep "DOCKER_IMAGE_BUILD_ARG_"
-echo "##############################################################"
-
 # Prepare the build directory.
 rm -rf "$BUILD_DIR"
 cp -r "$BASE_DIR" "$BUILD_DIR"
-cp "$BUILD_DIR"/"$DOCKER_IMAGE_BUILD_ARG_DOCKERFILE" "$BUILD_DIR"/Dockerfile.actual
+cp "$BUILD_DIR"/"$DOCKERFILE" "$BUILD_DIR"/Dockerfile.actual
 case $DOCKER_IMAGE_ARCH in
     amd64|i386)
         # QEMU handler not needed.
@@ -134,18 +118,18 @@ esac
 if [ "$(docker version -f '{{.Server.Experimental}}')" = "true" ]; then
     DOCKER_CMD_OPTS="$DOCKER_CMD_OPTS --squash"
 else
-    echo "WARNING: Docker experimental features not enabled!  Image size may be bigger."
+    echo "WARNING: Docker experimental features not enabled!  Image size won't be optimized."
     echo "         See https://github.com/docker/docker-ce/blob/master/components/cli/experimental/README.md"
     echo "         to enable experimental features."
 fi
 
+# Build image.
 echo "Starting build of Docker image '$DOCKER_IMAGE_NAME'..."
 docker build $DOCKER_CMD_OPTS \
-         --build-arg BASEIMAGE="$DOCKER_IMAGE_BUILD_ARG_BASEIMAGE" \
-         --build-arg IMAGE_VERSION="${DOCKER_IMAGE_BUILD_ARG_VERSION}" \
-         --build-arg GLIBC_INSTALL="$DOCKER_IMAGE_BUILD_ARG_GLIBC" \
-         --build-arg GLIBC_ARCH="$DOCKER_IMAGE_BUILD_ARG_GLIBC_ARCH" \
+         --build-arg BASEIMAGE="$DOCKER_BASEIMAGE" \
+         --build-arg IMAGE_VERSION="${DOCKER_IMAGE_VERSION}" \
          -f "$BUILD_DIR"/Dockerfile.actual \
-         -t "$DOCKER_IMAGE_NAME" "$BUILD_DIR"
+         -t "$DOCKER_IMAGE_NAME" \
+         "$BUILD_DIR"
 
 # vim:ts=4:sw=4:et:sts=4

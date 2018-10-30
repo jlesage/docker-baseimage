@@ -13,18 +13,17 @@ usage() {
         echo
     fi
 
-    echo "usage: $( basename $0 ) [OPTION]... NAME REPO FLAVOR ARCH VERSION
+    echo "usage: $( basename $0 ) [OPTION]... NAME REPO TAG_PREFIX ARCH VERSION
 
 Arguments:
   NAME                  Name of the Docker image to push.
   REPO                  Docker repository where to push the image.
-  FLAVOR                Flavor of the Docker image being pushed.  Valid values
-                        are:
-$(echo "$ALL_DOCKER_FLAVORS" | sed 's/^/                          /')
+  TAG_PREFIX            Tag prefix of the Docker image being pushed.
   ARCH                  Architecture of the Docker image being pushed.  Valid
                         values are:
 $(echo "$ALL_DOCKER_ARCHS" | sed 's/^/                          /')
-  VERSION               Version of the Docker image being pushed.
+  VERSION               Version of the Docker image being pushed.  Will be used
+                        as the tag suffix.
 
 Options:
   -n, --dry-run         Docker images won't be pushed.
@@ -64,43 +63,33 @@ DOCKER_IMAGE_NAME="${1:-UNSET}"
 DOCKER_REPO="${2:-UNSET}"
 [ "$DOCKER_REPO" = "UNSET" ] && usage "ERROR: A Docker repository must be specified." && exit 1
 
-# Get the Docker image flavor.
-DOCKER_IMAGE_FLAVOR="${3:-UNSET}"
-[ "$DOCKER_IMAGE_FLAVOR" = "UNSET" ] && usage "ERROR: A Docker image flavor must be specified." && exit 1
+# Get the Docker image tag prefix.
+DOCKER_IMAGE_TAG_PREFIX="${3:-UNSET}"
+[ "$DOCKER_IMAGE_TAG_PREFIX" = "UNSET" ] && usage "ERROR: A Docker image tag prefix must be specified." && exit 1
 
 # Get the Docker image architecture.
 DOCKER_IMAGE_ARCH="${4:-UNSET}"
 [ "$DOCKER_IMAGE_ARCH" = "UNSET" ] && usage "ERROR: A Docker image architecture must be specified." && exit 1
+if ! echo "$ALL_DOCKER_ARCHS" | grep -qw "$DOCKER_IMAGE_ARCH"; then
+    usage "ERROR: Invalid Docker image architecture '$DOCKER_IMAGE_ARCH'."
+    exit 1
+fi
 
 # Get the Docker image version.
 DOCKER_IMAGE_VERSION="${5:-UNSET}"
 [ "$DOCKER_IMAGE_VERSION" = "UNSET" ] && usage "ERROR: A Docker image version must be specified." && exit 1
-
-# Make sure the Docker version is valid.
 if [[ ! "$DOCKER_IMAGE_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)[0-9]*)?$ ]]; then
-    echo "ERROR: Invliad Docker image version '$DOCKER_IMAGE_VERSION'."
-    exit 1
-fi
-
-# Make sure the Docker image flavor is valid.
-if ! echo "$ALL_DOCKER_FLAVORS" | grep -q "^${DOCKER_IMAGE_FLAVOR}$"; then
-    usage "ERROR: Invalid Docker image flavor '$DOCKER_IMAGE_FLAVOR'."
-    exit 1
-fi
-
-# Make sure the Docker image architecture is valid.
-if ! echo "$ALL_DOCKER_ARCHS" | grep -q "^${DOCKER_IMAGE_ARCH}$"; then
-    usage "ERROR: Invalid Docker image architecture '$DOCKER_IMAGE_ARCH'."
+    echo "ERROR: Invalid Docker image version '$DOCKER_IMAGE_VERSION'."
     exit 1
 fi
 
 # For normal versions without a beta/rc suffix, we need to add 3 tags.  For
 # example, for an image version of 2.1.5:
-#   - ${DOCKER_IMAGE_FLAVOR}-v2.1.5 (exact version)
-#   - ${DOCKER_IMAGE_FLAVOR}-v2.1   (latest minor version)
-#   - ${DOCKER_IMAGE_FLAVOR}-v2     (latest major version)
+#   - ${DOCKER_IMAGE_TAG_PREFIX}-v2.1.5 (exact version)
+#   - ${DOCKER_IMAGE_TAG_PREFIX}-v2.1   (latest minor version)
+#   - ${DOCKER_IMAGE_TAG_PREFIX}-v2     (latest major version)
 
-DOCKER_NEWTAG_EXACT="${DOCKER_IMAGE_FLAVOR}-${DOCKER_IMAGE_VERSION}"
+DOCKER_NEWTAG_EXACT="${DOCKER_IMAGE_TAG_PREFIX}-${DOCKER_IMAGE_VERSION}"
 DOCKER_NEWTAG_LATEST_MINOR=UNSET
 DOCKER_NEWTAG_LATEST_MAJOR=UNSET
 
@@ -108,8 +97,8 @@ if [[ "$DOCKER_IMAGE_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     MAJOR="$(echo "${DOCKER_IMAGE_VERSION:1}" | cut -d'.' -f1)"
     MINOR="$(echo "${DOCKER_IMAGE_VERSION:1}" | cut -d'.' -f2)"
 
-    DOCKER_NEWTAG_LATEST_MINOR="${DOCKER_IMAGE_FLAVOR}-v${MAJOR}.${MINOR}"
-    DOCKER_NEWTAG_LATEST_MAJOR="${DOCKER_IMAGE_FLAVOR}-v${MAJOR}"
+    DOCKER_NEWTAG_LATEST_MINOR="${DOCKER_IMAGE_TAG_PREFIX}-v${MAJOR}.${MINOR}"
+    DOCKER_NEWTAG_LATEST_MAJOR="${DOCKER_IMAGE_TAG_PREFIX}-v${MAJOR}"
 fi
 
 # Create and push tags.
