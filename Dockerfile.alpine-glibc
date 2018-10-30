@@ -1,0 +1,202 @@
+#
+# baseimage Dockerfile
+#
+# https://github.com/jlesage/docker-baseimage
+#
+
+ARG BASEIMAGE=unknown
+
+# Pull base image.
+FROM ${BASEIMAGE}
+
+# Define software related variables.
+ARG MINIT_VERSION=efcaa46
+ARG MINIT_URL=https://github.com/jlesage/minit/archive/${MINIT_VERSION}.tar.gz
+ARG LIBOWFAT_VERSION=0.31
+ARG LIBOWFAT_URL=https://www.fefe.de/libowfat/libowfat-${LIBOWFAT_VERSION}.tar.xz
+ARG LOGMONITOR_VERSION=4c7a259
+ARG LOGMONITOR_URL=https://github.com/jlesage/logmonitor/archive/${LOGMONITOR_VERSION}.tar.gz
+
+# Define GLIBC related variables.
+ARG GLIBC_VERSION=2.26-r1
+ARG GLIBC_URL=https://github.com/jlesage/glibc-bin-multiarch/releases/download/${GLIBC_VERSION}/glibc-bin-${GLIBC_VERSION}-ARCH.tar.gz
+ARG GLIBC_LOCALE_INPUT=en_US
+ARG GLIBC_LOCALE_CHARMAP=UTF-8
+ARG GLIBC_LOCALE=${GLIBC_LOCALE_INPUT}.${GLIBC_LOCALE_CHARMAP}
+
+# Define working directory.
+WORKDIR /tmp
+
+# Copy helpers.
+COPY helpers/* /usr/bin/
+
+# Install glibc if needed.
+RUN \
+    add-pkg --virtual build-dependencies curl binutils alpine-sdk && \
+    # Download and install glibc.
+    curl -# -L "$(echo ${GLIBC_URL}|sed "s/ARCH/$(apk --print-arch)/")" | tar xz -C / && \
+    # Strip symbols.
+    find /usr/glibc-compat/bin -type f -exec strip {} ';' && \
+    find /usr/glibc-compat/sbin -type f -exec strip {} ';' && \
+    find /usr/glibc-compat/lib -type f -exec strip {} ';' && \
+    # Create /etc/nsswitch.conf.
+    echo -n "hosts: files mdns4_minimal [NOTFOUND=return] dns mdns4" > /etc/nsswitch.conf && \
+    # Create /usr/glibc-compat/etc/ld.so.conf
+    echo "# libc default configuration" >> /usr/glibc-compat/etc/ld.so.conf && \
+    echo "/usr/local/lib" >> /usr/glibc-compat/etc/ld.so.conf && \
+    echo "/usr/glibc-compat/lib" >> /usr/glibc-compat/etc/ld.so.conf && \
+    echo "/usr/lib" >> /usr/glibc-compat/etc/ld.so.conf && \
+    echo "/lib" >> /usr/glibc-compat/etc/ld.so.conf && \
+    # Create required symbolic links.
+    mkdir -p /lib /lib64 /usr/glibc-compat/lib/locale && \
+    ln -s /usr/glibc-compat/lib/ld-linux-x86-64.so.2 /lib/ld-linux-x86-64.so.2 && \
+    ln -s /usr/glibc-compat/lib/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2 && \
+    ln -s /usr/glibc-compat/etc/ld.so.cache /etc/ld.so.cache && \
+    # Run ldconfig.
+    /usr/glibc-compat/sbin/ldconfig && \
+    # Generate locale.
+    /usr/glibc-compat/bin/localedef --inputfile ${GLIBC_LOCALE_INPUT} \
+                                    --charmap ${GLIBC_LOCALE_CHARMAP} \
+                                    ${GLIBC_LOCALE} && \
+    # Timezone support.
+    ln -s /usr/share/zoneinfo /usr/glibc-compat/share/zoneinfo && \
+    # Add apk trigger.  This is needed so that ldconfig is called automatically
+    # after apk installs libraries.
+    echo 'pkgname=glibc-ldconfig-trigger' >> APKBUILD && \
+    echo 'pkgver=1.0' >> APKBUILD && \
+    echo 'pkgrel=0' >> APKBUILD && \
+    echo 'pkgdesc="Dummy package that installs trigger for glibc ldconfig"' >> APKBUILD && \
+    echo 'url="https://github.com/jlesage/docker-baseimage"' >> APKBUILD && \
+    echo 'arch="noarch"' >> APKBUILD && \
+    echo 'license="GPL"' >> APKBUILD && \
+    echo 'makedepends=""' >> APKBUILD && \
+    echo 'depends=""' >> APKBUILD && \
+    echo 'install=""' >> APKBUILD && \
+    echo 'subpackages=""' >> APKBUILD && \
+    echo 'source=""' >> APKBUILD && \
+    echo 'triggers="$pkgname.trigger=/lib:/usr/lib:/usr/glibc-compat/lib"' >> APKBUILD && \
+    echo 'package() {' >> APKBUILD && \
+    echo '        mkdir -p "$pkgdir"' >> APKBUILD && \
+    echo '}' >> APKBUILD && \
+    echo '#!/bin/sh' >> glibc-ldconfig-trigger.trigger && \
+    echo '/usr/glibc-compat/sbin/ldconfig' >> glibc-ldconfig-trigger.trigger && \
+    chmod +x glibc-ldconfig-trigger.trigger && \
+    adduser -D -G abuild -s /bin/sh abuild && \
+    su abuild -c "abuild-keygen -a -n" && \
+    su abuild -c "abuild" && \
+    cp /home/abuild/packages/*/glibc-ldconfig-trigger-1.0-r0.apk . && \
+    apk --no-cache --allow-untrusted add glibc-ldconfig-trigger-1.0-r0.apk && \
+    deluser --remove-home abuild && \
+    # Remove unneeded stuff.
+    rm /usr/glibc-compat/etc/rpc && \
+    rm /usr/glibc-compat/lib/*.a && \
+    rm -r /usr/glibc-compat/lib/audit && \
+    rm -r /usr/glibc-compat/lib/gconv && \
+    rm -r /usr/glibc-compat/lib/getconf && \
+    rm -r /usr/glibc-compat/include && \
+    rm -r /usr/glibc-compat/share/locale && \
+    rm -r /usr/glibc-compat/share/i18n && \
+    rm -r /usr/glibc-compat/var && \
+    # Cleanup
+    del-pkg build-dependencies && \
+    rm -rf /tmp/* /tmp/.[!.]*
+
+# Compile and install minit.
+RUN \
+    add-pkg --virtual build-dependencies \
+        build-base \
+        curl \
+        tar \
+        xz \
+        linux-headers \
+        && \
+    mkdir libowfat minit && \
+    curl -# -L ${LIBOWFAT_URL} | tar xJ --strip 1 -C libowfat && \
+    curl -# -L ${MINIT_URL} | tar xz --strip 1 -C minit && \
+    # Compile libowfat.
+    cd libowfat && \
+    sed-patch 's|$(DIET) $(CCC) -g -o $@ t.o|$(DIET) $(CCC) -no-pie -g -o $@ t.o|' GNUmakefile && \
+    make -j$(nproc) && \
+    cd .. && \
+    # Compile minit.
+    cd minit && \
+    make MINITROOT=/var/run/minit MINIT_LOG_PREFIX="[supervisor] " LOG_SERVICE_STATE=1 && \
+    cd .. && \
+    # Install minit.
+    cp -v minit/minit /usr/bin/ && \
+    cp -v minit/msvc /usr/bin/ && \
+    # Cleanup
+    del-pkg build-dependencies && \
+    rm -rf /tmp/* /tmp/.[!.]*
+
+# Compile and install logmonitor.
+RUN \
+    add-pkg --virtual build-dependencies \
+        curl \
+        gcc \
+        make \
+        musl-dev \
+        linux-headers \
+        && \
+    # Download.
+    mkdir logmonitor && \
+    curl -# -L ${LOGMONITOR_URL} | tar xz --strip 1 -C logmonitor && \
+    # Compile.
+    cd logmonitor && \
+    make && \
+    cd .. && \
+    # Install.
+    cp -v logmonitor/logmonitor /usr/bin/ && \
+    strip /usr/bin/logmonitor && \
+    # Cleanup.
+    del-pkg build-dependencies && \
+    rm -rf /tmp/* /tmp/.[!.]*
+
+# Install system packages.
+RUN \
+    add-pkg \
+        # For timezone support
+        tzdata \
+        su-exec
+
+# Add files.
+COPY rootfs/ /
+
+# Make sure all required directory exists.
+RUN \
+    mkdir -p \
+        /defaults \
+        /etc/cont-init.d \
+        /etc/cont-finish.d \
+        /etc/services.d \
+        /etc/cont-env.d
+
+# Make sure to remove QEMU static binary that may have been installed.
+RUN rm -f /usr/bin/qemu-*-static
+
+# Set public environment variables.
+# NOTE: Since variables declared here are exposed/visible to the end-users,
+#       they should be meaningful to them, i.e. they should act as a way to
+#       configure the container.
+ENV USER_ID=1000 \
+    GROUP_ID=1000 \
+    SUP_GROUP_IDS= \
+    UMASK=022 \
+    TZ=Etc/UTC \
+    KEEP_APP_RUNNING=0 \
+    APP_NICENESS=
+
+# Define mountable directories.
+VOLUME ["/config"]
+
+# Define default command.
+CMD ["/etc/minit/init"]
+
+# Metadata.
+ARG IMAGE_VERSION=unknown
+LABEL \
+      org.label-schema.name="baseimage" \
+      org.label-schema.description="A minimal docker baseimage to ease creation of long-lived application containers" \
+      org.label-schema.version="${IMAGE_VERSION}" \
+      org.label-schema.vcs-url="https://github.com/jlesage/docker-baseimage" \
+      org.label-schema.schema-version="1.0"
