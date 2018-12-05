@@ -8,7 +8,7 @@ platform:
 
 steps:
 - name: build
-  image: jlesage/drone-plugin-docker
+  image: plugins/docker
   settings:
     repo: jlesage/baseimage-test
     dockerfile: Dockerfile.alpine
