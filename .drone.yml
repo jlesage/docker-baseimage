@@ -8,7 +8,7 @@ platform:
 
 steps:
 - name: build
-  image: plugins/docker
+  image: jlesage/drone-plugin-docker
   settings:
     repo: jlesage/baseimage-test
     dockerfile: Dockerfile.alpine
@@ -24,6 +24,7 @@ steps:
     - alpine-3.8-v3.0
     - alpine-3.8-v3
     - alpine-3.8
+    debug: true
 
 #- name: build
 #  image: docker:17.12.0-ce-dind
