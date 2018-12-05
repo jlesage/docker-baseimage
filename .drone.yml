@@ -1,0 +1,29 @@
+---
+kind: pipeline
+name: alpine-3.8-amd64
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: build
+  image: plugins/docker
+  settings:
+    repo: jlesage/baseimage-test
+    dockerfile: Dockerfile.alpine
+    build_args:
+    - BASEIMAGE=alpine:3.8
+    - IMAGE_VERSION=v3.0.0
+    password:
+      from_secret: dockerhub_password
+    username:
+      from_secret: dockerhub_username
+    tags:
+    - alpine-3.8-v3.0.0
+    - alpine-3.8-v3.0
+    - alpine-3.8-v3
+    - alpine-3.8
+
+
+...
