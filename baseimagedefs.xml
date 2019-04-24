@@ -16,6 +16,11 @@ long-lived application.
     <!-- Changelog -->
     <history>
       <release>
+        <version>2.4.2</version>
+        <date>2019-04-24</date>
+        <change>Updated installed packages to get latest security fixes.</change>
+      </release>
+      <release>
         <version>2.4.1</version>
         <date>2018-09-18</date>
         <change>Updated installed packages to get latest security fixes.</change>
