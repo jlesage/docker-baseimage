@@ -16,6 +16,12 @@ long-lived application.
     <!-- Changelog -->
     <history>
       <release>
+        <version>2.4.3</version>
+        <date>2019-10-04</date>
+        <change>Updated installed packages to get latest security fixes.</change>
+        <change>Make sure the tzdata is installed.</change>
+      </release>
+      <release>
         <version>2.4.2</version>
         <date>2019-04-24</date>
         <change>Updated installed packages to get latest security fixes.</change>
