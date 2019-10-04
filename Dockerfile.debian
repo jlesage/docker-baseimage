@@ -51,6 +51,12 @@ RUN \
     del-pkg build-dependencies && \
     rm -rf /tmp/* /tmp/.[!.]*
 
+# Install system packages.
+RUN \
+    add-pkg \
+        # For timezone support
+        tzdata
+
 # Make sure VERSION_CODENAME is set in /etc/os-release.
 RUN \
     if ! grep -q "^VERSION_CODENAME=" /etc/os-release; then \
