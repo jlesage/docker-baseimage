@@ -53,6 +53,7 @@ Different docker images are available:
 | [Alpine 3.10]       | alpine-3.10-glibc | [![](https://images.microbadger.com/badges/image/jlesage/baseimage:alpine-3.10-glibc.svg)](http://microbadger.com/#/images/jlesage/baseimage:alpine-3.10-glibc "Get your own image badge on microbadger.com") |
 | [Debian 8]         | debian-8         | [![](https://images.microbadger.com/badges/image/jlesage/baseimage:debian-8.svg)](http://microbadger.com/#/images/jlesage/baseimage:debian-8/ "Get your own image badge on microbadger.com") |
 | [Debian 9]         | debian-9         | [![](https://images.microbadger.com/badges/image/jlesage/baseimage:debian-9.svg)](http://microbadger.com/#/images/jlesage/baseimage:debian-9/ "Get your own image badge on microbadger.com") |
+| [Debian 10]         | debian-10         | [![](https://images.microbadger.com/badges/image/jlesage/baseimage:debian-10.svg)](http://microbadger.com/#/images/jlesage/baseimage:debian-10/ "Get your own image badge on microbadger.com") |
 | [Ubuntu 16.04 LTS] | ubuntu-16.04     | [![](https://images.microbadger.com/badges/image/jlesage/baseimage:ubuntu-16.04.svg)](http://microbadger.com/#/images/jlesage/baseimage:ubuntu-16.04 "Get your own image badge on microbadger.com") |
 | [Ubuntu 18.04 LTS] | ubuntu-18.04     | [![](https://images.microbadger.com/badges/image/jlesage/baseimage:ubuntu-18.04.svg)](http://microbadger.com/#/images/jlesage/baseimage:ubuntu-18.04 "Get your own image badge on microbadger.com") |
 
@@ -64,6 +65,7 @@ Different docker images are available:
 [Alpine 3.10]: https://alpinelinux.org
 [Debian 8]: https://www.debian.org/releases/jessie/
 [Debian 9]: https://www.debian.org/releases/stretch/
+[Debian 10]: https://www.debian.org/releases/buster/
 [Ubuntu 16.04 LTS]: http://releases.ubuntu.com/16.04/
 [Ubuntu 18.04 LTS]: http://releases.ubuntu.com/18:04/
 
