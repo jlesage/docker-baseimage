@@ -241,7 +241,7 @@ long-lived application.
       </environment_variable>
       <environment_variable>
         <name>KEEP_APP_RUNNING</name>
-        <description>When set to `1`, the application will be automatically restarted if it crashes or if user quits it.</description>
+        <description>When set to `1`, the application will be automatically restarted if it crashes or if a user quits it.</description>
         <default>0</default>
       </environment_variable>
       <environment_variable>
@@ -264,7 +264,7 @@ long-lived application.
       </environment_variable>
       <environment_variable>
         <name>CLEAN_TMP_DIR</name>
-        <description>When set to `1`, all files in the `/tmp` directory are delete during the container startup.</description>
+        <description>When set to `1`, all files in the `/tmp` directory are deleted during the container startup.</description>
         <default>1</default>
       </environment_variable>
     </environment_variables>
