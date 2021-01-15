@@ -6,6 +6,12 @@
 
 ARG BASEIMAGE=unknown
 
+# Build the log monitor.
+FROM alpine:3.12 AS logmonitor
+COPY src/logmonitor /tmp/logmonitor
+RUN apk --no-cache add build-base linux-headers
+RUN make -C /tmp/logmonitor
+
 # Pull base image.
 FROM ${BASEIMAGE}
 
@@ -21,6 +27,9 @@ WORKDIR /tmp
 
 # Copy helpers.
 COPY helpers/* /usr/local/bin/
+
+# Install the log monitor.
+COPY --from=logmonitor /tmp/logmonitor/logmonitor /usr/bin/
 
 # Install s6 overlay.
 RUN \
