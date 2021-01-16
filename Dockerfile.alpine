@@ -6,6 +6,12 @@
 
 ARG BASEIMAGE=unknown
 
+# Build the init system and process supervisor.
+FROM alpine:3.12 AS cinit
+COPY src/cinit /tmp/cinit
+RUN apk --no-cache add build-base
+RUN make -C /tmp/cinit
+
 # Build the log monitor.
 FROM alpine:3.12 AS logmonitor
 COPY src/logmonitor /tmp/logmonitor
@@ -27,6 +33,9 @@ WORKDIR /tmp
 
 # Copy helpers.
 COPY helpers/* /usr/local/bin/
+
+# Install the init system and process supervisor.
+COPY --from=cinit /tmp/cinit/cinit /usr/sbin/
 
 # Install the log monitor.
 COPY --from=logmonitor /tmp/logmonitor/logmonitor /usr/bin/
