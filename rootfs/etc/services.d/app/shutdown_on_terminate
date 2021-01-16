@@ -1,12 +1,13 @@
 #!/bin/sh
 
-#
-# Clean the /tmp directory.
-#
-
 set -e # Exit immediately if a command exits with a non-zero status.
 set -u # Treat unset variables as an error.
 
-rm -rf /tmp/* /tmp/.[!.]*
+if [ "${KEEP_APP_RUNNING:-0}" -eq 0 ]; then
+    # Container should be shutted down.
+    echo "true"
+else
+    echo "false"
+fi
 
 # vim:ft=sh:ts=4:sw=4:et:sts=4

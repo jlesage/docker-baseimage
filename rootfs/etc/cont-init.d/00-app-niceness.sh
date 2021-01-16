@@ -1,15 +1,13 @@
-#!/usr/bin/with-contenv sh
+#!/bin/sh
 
 #
-# Handle configured niceness value of the application.
+# Verify that the container has permission to set the configured niceness value.
 #
 
 set -e # Exit immediately if a command exits with a non-zero status.
 set -u # Treat unset variables as an error.
 
-APP_NICE_CMD=' '
-
-if [ "${APP_NICENESS:-UNSET}" != "UNSET" ]; then
+if [ "${APP_NICENESS:-0}" -ne 0 ]; then
     APP_NICE_CMD="$(which nice) -n $APP_NICENESS"
 
     # NOTE: On debian systems, nice always has an exit code of `0`, even when
@@ -21,8 +19,5 @@ if [ "${APP_NICENESS:-UNSET}" != "UNSET" ]; then
         exit 6
     fi
 fi
-
-# Export variable.
-add-contenv APP_NICE_CMD "$APP_NICE_CMD"
 
 # vim:ft=sh:ts=4:sw=4:et:sts=4

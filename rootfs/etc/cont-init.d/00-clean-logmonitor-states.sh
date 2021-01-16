@@ -1,4 +1,4 @@
-#!/usr/bin/with-contenv sh
+#!/bin/sh
 
 #
 # Clean the /var/run/logmonitor directory.

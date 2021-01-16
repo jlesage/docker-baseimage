@@ -1,0 +1,19 @@
+#!/bin/sh
+
+set -e # Exit immediately if a command exits with a non-zero status.
+set -u # Treat unset variables as an error.
+
+# Each log file to monitor is a parameter.
+for FILE in $(cat /etc/logmonitor/logmonitor.conf | grep 'LOG_FILES=' | cut -d'=' -f2 | tr ',' ' ')
+do
+    [ -z "$FILE" ] || echo "$FILE"
+done
+
+# Each status file to monitor is a parameter.
+STATUS_FILES=
+for FILE in $(cat /etc/logmonitor/logmonitor.conf | grep 'STATUS_FILES=' | cut -d'=' -f2 | tr ',' ' ')
+do
+    [ -z "$FILE" ] || echo "s:$FILE"
+done
+
+# vim:ft=sh:ts=4:sw=4:et:sts=4
