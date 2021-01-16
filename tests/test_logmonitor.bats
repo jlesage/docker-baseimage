@@ -7,6 +7,7 @@ setup() {
 
 teardown() {
     load teardown_container_daemon
+    load teardown_common
 }
 
 @test "Checking log monitor functionality with log files..." {
@@ -31,6 +32,9 @@ teardown() {
 
     restart_container_daemon
 
+    # Make sure the logmonitor has been started.
+    sleep 10
+
     exec_container_daemon sh -c "echo ThisIsALine1       >> /tmp/test1.log"
     exec_container_daemon sh -c "echo TriggerWord        >> /tmp/test1.log"
     exec_container_daemon sh -c "echo ThisIsALine2       >> /tmp/test2.log"
@@ -50,9 +54,11 @@ teardown() {
     count1=0
     count2=0
     for item in "${lines[@]}"; do
-        if [ "$item" == "ERROR: Test1 title Test description" ]; then
+        regex1=".*ERROR: Test1 title Test description"
+        regex2=".*ERROR: Test2 title Test description"
+        if [[ "$item" =~ $regex1 ]]; then
             count1="$(expr $count1 + 1)"
-        elif [ "$item" == "ERROR: Test2 title Test description" ]; then
+        elif [[ "$item" =~ $regex2 ]]; then
             count2="$(expr $count2 + 1)"
         fi
     done
@@ -96,12 +102,16 @@ teardown() {
     count1=0
     count2=0
     for item in "${lines[@]}"; do
-        if [ "$item" == "ERROR: Test1 title Test description" ]; then
+        regex1=".*ERROR: Test1 title Test description"
+        regex2=".*ERROR: Test2 title Test description"
+        if [[ "$item" =~ $regex1 ]]; then
             count1="$(expr $count1 + 1)"
-        elif [ "$item" == "ERROR: Test2 title Test description" ]; then
+        elif [[ "$item" =~ $regex2 ]]; then
             count2="$(expr $count2 + 1)"
         fi
     done
     [ "$count1" -eq 1 ]
     [ "$count2" -eq 1 ]
 }
+
+# vim:ft=sh:ts=4:sw=4:et:sts=4
