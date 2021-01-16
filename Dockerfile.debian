@@ -29,13 +29,6 @@ RUN strip /tmp/su-exec/su-exec-static
 # Pull base image.
 FROM ${BASEIMAGE}
 
-# Automatically set by buildx.
-ARG TARGETARCH
-
-# Define s6 overlay related variables.
-ARG S6_OVERLAY_VERSION=1.21.4.0
-ARG S6_OVERLAY_URL=https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-ARCH.tar.gz
-
 # Variables needed for package installation via APT.
 ARG DEBIAN_FRONTEND=noninteractive
 ARG TERM=xterm
@@ -54,39 +47,6 @@ COPY --from=logmonitor /tmp/logmonitor/logmonitor /usr/bin/
 
 # Install su-exec.
 COPY --from=su-exec /tmp/su-exec/su-exec-static /usr/sbin/su-exec
-
-# Install s6 overlay.
-RUN \
-    add-pkg --virtual build-dependencies curl ca-certificates patch && \
-    if [ "$TARGETARCH" = "amd64" ]; then S6_ARCH=amd64; \
-    elif [ "$TARGETARCH" = "386" ]; then S6_ARCH=x86; \
-    elif [ "$TARGETARCH" = "arm" ]; then S6_ARCH=arm; \
-    elif [ "$TARGETARCH" = "arm64" ]; then S6_ARCH=aarch64; \
-    else echo "Unexpected TARGETARCH: $TARGETARCH"; false; fi && \
-    S6_OVERLAY_URL="$(echo ${S6_OVERLAY_URL}|sed "s/ARCH/$S6_ARCH/")" && \
-    echo "Downloading s6-overlay ($S6_OVERLAY_URL)..." && \
-    curl -# -L -o s6-overlay.tar.gz "$S6_OVERLAY_URL" && \
-    echo "Installing s6-overlay..." && \
-    # Workaround for some distro where '/bin' being a symlink to '/usr/bin':
-    # extract the tarball in two steps.
-    if [ -L /bin ]; then \
-        tar xzf s6-overlay.tar.gz -C / --exclude="./bin" && \
-        tar xzf /tmp/s6-overlay.tar.gz -C /usr ./bin; \
-    else \
-        tar xzf s6-overlay.tar.gz -C /; \
-    fi && \
-    echo "Patching s6-overlay..." && \
-    curl -# -L https://github.com/jlesage/s6-overlay/commit/d151c41.patch | patch -d / -p3 && \
-    chmod +x \
-        /etc/s6/services/.s6-svscan/SIGHUP \
-        /etc/s6/services/.s6-svscan/SIGINT \
-        /etc/s6/services/.s6-svscan/SIGQUIT \
-        /etc/s6/services/.s6-svscan/SIGTERM \
-        /usr/bin/sv-getdeps \
-        && \
-    # Cleanup
-    del-pkg build-dependencies && \
-    rm -rf /tmp/* /tmp/.[!.]*
 
 # Install system packages.
 RUN \
@@ -113,8 +73,8 @@ RUN \
 COPY rootfs/ /
 
 # Set environment variables.
-ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=3 \
-    S6_SERVICE_DEPS=1 \
+ENV \
+    LANG=en_US.UTF-8 \
     USER_ID=1000 \
     GROUP_ID=1000 \
     APP_NAME=DockerApp \
@@ -128,7 +88,7 @@ ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=3 \
 VOLUME ["/config"]
 
 # Define default command.
-# Use S6 overlay init system.
+# Use the init system.
 CMD ["/init"]
 
 # Metadata.
