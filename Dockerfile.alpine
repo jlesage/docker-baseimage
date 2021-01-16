@@ -40,7 +40,7 @@ ARG S6_OVERLAY_URL=https://github.com/just-containers/s6-overlay/releases/downlo
 WORKDIR /tmp
 
 # Copy helpers.
-COPY helpers/* /usr/local/bin/
+COPY helpers/* /usr/bin/
 
 # Install the init system and process supervisor.
 COPY --from=cinit /tmp/cinit/cinit /usr/sbin/
