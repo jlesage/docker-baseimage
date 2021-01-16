@@ -74,15 +74,13 @@ COPY rootfs/ /
 
 # Set environment variables.
 ENV \
-    LANG=en_US.UTF-8 \
     USER_ID=1000 \
     GROUP_ID=1000 \
-    APP_NAME=DockerApp \
-    APP_USER=app \
-    XDG_DATA_HOME=/config/xdg/data \
-    XDG_CONFIG_HOME=/config/xdg/config \
-    XDG_CACHE_HOME=/config/xdg/cache \
-    XDG_RUNTIME_DIR=/tmp/run/user/app
+    SUP_GROUP_IDS= \
+    UMASK=022 \
+    TZ=Etc/UTC \
+    KEEP_APP_RUNNING=0 \
+    APP_NICENESS=0
 
 # Define mountable directories.
 VOLUME ["/config"]

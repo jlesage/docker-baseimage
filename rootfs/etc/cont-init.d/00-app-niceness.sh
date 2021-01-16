@@ -23,6 +23,6 @@ if [ "${APP_NICENESS:-UNSET}" != "UNSET" ]; then
 fi
 
 # Export variable.
-echo "$APP_NICE_CMD" > /var/run/s6/container_environment/APP_NICE_CMD
+add-contenv APP_NICE_CMD "$APP_NICE_CMD"
 
 # vim:ft=sh:ts=4:sw=4:et:sts=4
