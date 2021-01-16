@@ -44,7 +44,7 @@ ARG TERM=xterm
 WORKDIR /tmp
 
 # Copy helpers.
-COPY helpers/* /usr/local/bin/
+COPY helpers/* /usr/bin/
 
 # Install the init system and process supervisor.
 COPY --from=cinit /tmp/cinit/cinit /usr/sbin/
