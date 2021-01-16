@@ -62,12 +62,14 @@ RUN \
         del-pkg lsb-release; \
     fi
 
-# Save some defaults.
+# Make sure all required directory exists.
 RUN \
-    mkdir /defaults && \
-    cp /etc/passwd /defaults/ && \
-    cp /etc/group /defaults/ && \
-    cp /etc/shadow /defaults/
+    mkdir -p \
+        /defaults \
+        /etc/cont-init.d \
+        /etc/cont-finish.d \
+        /etc/services.d \
+        /etc/cont-env.d
 
 # Add files.
 COPY rootfs/ /
