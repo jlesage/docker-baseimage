@@ -1,13 +1,10 @@
-[ -n "$CONTAINER_DAEMON_ID" ]
+[ -n "$CONTAINER_DAEMON_NAME" ]
 
 echo "Stopping docker container..."
-docker stop "$CONTAINER_DAEMON_ID"
+docker stop "$CONTAINER_DAEMON_NAME"
 
 echo "Removing docker container..."
-docker rm "$CONTAINER_DAEMON_ID"
-
-# Remove temporary work directory.
-rm -r "$TESTS_WORKDIR"
+docker rm "$CONTAINER_DAEMON_NAME"
 
 # Clear the container ID.
-CONTAINER_DAEMON_ID=
+CONTAINER_DAEMON_NAME=
