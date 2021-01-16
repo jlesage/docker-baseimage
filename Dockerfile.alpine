@@ -18,6 +18,14 @@ COPY src/logmonitor /tmp/logmonitor
 RUN apk --no-cache add build-base linux-headers
 RUN make -C /tmp/logmonitor
 
+# Build su-exec
+FROM alpine:3.12 AS su-exec
+RUN apk --no-cache add build-base curl
+RUN mkdir /tmp/su-exec
+RUN curl -# -L https://github.com/ncopa/su-exec/archive/v0.2.tar.gz | tar xz --strip 1 -C /tmp/su-exec
+RUN make -C /tmp/su-exec su-exec-static
+RUN strip /tmp/su-exec/su-exec-static
+
 # Pull base image.
 FROM ${BASEIMAGE}
 
@@ -39,6 +47,9 @@ COPY --from=cinit /tmp/cinit/cinit /usr/sbin/
 
 # Install the log monitor.
 COPY --from=logmonitor /tmp/logmonitor/logmonitor /usr/bin/
+
+# Install su-exec.
+COPY --from=su-exec /tmp/su-exec/su-exec-static /usr/sbin/su-exec
 
 # Install s6 overlay.
 RUN \
