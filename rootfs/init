@@ -1,0 +1,185 @@
+#!/bin/sh
+
+set -e # Exit immediately if a command exits with a non-zero status.
+set -u # Treat unset variables as an error.
+
+STAGE=init
+
+log() {
+    printf "[%-12s] $*\n" "$STAGE"
+}
+
+log_script() {
+    while read OUTPUT; do
+        log "$1: $OUTPUT"
+    done
+}
+
+valid_env_var_name() {
+    case "$1" in
+        *[!a-zA-Z0-9_]*|[0-9]*)
+            return 1
+            ;;
+        *)
+            return 0
+            ;;
+    esac
+}
+
+load_env_var() {
+    VAR_NAME="$1"
+    VAR_VAL="$2"
+    # Use the parameter expansion '${parameter+word}': we want to set
+    # the environment variable only when *unset*.  If the variable is
+    # already set, with null or a value, we need to skip it.
+    # https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_06_02
+    VAR_TEST="$(eval echo \$\{$VAR_NAME+x\})"
+    if [ -z "$VAR_TEST" ]; then
+        export "$VAR_NAME"="$VAR_VAL"
+    fi
+}
+
+# http://cfajohnson.com/shell/cus-faq-2.html#Q11
+run() {
+    j=1
+    while eval "\${pipestatus_$j+:} false"; do
+        unset pipestatus_$j
+        j=$(($j+1))
+    done
+    j=1 com= k=1 l=
+    for a; do
+        if [ "x$a" = 'x|' ]; then
+            com="$com { $l "'3>&-
+                          echo "pipestatus_'$j'=$?" >&3
+                      } 4>&- |'
+            j=$(($j+1)) l=
+        else
+            l="$l \"\$$k\""
+        fi
+        k=$(($k+1))
+    done
+    com="$com $l"' 3>&- >&4 4>&-
+        echo "pipestatus_'$j'=$?"'
+    exec 4>&1
+    eval "$(exec 3>&1; eval "$com")"
+    exec 4>&-
+    j=1
+    while eval "\${pipestatus_$j+:} false"; do
+        eval "[ \$pipestatus_$j -eq 0 ] || return 1"
+        j=$(($j+1))
+    done
+    return 0
+}
+
+log "container is starting..."
+
+# Install container environment variables.
+STAGE=cont-env
+log "loading container environment variables..."
+if [ -d /etc/cont-env.d ]; then
+    FILELIST="$(mktemp)"
+    find /etc/cont-env.d -maxdepth 1 -type f | sort > "$FILELIST"
+    exec 3<"$FILELIST" # Open for reading on file descriptor 3.
+    while read FILE
+    do
+        FILENAME="$(basename "$FILE")"
+
+        if ! valid_env_var_name "$FILENAME"; then
+            echo "invalid environment variable name: $FILENAME"
+            exit 1
+        fi
+
+        if [ -x "$FILE" ]; then
+            echo "executing..." | log_script "$FILENAME"
+
+            set +e
+            VAL="$($FILE 2>/dev/null | head -n1)"
+            RC="$?"
+            set -e
+
+            if [ $RC -eq 0 ]; then
+                echo "terminated successfully." | log_script "$FILENAME"
+            else
+                echo "terminated with error $RC." | log_script "$FILENAME"
+                exit $RC
+            fi
+
+            echo "loading..." | log_script "$FILENAME"
+            #echo "$VAL" > /var/run/cont-env/"$FILENAME"
+            load_env_var "$FILENAME" "$VAL"
+        else
+            echo "loading..." | log_script "$FILENAME"
+            load_env_var "$FILENAME" "$(cat "$FILE" | head -n1)"
+        fi
+    done <&3
+    exec 3>&- # Close file descriptor.
+    rm "$FILELIST"
+fi
+log "container environment variables initialized."
+
+# Export Docker secrets as environment variables.
+STAGE=cont-secrets
+log "loading container secrets..."
+if [ -d /run/secrets ]; then
+    FILELIST="$(mktemp)"
+    find /run/secrets -maxdepth 1 -type f -name "ENV__*" | sort > "$FILELIST"
+    exec 3<"$FILELIST" # Open for reading on file descriptor 3.
+    while read FILE
+    do
+        ENV_VAR_NAME="${FILE#/run/secrets/ENV__}"
+
+        if ! valid_env_var_name "$ENV_VAR_NAME"; then
+            echo "invalid environment variable name: $FILENAME"
+            exit 1
+        fi
+
+        echo "loading..." | log_script "$ENV_VAR_NAME"
+        load_env_var "$ENV_VAR_NAME" "$(cat "$FILE" | head -n1)"
+    done <&3
+    exec 3>&- # Close file descriptor.
+    rm "$FILELIST"
+fi
+log "container secrets loaded."
+
+# Invoke initialization scripts.
+STAGE=cont-init
+log "executing container initialization scripts..."
+if [ -d /etc/cont-init.d ]; then
+    find /etc/cont-init.d -maxdepth 1 -type f | sort | while read FILE
+    do
+        FILENAME="$(basename "$FILE")"
+
+        if [ ! -x "$FILE" ]; then
+            echo "WARNING: not executable, ignoring." | log_script "$FILENAME"
+            continue
+        fi
+
+        echo "executing..." | log_script "$FILENAME"
+
+        set +e
+        run "$FILE" 2>&1 \| log_script "$FILENAME"
+        RC=$pipestatus_1
+        set -e
+
+        if [ $RC -eq 0 ]; then
+            echo "terminated successfully." | log_script "$FILENAME"
+        else
+            echo "terminated with error $RC." | log_script "$FILENAME"
+            exit $RC
+        fi
+    done
+fi
+log "all container initialization scripts executed."
+
+# Finally, invoke the process supervisor.
+STAGE=init
+
+CINIT_ARGS="-p supervisor"
+if [ "${CONTAINER_DEBUG:-0}" -eq 1 ]; then
+    CINIT_ARGS="$CINIT_ARGS --debug"
+fi
+
+log "giving control to process supervisor."
+exec /usr/sbin/cinit $CINIT_ARGS
+
+# vim:ft=sh:ts=4:sw=4:et:sts=4
