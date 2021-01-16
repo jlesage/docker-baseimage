@@ -1,0 +1,83 @@
+#!/usr/bin/with-contenv sh
+
+#
+# This is invoked by cinit when it exits.
+#
+
+set -e # Exit immediately if a command exits with a non-zero status.
+set -u # Treat unset variables as an error.
+
+EXIT_CODE=${FORCED_CONTAINER_EXIT_CODE:-${1:-1}}
+
+log() {
+    printf "[%-12s] $*\n" "finish"
+}
+
+log_script() {
+    while read OUTPUT; do
+        log "$1: $OUTPUT"
+    done
+}
+
+# http://cfajohnson.com/shell/cus-faq-2.html#Q11
+run() {
+    j=1
+    while eval "\${pipestatus_$j+:} false"; do
+        unset pipestatus_$j
+        j=$(($j+1))
+    done
+    j=1 com= k=1 l=
+    for a; do
+        if [ "x$a" = 'x|' ]; then
+            com="$com { $l "'3>&-
+                          echo "pipestatus_'$j'=$?" >&3
+                      } 4>&- |'
+            j=$(($j+1)) l=
+        else
+            l="$l \"\$$k\""
+        fi
+        k=$(($k+1))
+    done
+    com="$com $l"' 3>&- >&4 4>&-
+        echo "pipestatus_'$j'=$?"'
+    exec 4>&1
+    eval "$(exec 3>&1; eval "$com")"
+    exec 4>&-
+    j=1
+    while eval "\${pipestatus_$j+:} false"; do
+        eval "[ \$pipestatus_$j -eq 0 ] || return \$pipestatus_$j"
+        j=$(($j+1))
+    done
+    return 0
+}
+
+# Invoke finish scripts.
+log "executing container finish scripts..."
+if [ -d /etc/cont-finish.d ]; then
+    find /etc/cont-finish.d -maxdepth 1 -type f | sort | while read FILE
+    do
+        FILENAME="$(basename "$FILE")"
+
+        if [ ! -x "$FILE" ]; then
+            echo "WARNING: not executable, ignoring." | log_script "$FILENAME"
+            continue
+        fi
+        echo "executing..." | log_script "$FILENAME"
+
+        set +e
+        run "$FILE" \| log_script "$FILENAME"
+        RC=$?
+        set -e
+
+        if [ $RC -eq 0 ]; then
+            echo "terminated successfully." | log_script "$FILENAME"
+        else
+            echo "terminated with error $RC." | log_script "$FILENAME"
+        fi
+    done
+fi
+log "all container finish scripts executed."
+
+exit $EXIT_CODE
+
+# vim:ft=sh:ts=4:sw=4:et:sts=4
