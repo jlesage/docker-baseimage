@@ -1,3 +1,0 @@
-DOCKERFILE=Dockerfile.debian
-BASEIMAGE=debian:stretch-slim
-S6_OVERLAY_ARCH=amd64
