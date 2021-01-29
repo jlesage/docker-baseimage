@@ -1,0 +1,176 @@
+#!/bin/sh
+
+set -e # Exit immediately if a command exits with a non-zero status.
+set -u # Treat unset variables as an error.
+
+GLIBC_DEFAULT_VERSION="2.31-r1"
+LOCALES_TO_ADD=
+
+if [ ! -f /etc/os-release ]; then
+    echo "ERROR: File not found: /etc/os-release"
+    exit 1
+fi
+
+. /etc/os-release
+
+if [ "${ID:-}" != "alpine" ]; then
+    echo "ERROR: This should be run on Alpine Linux only."
+    exit 1
+fi
+
+usage() {
+    echo "usage: $(basename $0) [OPTION]...
+
+Options:
+    --glibc-version VERSION   Install glibc version VERSION.  If not set,
+                              version $GLIBC_DEFAULT_VERSION is used.
+    --add-locale LOCALE       Generate and add locale LOCALE.  Option can be
+                              repeated if multiple locales are needed.
+    -h, --help                Print this help and exit.
+"
+}
+
+# Parse arguments.
+while [ "$#" -ne 0 ]
+do
+    case "$1" in
+        --glibc-version)
+            GLIBC_VERSION="${2:-}"
+            if [ -z "$GLIBC_VERSION" ]; then
+                echo "ERROR: glibc version missing."
+                exit 1
+            fi
+            shift 2
+            ;;
+        --add-locale)
+            NEW_LOCALE="${2:-}"
+            if [ -z "$NEW_LOCALE" ]; then
+                echo "ERROR: locale missing."
+                exit 1
+            fi
+            shift 2
+            LOCALES_TO_ADD="$LOCALES_TO_ADD $NEW_LOCALE"
+            ;;
+        -h|--help)
+            usage
+            exit 1
+            ;;
+        *)
+            echo "ERROR: Unknown argument \"$1\"."
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+# Determine the architecture.
+# https://wiki.alpinelinux.org/wiki/Architecture
+APK_ARCH="$(apk --print-arch)"
+case "$APK_ARCH" in
+    x86_64)  GLIBC_ARCH=x86_64  ;;
+    x86)     GLIBC_ARCH=x86     ;;
+    armhf)   GLIBC_ARCH=arm     ;; # 32 bit ARM (hard-float ABI) - ARMv6
+    armv7)   GLIBC_ARCH=arm     ;; # 32 bit ARM (hard-float ABI) - ARMv7
+    aarch64) GLIBC_ARCH=aarch64 ;; # 64 bit ARM - ARMv8
+    *)
+        echo "ERROR: unsupported architecture '$APK_ARCH'."
+        exit 1
+        ;;
+esac
+
+# Define GLIBC related variables.
+GLIBC_VERSION=${GLIBC_VERSION:-$GLIBC_DEFAULT_VERSION}
+GLIBC_URL=https://github.com/jlesage/glibc-bin-multiarch/releases/download/${GLIBC_VERSION}/glibc-bin-${GLIBC_VERSION}-${GLIBC_ARCH}.tar.gz
+
+# Install build dependencies.
+add-pkg --virtual build-dependencies curl binutils alpine-sdk
+
+# Download and install glibc.
+echo "Downloading glibc ($GLIBC_URL)..."
+curl -# -L "$GLIBC_URL" | tar xz -C /
+
+echo "Installing glibc..."
+
+# Strip symbols.
+find /usr/glibc-compat/bin -type f -exec strip {} ';'
+find /usr/glibc-compat/sbin -type f -exec strip {} ';'
+find /usr/glibc-compat/lib -type f -exec strip {} ';'
+
+# Create /etc/nsswitch.conf.
+echo -n "hosts: files mdns4_minimal [NOTFOUND=return] dns mdns4" > /etc/nsswitch.conf
+
+# Create /usr/glibc-compat/etc/ld.so.conf
+echo "# libc default configuration" >> /usr/glibc-compat/etc/ld.so.conf
+echo "/usr/local/lib" >> /usr/glibc-compat/etc/ld.so.conf
+echo "/usr/glibc-compat/lib" >> /usr/glibc-compat/etc/ld.so.conf
+echo "/usr/lib" >> /usr/glibc-compat/etc/ld.so.conf
+echo "/lib" >> /usr/glibc-compat/etc/ld.so.conf
+
+# Create required symbolic links.
+mkdir -p /lib /lib64 /usr/glibc-compat/lib/locale
+ln -s /usr/glibc-compat/lib/ld-linux-x86-64.so.2 /lib/ld-linux-x86-64.so.2
+ln -s /usr/glibc-compat/lib/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
+ln -s /usr/glibc-compat/etc/ld.so.cache /etc/ld.so.cache
+
+# Run ldconfig.
+/usr/glibc-compat/sbin/ldconfig
+
+# Generate locale.
+for L in $LOCALES_TO_ADD
+do
+    GLIBC_LOCALE_INPUT="$(echo "$L" | cut -d'.' -f1)"
+    GLIBC_LOCALE_CHARMAP="$(echo "$L" | cut -d'.' -f2)"
+    GLIBC_LOCALE="$L"
+    echo "Adding locale $L..."
+    /usr/glibc-compat/bin/localedef --inputfile ${GLIBC_LOCALE_INPUT} \
+                                    --charmap ${GLIBC_LOCALE_CHARMAP} \
+                                    ${GLIBC_LOCALE}
+done
+
+# Timezone support.
+ln -s /usr/share/zoneinfo /usr/glibc-compat/share/zoneinfo
+
+# Add apk trigger.  This is needed so that ldconfig is called automatically
+# after apk installs libraries.
+echo 'pkgname=glibc-ldconfig-trigger' >> APKBUILD
+echo 'pkgver=1.0' >> APKBUILD
+echo 'pkgrel=0' >> APKBUILD
+echo 'pkgdesc="Dummy package that installs trigger for glibc ldconfig"' >> APKBUILD
+echo 'url="https://github.com/jlesage/docker-baseimage"' >> APKBUILD
+echo 'arch="noarch"' >> APKBUILD
+echo 'license="GPL"' >> APKBUILD
+echo 'makedepends=""' >> APKBUILD
+echo 'depends=""' >> APKBUILD
+echo 'install=""' >> APKBUILD
+echo 'subpackages=""' >> APKBUILD
+echo 'source=""' >> APKBUILD
+echo 'triggers="$pkgname.trigger=/lib:/usr/lib:/usr/glibc-compat/lib"' >> APKBUILD
+echo 'package() {' >> APKBUILD
+echo '        mkdir -p "$pkgdir"' >> APKBUILD
+echo '}' >> APKBUILD
+echo '#!/bin/sh' >> glibc-ldconfig-trigger.trigger
+echo '/usr/glibc-compat/sbin/ldconfig' >> glibc-ldconfig-trigger.trigger
+chmod +x glibc-ldconfig-trigger.trigger
+adduser -D -G abuild -s /bin/sh abuild
+su-exec abuild abuild-keygen -a -n
+su-exec abuild abuild
+cp /home/abuild/packages/*/glibc-ldconfig-trigger-1.0-r0.apk .
+apk --no-cache --allow-untrusted add glibc-ldconfig-trigger-1.0-r0.apk
+deluser --remove-home abuild
+
+# Remove unneeded stuff.
+rm /usr/glibc-compat/etc/rpc
+rm /usr/glibc-compat/lib/*.a
+rm -r /usr/glibc-compat/lib/audit
+rm -r /usr/glibc-compat/lib/gconv
+rm -r /usr/glibc-compat/lib/getconf
+rm -r /usr/glibc-compat/include
+rm -r /usr/glibc-compat/share/locale
+rm -r /usr/glibc-compat/share/i18n
+rm -r /usr/glibc-compat/var
+
+# Cleanup
+del-pkg build-dependencies && \
+rm -rf /tmp/* /tmp/.[!.]*
+
+echo "glibc $GLIBC_VERSION installed successfully."
