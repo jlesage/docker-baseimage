@@ -65,10 +65,10 @@ install_pkg_debian() {
 
 cleanup_debian() {
     apt-get -q clean
-        rm -rf /var/lib/apt/lists/* \
-               /var/log/dpkg.log \
-               /var/log/alternatives.log \
-               /var/log/apt/*
+    rm -rf /var/lib/apt/lists/* \
+           /var/log/dpkg.log \
+           /var/log/alternatives.log \
+           /var/log/apt/*
 }
 
 #
