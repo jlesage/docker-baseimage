@@ -1,4 +1,4 @@
-#!/usr/bin/with-contenv sh
+#!/bin/sh
 
 #
 # This is invoked by cinit when it exits.
@@ -7,7 +7,7 @@
 set -e # Exit immediately if a command exits with a non-zero status.
 set -u # Treat unset variables as an error.
 
-EXIT_CODE=${FORCED_CONTAINER_EXIT_CODE:-${1:-1}}
+EXIT_CODE=${1:-1}
 
 log() {
     printf "[%-12s] $*\n" "finish"
