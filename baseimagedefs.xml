@@ -16,6 +16,11 @@ long-lived application.
     <!-- Changelog -->
     <history>
       <release>
+        <version>2.4.5</version>
+        <date>2021-04-01</date>
+        <change>Updated installed packages to get latest security fixes.</change>
+      </release>
+      <release>
         <version>2.4.4</version>
         <date>2020-06-25</date>
         <change>Upgraded glibc to version 2.31 on Alpine Linux images with glibc integrated.</change>
