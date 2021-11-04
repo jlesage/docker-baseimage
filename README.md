@@ -54,8 +54,6 @@ Different docker images are available:
 
 | Base Distribution  | Docker Image Base Tag | Size |
 |--------------------|-----------------------|------|
-| [Alpine 3.8]       | alpine-3.8            | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.8)   |
-| [Alpine 3.9]       | alpine-3.9            | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.9)   |
 | [Alpine 3.10]      | alpine-3.10           | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.10)  |
 | [Alpine 3.11]      | alpine-3.11           | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.11)  |
 | [Alpine 3.12]      | alpine-3.12           | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.12)  |
@@ -64,12 +62,11 @@ Different docker images are available:
 | [Debian 8]         | debian-8              | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-8)     |
 | [Debian 9]         | debian-9              | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-9)     |
 | [Debian 10]        | debian-10             | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-10)    |
+| [Debian 11]        | debian-11             | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-11)    |
 | [Ubuntu 16.04 LTS] | ubuntu-16.04          | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-16.04) |
 | [Ubuntu 18.04 LTS] | ubuntu-18.04          | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-18.04) |
 | [Ubuntu 20.04 LTS] | ubuntu-20.04          | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-20.04) |
 
-[Alpine 3.8]: https://alpinelinux.org
-[Alpine 3.9]: https://alpinelinux.org
 [Alpine 3.10]: https://alpinelinux.org
 [Alpine 3.11]: https://alpinelinux.org
 [Alpine 3.12]: https://alpinelinux.org
@@ -78,6 +75,7 @@ Different docker images are available:
 [Debian 8]: https://www.debian.org/releases/jessie/
 [Debian 9]: https://www.debian.org/releases/stretch/
 [Debian 10]: https://www.debian.org/releases/buster/
+[Debian 11]: https://www.debian.org/releases/bullseye/
 [Ubuntu 16.04 LTS]: http://releases.ubuntu.com/16.04/
 [Ubuntu 18.04 LTS]: http://releases.ubuntu.com/18.04/
 [Ubuntu 20.04 LTS]: http://releases.ubuntu.com/20.04/
