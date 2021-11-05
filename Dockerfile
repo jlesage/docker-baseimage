@@ -19,19 +19,19 @@ ARG DEBIAN_PKGS="\
 "
 
 # Build the init system and process supervisor.
-FROM alpine:3.12 AS cinit
+FROM alpine:3.14 AS cinit
 COPY src/cinit /tmp/cinit
 RUN apk --no-cache add build-base
 RUN make -C /tmp/cinit
 
 # Build the log monitor.
-FROM alpine:3.12 AS logmonitor
+FROM alpine:3.14 AS logmonitor
 COPY src/logmonitor /tmp/logmonitor
 RUN apk --no-cache add build-base linux-headers
 RUN make -C /tmp/logmonitor
 
 # Build su-exec
-FROM alpine:3.12 AS su-exec
+FROM alpine:3.14 AS su-exec
 RUN apk --no-cache add build-base curl
 RUN mkdir /tmp/su-exec
 RUN curl -# -L https://github.com/ncopa/su-exec/archive/v0.2.tar.gz | tar xz --strip 1 -C /tmp/su-exec
