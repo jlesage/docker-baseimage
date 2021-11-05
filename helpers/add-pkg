@@ -108,6 +108,10 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
+if [ -z "$(which apk)" ]; then
+    export DEBIAN_FRONTEND=noninteractive
+fi
+
 VIRTUAL_PKG=
 if [ "$1" = "--virtual" ]; then
     shift
