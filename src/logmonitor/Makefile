@@ -1,12 +1,10 @@
 TARGET = logmonitor
 
-CC = $(TOOLCHAIN_PREFIX)gcc
-STRIP = $(TOOLCHAIN_PREFIX)strip
 RM = rm -f
 
 CPPFLAGS = -MMD
 CFLAGS = -Wall -Werror -std=gnu11
-LDFLAGS = -static
+LDFLAGS = -static -Wl,--strip-all
 LDLIBS =
 
 SOURCES = logmonitor.c
@@ -15,7 +13,6 @@ DEPENDS = $(OBJECTS:.o=.d)
 
 $(TARGET): $(OBJECTS)
 	$(CC) $(LDFLAGS) $(OBJECTS) $(LDLIBS) -o $@
-	$(STRIP) $@
 
 clean:
 	-$(RM) $(OBJECTS)
