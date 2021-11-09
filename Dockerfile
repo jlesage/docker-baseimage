@@ -21,16 +21,26 @@ ARG DEBIAN_PKGS="\
 # Dockerfile cross-compilation helpers.
 FROM --platform=$BUILDPLATFORM tonistiigi/xx AS xx
 
+# Build UPX.
+# NOTE: The latest official releast of UPX (version 3.96) produces binaries that
+# crash on ARM.  We need to manually compile it with all latest fixes.
+FROM --platform=$BUILDPLATFORM alpine:3.14 AS upx
+RUN apk --no-cache add build-base git bash perl ucl-dev zlib-dev zlib-static && \
+    git clone --recurse-submodules https://github.com/upx/upx.git /tmp/upx && \
+    git -C /tmp/upx checkout f75ad8b && \
+    make LDFLAGS=-static CXXFLAGS_OPTIMIZE= -C /tmp/upx -j$(nproc) all
+
 # Build the init system and process supervisor.
 FROM --platform=$BUILDPLATFORM alpine:3.14 AS cinit
 ARG TARGETPLATFORM
 COPY --from=xx / /
 COPY src/cinit /tmp/cinit
-RUN apk --no-cache add make clang upx
+RUN apk --no-cache add make clang
 RUN xx-apk --no-cache add gcc musl-dev
 RUN CC=xx-clang \
     make -C /tmp/cinit
 RUN xx-verify --static /tmp/cinit/cinit
+COPY --from=upx /tmp/upx/src/upx.out /usr/bin/upx
 RUN upx /tmp/cinit/cinit
 
 # Build the log monitor.
@@ -38,18 +48,19 @@ FROM --platform=$BUILDPLATFORM alpine:3.14 AS logmonitor
 ARG TARGETPLATFORM
 COPY --from=xx / /
 COPY src/logmonitor /tmp/logmonitor
-RUN apk --no-cache add make clang upx
+RUN apk --no-cache add make clang
 RUN xx-apk --no-cache add gcc musl-dev linux-headers
 RUN CC=xx-clang \
     make -C /tmp/logmonitor
 RUN xx-verify --static /tmp/logmonitor/logmonitor
+COPY --from=upx /tmp/upx/src/upx.out /usr/bin/upx
 RUN upx /tmp/logmonitor/logmonitor
 
 # Build su-exec
 FROM --platform=$BUILDPLATFORM alpine:3.14 AS su-exec
 ARG TARGETPLATFORM
 COPY --from=xx / /
-RUN apk --no-cache add curl make clang upx
+RUN apk --no-cache add curl make clang
 RUN xx-apk --no-cache add gcc musl-dev
 RUN mkdir /tmp/su-exec
 RUN curl -# -L https://github.com/ncopa/su-exec/archive/v0.2.tar.gz | tar xz --strip 1 -C /tmp/su-exec
@@ -57,6 +68,7 @@ RUN CC=xx-clang \
     LDFLAGS="-static -Wl,--strip-all" \
     make -C /tmp/su-exec
 RUN xx-verify --static /tmp/su-exec/su-exec
+COPY --from=upx /tmp/upx/src/upx.out /usr/bin/upx
 RUN upx /tmp/su-exec/su-exec
 
 # Pull base image.
