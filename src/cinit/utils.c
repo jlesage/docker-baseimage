@@ -510,7 +510,7 @@ void string_to_uint(const char *str, unsigned int *result)
         // Extra characters at end of input.
         ThrowMessage("not a number");
     }
-    else if (val == ULLONG_MAX && ERANGE == errno) {
+    else if (val == ULONG_MAX && ERANGE == errno) {
         // Out of range of type unsinged long int.
         ThrowMessage("out of range");
     }
@@ -591,7 +591,7 @@ void string_to_mode(const char *str, mode_t *result)
         // Extra characters at end of input.
         ThrowMessage("not a number");
     }
-    else if (val == ULLONG_MAX && ERANGE == errno) {
+    else if (val == ULONG_MAX && ERANGE == errno) {
         // Out of range of type unsinged long int.
         ThrowMessage("out of range");
     }

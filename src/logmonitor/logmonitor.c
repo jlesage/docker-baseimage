@@ -777,13 +777,16 @@ static lm_target_t *alloc_target(const char *targets_dir, const char *name)
             // Convert the debouncing value.
             if (IS_SUCCESS(retval)) {
                 char *end;
-                target->debouncing = strtol(debouncing_str, &end, 10);
+                long int val = strtol(debouncing_str, &end, 10);
                 if (end == debouncing_str
                     || *end != '\0'
-                    || ((LONG_MIN == target->debouncing || LONG_MAX == target->debouncing) && ERANGE == errno)
-                    || target->debouncing > INT_MAX
-                    || target->debouncing < INT_MIN) {
+                    || ((LONG_MIN == val || LONG_MAX == val) && ERANGE == errno)
+                    || val > INT_MAX
+                    || val < INT_MIN) {
                     SET_ERROR(retval, "Invalid debouncing value '%s' defined in %s.", debouncing_str, filepath);
+                }
+                else {
+                    target->debouncing = val;
                 }
             }
 
@@ -1015,16 +1018,15 @@ int main(int argc, char **argv)
     const char *cfgdir = DEFAULT_CONFIG_DIR;
 
     char *tailbuf;
-    int n;
 
     // Parse options.
     if (IS_SUCCESS(retval)) {
-        while (n >= 0) {
-            n = getopt_long(argc, argv, short_options, long_options, NULL);
+        while (true) {
+            int n = getopt_long(argc, argv, short_options, long_options, NULL);
             if (n < 0) {
-                 continue;
+                 break;
             }
-            switch(n) {
+            switch (n) {
                 case 'c':
                     cfgdir = optarg;
                     break;
