@@ -3,7 +3,7 @@ TARGET = logmonitor
 RM = rm -f
 
 CPPFLAGS = -MMD
-CFLAGS = -Wall -Werror -std=gnu11
+CFLAGS = -Wall -Werror -std=gnu11 -Os -fomit-frame-pointer
 LDFLAGS = -static -Wl,--strip-all
 LDLIBS =
 
