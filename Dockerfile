@@ -65,6 +65,7 @@ RUN xx-apk --no-cache add gcc musl-dev
 RUN mkdir /tmp/su-exec
 RUN curl -# -L https://github.com/ncopa/su-exec/archive/v0.2.tar.gz | tar xz --strip 1 -C /tmp/su-exec
 RUN CC=xx-clang \
+    CFLAGS="-Os -fomit-frame-pointer" \
     LDFLAGS="-static -Wl,--strip-all" \
     make -C /tmp/su-exec
 RUN xx-verify --static /tmp/su-exec/su-exec
