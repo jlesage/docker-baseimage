@@ -123,7 +123,7 @@ jobs:
       - name: Setup QEMU
         uses: docker/setup-qemu-action@v1
         with:
-          platforms: 386,arm,arm64,ppc64le,mips64,s390x
+          platforms: arm,arm64,ppc64le,mips64,s390x
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -154,11 +154,6 @@ jobs:
             docker pull $DOCKER_IMAGE
             CURRENT_ARCH="$(docker run --rm $DOCKER_IMAGE sh -c 'uname -m')"
             echo "Testing image on $CURRENT_ARCH..."
-            if [[ "$CURRENT_ARCH" == "i686" ]]; then
-                # Image test can hang... looks like a QEMU issue.
-                echo "Skipping testing of the linux/386 image. "
-                continue
-            fi
             bats tests
           done
 
