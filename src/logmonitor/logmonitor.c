@@ -1017,7 +1017,7 @@ int main(int argc, char **argv)
     unsigned sleep_period = 1;
     const char *cfgdir = DEFAULT_CONFIG_DIR;
 
-    char *tailbuf;
+    char *tailbuf = NULL;
 
     // Parse options.
     if (IS_SUCCESS(retval)) {
