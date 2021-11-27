@@ -244,14 +244,6 @@ int read_lines(int *fds, size_t num_fds, line_callback_t callback, void *callbac
     int retval = 0;
     bool done = false;
     output_read_state_t *read_states = NULL;
-    struct pollfd pfds[num_fds];
-
-    // Fill the file descriptors for poll function.
-    for (unsigned int i = 0; i < num_fds; i++) {
-        pfds[i].fd = fds[i];
-        pfds[i].events = POLLIN;
-    }
-
     // Alloc memory for read states.
     read_states = calloc(num_fds, sizeof(output_read_state_t));
     if (!read_states) {
@@ -260,6 +252,14 @@ int read_lines(int *fds, size_t num_fds, line_callback_t callback, void *callbac
 
     // Read file descriptors.
     while (retval == 0 && !done) {
+        struct pollfd pfds[num_fds];
+
+        // Fill the file descriptors for poll function.
+        for (unsigned int i = 0; i < num_fds; i++) {
+            pfds[i].fd = fds[i];
+            pfds[i].events = POLLIN;
+        }
+
         // Poll.
         if (poll(pfds, num_fds, -1) < 0) {
             if (errno == EINTR) {
@@ -296,8 +296,8 @@ int read_lines(int *fds, size_t num_fds, line_callback_t callback, void *callbac
             // Get the maximum number of bytes to read.
             size_t max_to_read = sizeof(rstate->buf) - rstate->used - 1;
 
-            // If there is nothing to read, line too big to fit in buffer.  We
-            // need to flush the buffer.
+            // If there is nothing to read, line is too big to fit in buffer.
+            // We need to flush the buffer.
             if (max_to_read == 0) {
                 rstate->buf[rstate->used] = '\0';
                 rstate->used = 0;
@@ -359,7 +359,7 @@ int read_lines(int *fds, size_t num_fds, line_callback_t callback, void *callbac
             }
         }
 
-        // Check if all file descriptor are done.
+        // Check if all file descriptors are done.
         done = true;
         for (unsigned int i = 0; i < num_fds; i++) {
             if (!read_states[i].eof) {
