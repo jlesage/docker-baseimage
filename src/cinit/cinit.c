@@ -16,6 +16,7 @@
 #include <sys/stat.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <pty.h>
 
 #include "utils.h"
 #include "log.h"
@@ -149,8 +150,8 @@ typedef struct {
 
     pid_t pid;
     unsigned long start_time;
-    int stdout_pipe[2];
-    int stderr_pipe[2];
+    int stdout_fd;
+    int stderr_fd;
     pthread_t logger;
     bool logger_started;
 } service_t;
@@ -280,6 +281,19 @@ static const char *signal_to_str(int sig)
 }
 
 /**
+ * Close a file descriptor if needed.
+ *
+ * @param fd Pointer to the file descriptor.
+ */
+static void close_fd(int *fd)
+{
+    if (fd && *fd > 0) {
+        close(*fd);
+        *fd = 0;
+    }
+}
+
+/**
  * Get the monotonic time since some unspecified starting point.
  *
  * @return Monotonic time, in milliseconds.
@@ -330,11 +344,11 @@ static int msleep(unsigned long msec)
  */
 static bool ends_with(const char *str, const char *suffix)
 {
-  size_t str_len = strlen(str);
-  size_t suffix_len = strlen(suffix);
+    size_t str_len = strlen(str);
+    size_t suffix_len = strlen(suffix);
 
-  return (str_len >= suffix_len) &&
-         (!memcmp(str + str_len - suffix_len, suffix, suffix_len));
+    return (str_len >= suffix_len) &&
+           (!memcmp(str + str_len - suffix_len, suffix, suffix_len));
 }
 
 /*
@@ -381,13 +395,11 @@ static void *service_logger(void *p)
 
     ASSERT_VALID_SERVICE_INDEX(service);
 
-    pthread_detach(pthread_self());
-
     // Build the prefix.
     snprintf(prefix, sizeof(prefix), "[%-*s] ", g_ctx.log_prefix_length, SRV(service).name);
 
     // Start the logger.
-    log_prefixer(prefix, SRV(service).stdout_pipe[0], SRV(service).stderr_pipe[0]);
+    log_prefixer(prefix, SRV(service).stdout_fd, SRV(service).stderr_fd);
 
     return NULL;
 }
@@ -745,16 +757,6 @@ static int load_service(const char *service)
     // PID of 0 means service not running.
     SRV(sid).pid = 0;
 
-    // Create pipe for service's stdout.
-    if (pipe(SRV(sid).stdout_pipe) < 0) {
-        ThrowMessageWithErrno("could not create stdout pipe");
-    }
-
-    // Create pipe for service's stderr.
-    if (pipe(SRV(sid).stderr_pipe) < 0) {
-        ThrowMessageWithErrno("could not create stderr pipe");
-    }
-
     // Set the service name at the end, when all validation is done.
     strcpy(SRV(sid).name, service);
 
@@ -773,10 +775,19 @@ static int load_service(const char *service)
 static pid_t fork_and_exec(int service)
 {
     pid_t p;
+    int pty_master;
+    int stderr_pipe[2];
 
     ASSERT_VALID_SERVICE_INDEX(service);
     
-    switch (p = fork()) {
+    // Create pipe for service's stderr.
+    if (pipe(stderr_pipe) < 0) {
+        //ThrowMessageWithErrno("could not create stderr pipe");
+        return 0;
+    }
+
+    // Use forkpty() to disable buffering on child side.
+    switch (p = forkpty(&pty_master, NULL, NULL, NULL)) {
         case (pid_t)-1:
         {
             // Fork failed.
@@ -786,13 +797,17 @@ static pid_t fork_and_exec(int service)
         {
             // Child.
 
-            // Set stdout and stderr.
-            dup2(SRV(service).stdout_pipe[1], STDOUT_FILENO);
-            dup2(SRV(service).stderr_pipe[1], STDERR_FILENO);
+            // forkpty() redirects stdout and stderr into a single stream, so
+            // it is not possible to tell if a message comes from stdout or
+            // stderr.  To avoid that, let's map the stderr of the child to a
+            // pipe.
+            // https://reviews.llvm.org/D15073
+            // https://github.com/microsoft/node-pty/issues/71
+            // https://stackoverflow.com/questions/4057985
+            dup2(stderr_pipe[1], STDERR_FILENO);
 
-            // Read sides are not needed.
-            close(SRV(service).stdout_pipe[0]);
-            close(SRV(service).stderr_pipe[0]);
+            // Read side of the pipe is not needed.
+            close(stderr_pipe[0]);
 
 #if 0
             ioctl(0, TIOCNOTTY, 0);
@@ -895,6 +910,11 @@ static pid_t fork_and_exec(int service)
         default:
         {
             // Parent.
+            SRV(service).stdout_fd = pty_master;
+            SRV(service).stderr_fd = stderr_pipe[0];
+
+            // Write side is not needed.
+            close(stderr_pipe[1]);
             return p;
         }
     }
@@ -930,6 +950,18 @@ static void start_service(int service)
         if (SRV(service).pid > 0) {
             log_debug("started service '%s'.", SRV(service).name);
             SRV(service).start_time = get_time();
+
+            // Start the logger.
+            ASSERT_LOG(!SRV(service).logger_started,
+                    "Logger thread already started for service '%s'.",
+                    SRV(service).name);
+            if (pthread_create(&SRV(service).logger, NULL, service_logger, (void*)&service) == 0) {
+                SRV(service).logger_started = true;
+            }
+            else {
+                log_err("could not create the logger thread for service '%s'.",
+                        SRV(service).name);
+            }
             return;
         }
         msleep(500);
@@ -948,12 +980,6 @@ static void stop_service(int service)
     
     if (SRV(service).pid == 0) {
         // Service not running.
-        return;
-    }
-    else if (SRV(service).pid == 1) {
-        // PID of 1 is used by non-respawning services.  Reset the PID so the
-        // service can be re-started.
-        SRV(service).pid = 0;
         return;
     }
 
@@ -1082,15 +1108,6 @@ static void load_services()
  */
 static void unload_services()
 {
-    // Close file descriptors.
-    // NOTE: This will cause the logger threads to terminate.
-    FOR_EACH_SERVICE(sid) {
-        if (SRV(sid).stdout_pipe[0]) close(SRV(sid).stdout_pipe[0]);
-        if (SRV(sid).stdout_pipe[1]) close(SRV(sid).stdout_pipe[1]);
-        if (SRV(sid).stderr_pipe[0]) close(SRV(sid).stderr_pipe[0]);
-        if (SRV(sid).stderr_pipe[1]) close(SRV(sid).stderr_pipe[1]);
-    }
-
     // Free memory.
     FOR_EACH_SERVICE(sid) {
         for (unsigned int i = 0; i < SRV(sid).param_list_size; i++) {
@@ -1132,31 +1149,24 @@ static void start_services()
         }
 
         Try {
-            // Start the logger.
-            if (pthread_create(&SRV(sid).logger, NULL, service_logger, (void*)&sid) == 0) {
-                SRV(sid).logger_started = true;
-            }
-            else {
-                ThrowMessage("could not create the logger thread");
-            }
-
             // Start service.
             start_service(sid);
 
             // Check if we need to wait for the service to terminate.
             if (SRV(sid).sync) {
                 log_debug("waiting for service '%s' to terminate...", SRV(sid).name);
-                if (waitpid(SRV(sid).pid, NULL, 0) < 0) {
+                while (waitpid(SRV(sid).pid, NULL, 0) < 0) {
                     if (errno == EINTR) {
                         if (do_shutdown) {
                             ExitTry();
                         }
+                        continue;
                     }
 
                     ThrowMessageWithErrno("could not wait for termination of service '%s'",
                             SRV(sid).name);
                 }
-                SRV(sid).pid = 1;
+                SRV(sid).pid = 0;
 
                 // Skip to next service.
                 ExitTry();
@@ -1254,6 +1264,27 @@ static void handle_killed(pid_t killed, int status, bool shutdown_in_progress)
 
         // Update service table.
         SRV(sid).pid = 0;
+
+        // Close file descriptors.
+        close_fd(&SRV(sid).stdout_fd);
+        close_fd(&SRV(sid).stderr_fd);
+
+        // Closing file descriptors should be enough for the logger thread to
+        // automatically terminate.
+        SRV(sid).logger_started = false;
+
+        // Join the logger thread.
+        log_debug("waiting termination of logger thread of service '%s'...",
+                SRV(sid).name);
+        int rc = pthread_join(SRV(sid).logger, NULL);
+        if (rc == 0) {
+            log_debug("logger thread of service '%s' successfully terminated.",
+                    SRV(sid).name);
+        }
+        else {
+            log_err("failed to join logger thread of service '%s': %s.",
+                    SRV(sid).name, strerror(rc));
+        }
 
         // Run the service's finish script.
         Try {
@@ -1618,15 +1649,14 @@ int main(int argc, char *argv[])
             if (SRV(sid).interval > 0) {
                 if ((get_time() - SRV(sid).start_time) >= SRV(sid).interval * 1000) {
                     // Check if service still running.
-                    if (SRV(sid).pid > 1 && kill(SRV(sid).pid, 0) == 0) {
+                    if (SRV(sid).pid > 0 && kill(SRV(sid).pid, 0) == 0) {
                         log_err("service '%s' didn't terminate before its next interval.", SRV(sid).name);
                         SRV(sid).start_time = get_time();
                         continue;
                     }
 
-                    // Restart the service.
+                    // Start the service again.
                     Try {
-                        stop_service(sid);
                         start_service(sid);
                     }
                     Catch (e) {
