@@ -3,6 +3,10 @@
 set -e # Exit immediately if a command exits with a non-zero status.
 set -u # Treat unset variables as an error.
 
+if [ "${CONTAINER_DEBUG:-0}" -eq 1 ]; then
+    echo "--debug"
+fi
+
 # Each log file to monitor is a parameter.
 for FILE in $(cat /etc/logmonitor/logmonitor.conf | grep 'LOG_FILES=' | cut -d'=' -f2 | tr ',' ' ')
 do
