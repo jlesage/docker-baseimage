@@ -129,7 +129,7 @@ NodeJS server.
 In `Dockerfile`:
 ```Dockerfile
 # Pull base image.
-FROM jlesage/baseimage:alpine-3.13-v3
+FROM jlesage/baseimage:alpine-3.15-v3
 
 # Install http-server.
 RUN add-pkg nodejs-npm && \
@@ -141,6 +141,8 @@ COPY startapp.sh /startapp.sh
 # Set the name of the application.
 RUN echo "http-server" > /etc/cont-env.d/APP_NAME
 
+# Expose ports.
+EXPOSE 8080
 ```
 
 In `startapp.sh`:
@@ -168,9 +170,9 @@ http://[HOST IP ADDR]:8080
 ### Selecting a Baseimage
 
 Using a baseimage based on Alpine Linux is the recommended choice.  Not only
-because of its small size, but also because Alpine Linux is a Linux distribution
-based on [musl] and [BusyBox] that is designed for security, simplicity and
-resource efficiency.
+because of its small size, but also because Alpine Linux is a distribution based
+on [musl] and [BusyBox] that is designed for security, simplicity and resource
+efficiency.
 
 However, using this baseimage to integrate an application not part of the
 Alpine's software repository or without its source code available may be harder.
@@ -229,13 +231,13 @@ and its application.
 
 There are two types of environment variables:
 
-  - **Public**: These variables are meant to be used by users of your
-    application.  They provide them a way configure the container.  They are
-    declared in the `Dockerfile`, via the `ENV` instruction.  Their value can be
-    set by users during the creation of the container, via the
-    `-e "<VAR>=<VALUE>"` argument of the `docker run` command.  Many Docker
-    container management systems use these variables to automatically provide
-    configuration parameters to the users.
+  - **Public**: These variables are targeted to people using the container.
+    They provide a way to configure configure it.  They are declared in the
+    `Dockerfile`, via the `ENV` instruction.  Their value can be set by users
+    during the creation of the container, via the `-e "<VAR>=<VALUE>"` argument
+    of the `docker run` command.  Also, many Docker container management systems
+    use these variables to automatically provide configuration parameters to the
+    users.
 
   - **Internal**: These variables are the ones thay don't need to be exposed to
     users.  They are useful for the application itself, but are not intended to
@@ -255,8 +257,10 @@ The following public environment variables are provided by the baseimage:
 |`SUP_GROUP_IDS`| Comma-separated list of supplementary group IDs of the application. | (unset) |
 |`UMASK`| Mask that controls how file permissions are set for newly created files. The value of the mask is in octal notation.  By default, the default umask value is `0022`, meaning that newly created files are readable by everyone, but only writable by the owner.  See the online umask calculator at http://wintelguy.com/umask-calc.pl. | `0022` |
 |`TZ`| [TimeZone](http://en.wikipedia.org/wiki/List_of_tz_database_time_zones) used by the container.  Timezone can also be set by mapping `/etc/localtime` between the host and the container. | `Etc/UTC` |
-|`KEEP_APP_RUNNING`| When set to `1`, the application will be automatically restarted when it crashes or terminates. | (unset) |
-|`APP_NICENESS`| Priority at which the application should run.  A niceness value of -20 is the highest priority and 19 is the lowest priority.  The default niceness value is 0.  **NOTE**: A negative niceness (priority increase) requires additional permissions.  In this case, the container should be run with the docker option `--cap-add=SYS_NICE`. | (unset) |
+|`KEEP_APP_RUNNING`| When set to `1`, the application will be automatically restarted when it crashes or terminates. | `0` |
+|`APP_NICENESS`| Priority at which the application should run.  A niceness value of -20 is the highest priority and 19 is the lowest priority.  The default niceness value is 0.  **NOTE**: A negative niceness (priority increase) requires additional permissions.  In this case, the container should be run with the docker option `--cap-add=SYS_NICE`. | `0` |
+|`INSTALL_PACKAGES`| Space-separated list of packages to install during the startup of the container.  Packages are installed from the repository of the Linux distribution this container is based on. | `""` |
+|`CONTAINER_DEBUG`| Set to `1` to enable debug logging. | `0` |
 
 #### Internal Environment Variables
 
@@ -269,15 +273,18 @@ The following internal environment variables are provided by the baseimage:
 |`XDG_CONFIG_HOME`| Defines the base directory relative to which user specific configuration files should be stored. | `/config/xdg/config` |
 |`XDG_DATA_HOME`| Defines the base directory relative to which user specific data files should be stored. | `/config/xdg/data` |
 |`XDG_CACHE_HOME`| Defines the base directory relative to which user specific non-essential data files should be stored. | `/config/xdg/cache` |
+|`TAKE_CONFIG_OWNERSHIP`| When set to `0`, ownership of the `/config` directory is not taken during startup of the container. | `1` |
 
 #### Adding/Removing Internal Environment Variables
 
 Internal environment variables can be defined by adding a file to
 `/etc/cont-env.d/` inside the container, where the name of the file is the name
-of the variable and its value is defined by the content of the file.  If the
-file has execute permission, the init process will execute the program and the
-value of the environment variable is expected to be printed to its standard
-output.
+of the variable and its value is defined by the content of the file.
+
+If the file has execute permission, the init process will execute the program
+and the value of the environment variable is expected to be printed to its
+standard output.  If the script exits with the return code `100`, the
+environment variable is not set.
 
 #### Availability
 
@@ -356,8 +363,9 @@ alphabetical order.  They are executed before starting services.
 Initialization scripts are located at `/etc/cont-init.d/` inside the container.
 
 To have a better predictability of the execution order, name of the scripts
-follows the `XX-name.sh` format, where `XX` is a sequence number.  The following
-ranges are used by the baseimage:
+follows the `XX-name.sh` format, where `XX` is a sequence number.
+
+The following ranges are used by the baseimage:
 
   - 10-29
   - 70-89
@@ -409,7 +417,7 @@ setting.
 | shutdown_on_terminate  | Boolean          | Indicates that the container should be shutted down when the service terminates. | `FALSE` |
 | min_running_time       | Unsigned integer | The minimum amount of time (in milliseconds) the service should be running before considering it as ready. | `500` |
 | disabled               | Boolean          | Indicates that the service is disabled, meaning that it won't be loaded nor started. | `FALSE` |
-| &lt;service&gt;.dep    | Boolean          | Indicates that the service depends on another one.  For example, having `srvB.dep` means that `srvB` should be started before this service. | N/A |
+| <service>.dep          | Boolean          | Indicates that the service depends on another one.  For example, having `srvB.dep` means that `srvB` should be started before this service. | N/A |
 
 The following table provides more details about some value types:
 
@@ -446,8 +454,8 @@ This behavior can be adjusted with the following methods:
 
 ### Configuration Directory
 
-Applications often needs to write configuration, data, states, logs, etc.
-Inside the container, this data should be stored in the `/config` directory.
+Applications often need to write configuration, data, states, logs, etc.
+Inside the container, this data should be stored under the `/config` directory.
 
 This directory is intended to be mapped to a folder on the host.  The goal is to
 write stuff outside the container to keep this data persistent.
@@ -459,7 +467,7 @@ NOTE: During the container startup, ownership of this folder and all its content
 
 #### Application's Data Directories
 
-A lot of applications use the environment variables defined in the
+A lot of applications use the environment variables defined by the
 [XDG Base Directory Specification] to determine where to store
 various data.  The baseimage sets these variables so they all fall under
 `/config/`:
@@ -520,7 +528,7 @@ exec /usr/bin/my_service > /config/log/my_service_out.log 2> /config/log/my_serv
 
 ### Log Monitor
 
-This baseimage include a simple log monitor.  This monitor allows sending
+The baseimage include a simple log monitor.  This monitor allows sending
 notification(s) when a particular message is detected in a log or status file.
 
 This system has two main components: notification definitions and notifications
@@ -583,9 +591,9 @@ RUN install-glibc
 
 ### Modifying Files With Sed
 
-`sed` is a useful tool and is often used in container builds to modify files.
-However, one downside of this method is that there is no easy way to determine
-if `sed` actually modified the file or not.
+`sed` is a useful tool often used in container builds to modify files.  However,
+one downside of this method is that there is no easy way to determine if `sed`
+actually modified the file or not.
 
 It's for this reason that the baseimage includes a helper that gives `sed` a
 "patch-like" behavior:  if the application of a sed expression results in no
