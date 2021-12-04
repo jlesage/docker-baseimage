@@ -10,7 +10,7 @@ log() {
 }
 
 log_script() {
-    while read OUTPUT; do
+    while IFS= read OUTPUT; do
         log "$1: $OUTPUT"
     done
 }
@@ -160,7 +160,7 @@ if [ -d /etc/cont-init.d ]; then
         echo "executing..." | log_script "$FILENAME"
 
         set +e
-        run "$FILE" 2>&1 \| log_script "$FILENAME"
+        run sh -c "$FILE 2>&1" \| log_script "$FILENAME"
         RC=$pipestatus_1
         set -e
 
