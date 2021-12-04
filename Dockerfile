@@ -120,7 +120,8 @@ ENV \
     UMASK=022 \
     TZ=Etc/UTC \
     KEEP_APP_RUNNING=0 \
-    APP_NICENESS=0
+    APP_NICENESS=0 \
+    CONTAINER_DEBUG=0
 
 # Define mountable directories.
 VOLUME ["/config"]
