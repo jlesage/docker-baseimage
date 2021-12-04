@@ -97,16 +97,19 @@ if [ -d /etc/cont-env.d ]; then
             RC="$?"
             set -e
 
-            if [ $RC -eq 0 ]; then
+            if [ $RC -eq 0 ] || [ $RC -eq 100 ]; then
                 echo "terminated successfully." | log_script "$FILENAME"
             else
                 echo "terminated with error $RC." | log_script "$FILENAME"
                 exit $RC
             fi
 
-            echo "loading..." | log_script "$FILENAME"
-            #echo "$VAL" > /var/run/cont-env/"$FILENAME"
-            load_env_var "$FILENAME" "$VAL"
+            if [ $RC -eq 0 ]; then
+                echo "loading..." | log_script "$FILENAME"
+                load_env_var "$FILENAME" "$VAL"
+            else
+                echo "not setting variable."
+            fi
         else
             echo "loading..." | log_script "$FILENAME"
             load_env_var "$FILENAME" "$(cat "$FILE" | head -n1)"
