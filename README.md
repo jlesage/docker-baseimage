@@ -254,12 +254,12 @@ The following public environment variables are provided by the baseimage:
 |----------------|----------------------------------------------|---------|
 |`USER_ID`| ID of the user the application runs as.  See [User/Group IDs](#usergroup-ids) to better understand when this should be set. | `1000` |
 |`GROUP_ID`| ID of the group the application runs as.  See [User/Group IDs](#usergroup-ids) to better understand when this should be set. | `1000` |
-|`SUP_GROUP_IDS`| Comma-separated list of supplementary group IDs of the application. | (unset) |
+|`SUP_GROUP_IDS`| Comma-separated list of supplementary group IDs of the application. | `""` |
 |`UMASK`| Mask that controls how file permissions are set for newly created files. The value of the mask is in octal notation.  By default, the default umask value is `0022`, meaning that newly created files are readable by everyone, but only writable by the owner.  See the online umask calculator at http://wintelguy.com/umask-calc.pl. | `0022` |
 |`TZ`| [TimeZone](http://en.wikipedia.org/wiki/List_of_tz_database_time_zones) used by the container.  Timezone can also be set by mapping `/etc/localtime` between the host and the container. | `Etc/UTC` |
 |`KEEP_APP_RUNNING`| When set to `1`, the application will be automatically restarted when it crashes or terminates. | `0` |
 |`APP_NICENESS`| Priority at which the application should run.  A niceness value of -20 is the highest priority and 19 is the lowest priority.  The default niceness value is 0.  **NOTE**: A negative niceness (priority increase) requires additional permissions.  In this case, the container should be run with the docker option `--cap-add=SYS_NICE`. | `0` |
-|`INSTALL_PACKAGES`| Space-separated list of packages to install during the startup of the container.  Packages are installed from the repository of the Linux distribution this container is based on. | `""` |
+|`INSTALL_PACKAGES`| Space-separated list of packages to install during the startup of the container.  Packages are installed from the repository of the Linux distribution this container is based on.  **ATTENTION**: Installing a package that override existing container files (e.g. binaries) can break it. | `""` |
 |`CONTAINER_DEBUG`| Set to `1` to enable debug logging. | `0` |
 
 #### Internal Environment Variables
@@ -273,11 +273,11 @@ The following internal environment variables are provided by the baseimage:
 |`XDG_CONFIG_HOME`| Defines the base directory relative to which user specific configuration files should be stored. | `/config/xdg/config` |
 |`XDG_DATA_HOME`| Defines the base directory relative to which user specific data files should be stored. | `/config/xdg/data` |
 |`XDG_CACHE_HOME`| Defines the base directory relative to which user specific non-essential data files should be stored. | `/config/xdg/cache` |
-|`TAKE_CONFIG_OWNERSHIP`| When set to `0`, ownership of the `/config` directory is not taken during startup of the container. | `1` |
+|`TAKE_CONFIG_OWNERSHIP`| When set to `0`, ownership of the content of the `/config` directory is not taken during startup of the container. | `1` |
 
 #### Adding/Removing Internal Environment Variables
 
-Internal environment variables can be defined by adding a file to
+Internal environment variables are defined by adding a file to
 `/etc/cont-env.d/` inside the container, where the name of the file is the name
 of the variable and its value is defined by the content of the file.
 
@@ -306,11 +306,11 @@ This baseimage automatically exports, as environment variables, Docker secrets
 that follow this naming convention:
 
 ```
-ENV__<environment variable name>
+CONT_ENV_<environment variable name>
 ```
 
-For example, for a secret named `ENV__MY_SECRET`, the environment variable
-`MY_SECRET` is created, with its content matching the one of the secret.
+For example, for a secret named `CONT_ENV_MY_PASSWORD`, the environment variable
+`MY_PASSWORD` is created, with its content matching the one of the secret.
 
 ### User/Group IDs
 
@@ -565,7 +565,7 @@ The following table describe files part of the definition:
 
 #### Notification Backend
 
-Definition of notification backend is stored in a directory under
+Definition of a notification backend is stored in a directory under
 `/etc/logmonitor/targets.d`.  For example, definition of `STDOUT` backend is
 found under `/etc/logmonitor/notifications.d/STDOUT/`.  The following table
 describe files part of the definition:
@@ -573,7 +573,12 @@ describe files part of the definition:
 | File         | Mandatory? | Description |
 |--------------|------------|-------------|
 | `send`       | Yes        | Program (script or binary with executable permission) that sends the notification.  It is invoked by the log monitor with the following notification properties as arguments: title, description/message and the severity level. |
-| `debouncing` | No         | File containing the minimum amount time (in seconds) that must elapse before sending the same notification with the current backend.  A value of `0` means infinite (notification is sent once).  If this file is missing, no debouncing is done. |
+| `debouncing` | No         | File containing the minimum amount time (in seconds) that must elapse before sending the same notification with this backend.  A value of `0` means infinite (notification is sent once).  If this file is missing, no debouncing is done. |
+
+**NOTE**: The log monitor invokes the notification backend and then waits for
+its termination.  So to prevent the log monitor from being blocked indefinitely,
+it is important to make sure that the execution of the `send` program terminates
+after a reasonable amount of time.
 
 By default, the baseimage contains the following notification backends:
 
