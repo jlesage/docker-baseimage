@@ -125,11 +125,11 @@ STAGE=cont-secrets
 log "loading container secrets..."
 if [ -d /run/secrets ]; then
     FILELIST="$(mktemp)"
-    find /run/secrets -maxdepth 1 -type f -name "ENV__*" | sort > "$FILELIST"
+    find /run/secrets -maxdepth 1 -type f -name "CONT_ENV_*" | sort > "$FILELIST"
     exec 3<"$FILELIST" # Open for reading on file descriptor 3.
     while read FILE
     do
-        ENV_VAR_NAME="${FILE#/run/secrets/ENV__}"
+        ENV_VAR_NAME="${FILE#/run/secrets/CONT_ENV_}"
 
         if ! valid_env_var_name "$ENV_VAR_NAME"; then
             echo "invalid environment variable name: $FILENAME"
