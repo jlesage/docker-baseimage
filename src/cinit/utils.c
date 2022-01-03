@@ -239,7 +239,7 @@ char **split(char *buf, int c, size_t *len, int plus, int ofs)
     return vector;
 }
 
-int read_lines(int *fds, size_t num_fds, line_callback_t callback, void *callback_data)
+int read_lines(int *fds, size_t num_fds, int event_fd, line_callback_t callback, void *callback_data)
 {
     int retval = 0;
     bool done = false;
@@ -277,6 +277,11 @@ int read_lines(int *fds, size_t num_fds, line_callback_t callback, void *callbac
 
             if (pfds[i].revents & POLLIN) {
                 // Ok, data available to read.
+                if (pfds[i].fd == event_fd) {
+                    // Time to exit.
+                    done = true;
+                    break;
+                }
             }
             else if (pfds[i].revents & (POLLHUP | POLLERR | POLLNVAL)) {
                 // The other end of the pipe has been closed.
@@ -290,6 +295,7 @@ int read_lines(int *fds, size_t num_fds, line_callback_t callback, void *callbac
             }
             else {
                 // Current fd not readable yet.
+                assert(pfds[i].revents == 0);
                 continue;
             }
 
@@ -360,11 +366,13 @@ int read_lines(int *fds, size_t num_fds, line_callback_t callback, void *callbac
         }
 
         // Check if all file descriptors are done.
-        done = true;
-        for (unsigned int i = 0; i < num_fds; i++) {
-            if (!read_states[i].eof) {
-                done = false;
-                break;
+        if (!done) {
+            done = true;
+            for (unsigned int i = 0; i < num_fds; i++) {
+                if (!read_states[i].eof) {
+                    done = false;
+                    break;
+                }
             }
         }
     }

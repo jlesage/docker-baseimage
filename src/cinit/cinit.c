@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <sys/wait.h>
 #include <sys/resource.h>
+#include <sys/eventfd.h>
 #include <grp.h>
 #include <dirent.h>
 #include <assert.h>
@@ -153,6 +154,7 @@ typedef struct {
     int stdout_fd;
     int stderr_fd;
     pthread_t logger;
+    int logger_event_fd;
     bool logger_started;
 } service_t;
 
@@ -399,7 +401,7 @@ static void *service_logger(void *p)
     snprintf(prefix, sizeof(prefix), "[%-*s] ", g_ctx.log_prefix_length, SRV(service).name);
 
     // Start the logger.
-    log_prefixer(prefix, SRV(service).stdout_fd, SRV(service).stderr_fd);
+    log_prefixer(prefix, SRV(service).stdout_fd, SRV(service).stderr_fd, SRV(service).logger_event_fd);
 
     return NULL;
 }
@@ -951,17 +953,35 @@ static void start_service(int service)
             log_debug("started service '%s'.", SRV(service).name);
             SRV(service).start_time = get_time();
 
-            // Start the logger.
+            // Service has been successfully started.  Now create its logger
+            // thread.
+
             ASSERT_LOG(!SRV(service).logger_started,
                     "Logger thread already started for service '%s'.",
                     SRV(service).name);
-            if (pthread_create(&SRV(service).logger, NULL, service_logger, (void*)&service) == 0) {
-                SRV(service).logger_started = true;
+
+            // Create file descriptor for event notification.  This is used to notify
+            // the logger thread to terminate.
+            SRV(service).logger_event_fd = eventfd(0, 0);
+            if (SRV(service).logger_event_fd < 0) {
+                int cur_errno = errno;
+                kill(SRV(service).pid, SIGKILL);
+                SRV(service).pid = 0;
+                errno = cur_errno;
+                ThrowMessageWithErrno("could not create file descriptor for event notification");
             }
-            else {
-                log_err("could not create the logger thread for service '%s'.",
-                        SRV(service).name);
+
+            // Create and start the logger thread.
+            int rc = pthread_create(&SRV(service).logger, NULL, service_logger, (void*)&service);
+            if (rc != 0) {
+                int cur_errno = errno;
+                kill(SRV(service).pid, SIGKILL);
+                SRV(service).pid = 0;
+                errno = cur_errno;
+                ThrowMessageWithErrno("could not create logger thread");
             }
+
+            SRV(service).logger_started = true;
             return;
         }
         msleep(500);
@@ -1265,26 +1285,37 @@ static void handle_killed(pid_t killed, int status, bool shutdown_in_progress)
         // Update service table.
         SRV(sid).pid = 0;
 
-        // Close file descriptors.
-        close_fd(&SRV(sid).stdout_fd);
-        close_fd(&SRV(sid).stderr_fd);
-
-        // Closing file descriptors should be enough for the logger thread to
-        // automatically terminate.
-        SRV(sid).logger_started = false;
+        // Ask the logger thread to terminate.
+        {
+            uint64_t u = 1;
+            ssize_t s = write(SRV(sid).logger_event_fd, &u, sizeof(u));
+            ASSERT_LOG(s == sizeof(u),
+                    "Failed to send event to logger thread: %s",
+                    strerror(errno));
+        }
 
         // Join the logger thread.
         log_debug("waiting termination of logger thread of service '%s'...",
                 SRV(sid).name);
         int rc = pthread_join(SRV(sid).logger, NULL);
-        if (rc == 0) {
-            log_debug("logger thread of service '%s' successfully terminated.",
-                    SRV(sid).name);
-        }
-        else {
-            log_err("failed to join logger thread of service '%s': %s.",
-                    SRV(sid).name, strerror(rc));
-        }
+        ASSERT_LOG(rc == 0, "Failed to join logger thread of service '%s': %s.",
+                SRV(sid).name, strerror(rc));
+        log_debug("logger thread of service '%s' successfully terminated.",
+                SRV(sid).name);
+
+        // Close file descriptors.
+        // NOTE: This should be done after the thread termination.  The manual
+        //       page for `close` warns:
+        //           It is probably unwise to close file descriptors while they
+        //           may be in use by system calls in other threads in the same
+        //           process. Since a file descriptor may be reused, there are
+        //           some obscure race conditions that may cause unintended side
+        //           effects.
+        close_fd(&SRV(sid).stdout_fd);
+        close_fd(&SRV(sid).stderr_fd);
+        close_fd(&SRV(sid).logger_event_fd);
+
+        SRV(sid).logger_started = false;
 
         // Run the service's finish script.
         Try {
