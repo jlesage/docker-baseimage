@@ -796,6 +796,9 @@ static pid_t fork_and_exec(int service)
         case (pid_t)-1:
         {
             // Fork failed.
+            close(stderr_pipe[0]);
+            close(stderr_pipe[1]);
+            //ThrowMessageWithErrno("fork failed");
             return 0;
         }
         case 0:
