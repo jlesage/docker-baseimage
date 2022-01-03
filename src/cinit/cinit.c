@@ -289,9 +289,9 @@ static const char *signal_to_str(int sig)
  */
 static void close_fd(int *fd)
 {
-    if (fd && *fd > 0) {
+    if (fd && *fd >= 0) {
         close(*fd);
-        *fd = 0;
+        *fd = -1;
     }
 }
 
@@ -557,6 +557,9 @@ static int load_service(const char *service)
 
     // Initialize service's structure.
     memset(&SRV(sid), 0, sizeof(SRV(sid)));
+    SRV(sid).stdout_fd = -1;
+    SRV(sid).stderr_fd = -1;
+    SRV(sid).logger_event_fd = -1;
     SRV(sid).umask = SERVICE_DEFAULT_UMASK;
     SRV(sid).ready_timeout = SERVICE_DEFAULT_READY_TIMEOUT;
     SRV(sid).min_running_time = SERVICE_DEFAULT_MIN_RUNNING_TIME;
