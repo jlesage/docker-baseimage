@@ -9,7 +9,6 @@
 #include <errno.h>
 #include <sys/wait.h>
 #include <sys/resource.h>
-#include <sys/eventfd.h>
 #include <grp.h>
 #include <dirent.h>
 #include <assert.h>
@@ -154,7 +153,6 @@ typedef struct {
     int stdout_fd;
     int stderr_fd;
     pthread_t logger;
-    int logger_event_fd;
     bool logger_started;
 } service_t;
 
@@ -392,16 +390,22 @@ static int exec_service_cmd(int service, const char *cmd, const char *cmd_path, 
  */
 static void *service_logger(void *p)
 {
-    int service = *((int*)p);
+    int service = -1;
     char prefix[512] = "";
 
+    // Service ID is passed as argument.
+    ASSERT_LOG(p != NULL, "No argument passed to logger thread.");
+    service = *((int*)p);
     ASSERT_VALID_SERVICE_INDEX(service);
+
+    // Free argument.
+    free(p);
 
     // Build the prefix.
     snprintf(prefix, sizeof(prefix), "[%-*s] ", g_ctx.log_prefix_length, SRV(service).name);
 
     // Start the logger.
-    log_prefixer(prefix, SRV(service).stdout_fd, SRV(service).stderr_fd, SRV(service).logger_event_fd);
+    log_prefixer(prefix, SRV(service).stdout_fd, SRV(service).stderr_fd);
 
     return NULL;
 }
@@ -559,7 +563,6 @@ static int load_service(const char *service)
     memset(&SRV(sid), 0, sizeof(SRV(sid)));
     SRV(sid).stdout_fd = -1;
     SRV(sid).stderr_fd = -1;
-    SRV(sid).logger_event_fd = -1;
     SRV(sid).umask = SERVICE_DEFAULT_UMASK;
     SRV(sid).ready_timeout = SERVICE_DEFAULT_READY_TIMEOUT;
     SRV(sid).min_running_time = SERVICE_DEFAULT_MIN_RUNNING_TIME;
@@ -966,26 +969,13 @@ static void start_service(int service)
                     "Logger thread already started for service '%s'.",
                     SRV(service).name);
 
-            // Create file descriptor for event notification.  This is used to notify
-            // the logger thread to terminate.
-            SRV(service).logger_event_fd = eventfd(0, 0);
-            if (SRV(service).logger_event_fd < 0) {
-                int cur_errno = errno;
-                kill(SRV(service).pid, SIGKILL);
-                SRV(service).pid = 0;
-                errno = cur_errno;
-                ThrowMessageWithErrno("could not create file descriptor for event notification");
-            }
-
             // Create and start the logger thread.
-            int rc = pthread_create(&SRV(service).logger, NULL, service_logger, (void*)&service);
-            if (rc != 0) {
-                int cur_errno = errno;
-                kill(SRV(service).pid, SIGKILL);
-                SRV(service).pid = 0;
-                errno = cur_errno;
-                ThrowMessageWithErrno("could not create logger thread");
-            }
+            int *service_arg = malloc(sizeof(int));
+            *service_arg = service;
+            int rc = pthread_create(&SRV(service).logger, NULL, service_logger, service_arg);
+            ASSERT_LOG(rc == 0, "Failed to create logger thread of service '%s': %s.",
+                    SRV(service).name,
+                    strerror(errno));
 
             SRV(service).logger_started = true;
             return;
@@ -1291,15 +1281,6 @@ static void handle_killed(pid_t killed, int status, bool shutdown_in_progress)
         // Update service table.
         SRV(sid).pid = 0;
 
-        // Ask the logger thread to terminate.
-        {
-            uint64_t u = 1;
-            ssize_t s = write(SRV(sid).logger_event_fd, &u, sizeof(u));
-            ASSERT_LOG(s == sizeof(u),
-                    "Failed to send event to logger thread: %s",
-                    strerror(errno));
-        }
-
         // Join the logger thread.
         log_debug("waiting termination of logger thread of service '%s'...",
                 SRV(sid).name);
@@ -1319,7 +1300,6 @@ static void handle_killed(pid_t killed, int status, bool shutdown_in_progress)
         //           effects.
         close_fd(&SRV(sid).stdout_fd);
         close_fd(&SRV(sid).stderr_fd);
-        close_fd(&SRV(sid).logger_event_fd);
 
         SRV(sid).logger_started = false;
 

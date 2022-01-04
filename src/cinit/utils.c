@@ -239,7 +239,7 @@ char **split(char *buf, int c, size_t *len, int plus, int ofs)
     return vector;
 }
 
-int read_lines(int *fds, size_t num_fds, int event_fd, line_callback_t callback, void *callback_data)
+int read_lines(int *fds, size_t num_fds, line_callback_t callback, void *callback_data)
 {
     int retval = 0;
     bool done = false;
@@ -256,8 +256,15 @@ int read_lines(int *fds, size_t num_fds, int event_fd, line_callback_t callback,
 
         // Fill the file descriptors for poll function.
         for (unsigned int i = 0; i < num_fds; i++) {
-            pfds[i].fd = fds[i];
-            pfds[i].events = POLLIN;
+            output_read_state_t *rstate = &read_states[i];
+            if (rstate->eof) {
+                pfds[i].fd = -1;
+                pfds[i].events = 0;
+            }
+            else {
+                pfds[i].fd = fds[i];
+                pfds[i].events = POLLIN;
+            }
         }
 
         // Poll.
@@ -275,13 +282,11 @@ int read_lines(int *fds, size_t num_fds, int event_fd, line_callback_t callback,
         for (unsigned int i = 0; i < num_fds; i++) {
             output_read_state_t *rstate = &read_states[i];
 
-            if (pfds[i].revents & POLLIN) {
+            if (pfds[i].fd < 0) {
+                // This is a file descriptor to ignore.
+            }
+            else if (pfds[i].revents & POLLIN) {
                 // Ok, data available to read.
-                if (pfds[i].fd == event_fd) {
-                    // Time to exit.
-                    done = true;
-                    break;
-                }
             }
             else if (pfds[i].revents & (POLLHUP | POLLERR | POLLNVAL)) {
                 // The other end of the pipe has been closed.
@@ -366,13 +371,11 @@ int read_lines(int *fds, size_t num_fds, int event_fd, line_callback_t callback,
         }
 
         // Check if all file descriptors are done.
-        if (!done) {
-            done = true;
-            for (unsigned int i = 0; i < num_fds; i++) {
-                if (!read_states[i].eof) {
-                    done = false;
-                    break;
-                }
+        done = true;
+        for (unsigned int i = 0; i < num_fds; i++) {
+            if (!read_states[i].eof) {
+                done = false;
+                break;
             }
         }
     }

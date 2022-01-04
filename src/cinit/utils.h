@@ -125,15 +125,12 @@ char **split(char *buf, int c, size_t *len, int plus, int ofs);
  *
  * @param[in] fds Table of file descriptors to read from.
  * @param[in] num_fds Number of file descriptors int the table.
- * @param[in] event_fd File descriptor for event notification.  Function
- *                     terminates when data is received from this FD. When used,
- *                     this FD must be part of fds.
  * @param[in] callback Function to be invoked.
  * @param[in] callback_data Custom data to be passed to the callback function.
  *
  * @return 0 on success, -1 if error occurred.
  */
-int read_lines(int *fds, size_t num_fds, int event_fd, line_callback_t callback, void *callback_data);
+int read_lines(int *fds, size_t num_fds, line_callback_t callback, void *callback_data);
 
 /**
  * Store the content of a text file into the provided buffer.

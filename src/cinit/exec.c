@@ -120,7 +120,7 @@ int exec_cmd_with_line_callback(exec_cmd_line_callback_t callback, void *callbac
             callback,
             callback_data,
         };
-        retval = read_lines(ctx.fds, DIM(ctx.fds), -1, process_line, &ctx);
+        retval = read_lines(ctx.fds, DIM(ctx.fds), process_line, &ctx);
 
         close(stdout_link[0]);
         close(stderr_link[0]);
@@ -357,7 +357,7 @@ int exec_cmd(bool disable_output, const char *output_prefix, const char *cmd, ..
             close(stderr_link[1]);
 
             // Read child's output.
-            retval = log_prefixer(output_prefix, stdout_link[0], stderr_link[0], -1);
+            retval = log_prefixer(output_prefix, stdout_link[0], stderr_link[0]);
         }
 
         close(stdout_link[0]);
