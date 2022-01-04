@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <unistd.h>
-#include <poll.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <errno.h>
@@ -14,7 +13,7 @@
 #define STDERR_IDX 1
 
 typedef struct {
-    int fds[3];
+    int fds[2];
     const char *prefix;
 } log_prefixer_ctx_t;
 
@@ -64,13 +63,12 @@ void log_stderr(const char *format, ...)
     pthread_mutex_unlock(&g_stderr_mutex);
 }
 
-int log_prefixer(const char *prefix, int stdout_fd, int stderr_fd, int event_fd)
+int log_prefixer(const char *prefix, int stdout_fd, int stderr_fd)
 {
-    int nfds = (event_fd > 0) ? 3 : 2;
     log_prefixer_ctx_t ctx = {
-        { stdout_fd, stderr_fd, event_fd },
+        { stdout_fd, stderr_fd },
         prefix,
     };
 
-    return read_lines(ctx.fds, nfds, event_fd, log_prefixer_callback, &ctx);
+    return read_lines(ctx.fds, DIM(ctx.fds), log_prefixer_callback, &ctx);
 }

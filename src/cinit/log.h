@@ -27,10 +27,9 @@ void log_stderr(const char *format, ...);
  * @param[in] prefix Prefix to be added.
  * @param[in] stdout_fd File descriptor associated to stdout.
  * @param[in] stderr_fd File descriptor associated to stderr.
- * @param[in] event_fd File descriptor used to stop the log prefixer.
  *
  * @return -1 if an error occurred, 0 otherwise.
  */
-int log_prefixer(const char *prefix, int stdout_fd, int stderr_fd, int event_fd);
+int log_prefixer(const char *prefix, int stdout_fd, int stderr_fd);
 
 #endif // __CINIT_LOG_H__
