@@ -49,7 +49,7 @@
 #define MIN_LOG_PREFIX_LENGTH 12
 
 /**
- * The maximum number of parameter a service's run program can have.
+ * The maximum number of parameters a service's run program can have.
  */
 #define MAX_NUM_SERVICE_RUN_PARAMS 32
 
@@ -120,6 +120,10 @@
         log_stdout("[%-*s] " fmt "\n", g_ctx.log_prefix_length, g_ctx.progname, ##arg); \
     } \
 } while (0)
+
+#define SHUTDOWN_REQUESTED() (do_shutdown == true)
+#define REQUEST_SHUTDOWN() do { do_shutdown = true; } while(0);
+#define BREAK_IF_SHUTDOWN_REQUESTED() if (SHUTDOWN_REQUESTED()) break
 
 /** Definition of a service. */
 typedef struct {
@@ -221,8 +225,8 @@ static void sigchild(int sig)
  */
 static void sigint(int sig)
 {
-    do_shutdown = true;
     log("SIGTINT received, shutting down...");
+    REQUEST_SHUTDOWN();
 }
 
 /**
@@ -232,8 +236,8 @@ static void sigint(int sig)
  */
 static void sigterm(int sig)
 {
-    do_shutdown = true;
     log("SIGTERM received, shutting down...");
+    REQUEST_SHUTDOWN();
 }
 
 /**
@@ -525,6 +529,35 @@ static bool is_service_started(int service)
 }
 
 /**
+ * Unload a service from the service table.
+ *
+ * All allocated memory associated to the service is freed.
+ *
+ * @param[in] service Index of the service.
+ */
+static void unload_service(int service)
+{
+    ASSERT_VALID_SERVICE_INDEX(service);
+
+    for (unsigned int i = 0; i < SRV(service).param_list_size; i++) {
+        free(SRV(service).param_list[i]);
+    }
+    SRV(service).param_list_size = 0;
+
+    for (unsigned int i = 0; i < SRV(service).environment_size; i++) {
+        free(SRV(service).environment[i]);
+    }
+    SRV(service).environment_size = 0;
+
+    if (SRV(service).run_abs_path) {
+        free(SRV(service).run_abs_path);
+        SRV(service).run_abs_path = NULL;
+    }
+
+    memset(&SRV(service), 0, sizeof(SRV(service)));
+}
+
+/**
  * Load a service in service table.
  *
  * @param[in] service Name of the service to be added.
@@ -579,7 +612,7 @@ static int load_service(const char *service)
         return sid;
     }
 
-    // Make sure the run file is executable if it exists.
+    // Make sure the run file is executable.
     if (access("run", X_OK) != 0) {
         ThrowMessage("run file not executable");
     }
@@ -1124,22 +1157,8 @@ static void load_services()
  */
 static void unload_services()
 {
-    // Free memory.
     FOR_EACH_SERVICE(sid) {
-        for (unsigned int i = 0; i < SRV(sid).param_list_size; i++) {
-            free(SRV(sid).param_list[i]);
-        }
-        SRV(sid).param_list_size = 0;
-
-        for (unsigned int i = 0; i < SRV(sid).environment_size; i++) {
-            free(SRV(sid).environment[i]);
-        }
-        SRV(sid).environment_size = 0;
-
-        if (SRV(sid).run_abs_path) {
-            free(SRV(sid).run_abs_path);
-            SRV(sid).run_abs_path = NULL;
-        }
+        unload_service(sid);
     }
 }
 
@@ -1160,9 +1179,7 @@ static void start_services()
         }
 
         // We may have received a shutdown request during the startup.
-        if (do_shutdown) {
-            break;
-        }
+        BREAK_IF_SHUTDOWN_REQUESTED();
 
         Try {
             // Start service.
@@ -1173,7 +1190,7 @@ static void start_services()
                 log_debug("waiting for service '%s' to terminate...", SRV(sid).name);
                 while (waitpid(SRV(sid).pid, NULL, 0) < 0) {
                     if (errno == EINTR) {
-                        if (do_shutdown) {
+                        if (SHUTDOWN_REQUESTED()) {
                             ExitTry();
                         }
                         continue;
@@ -1199,7 +1216,7 @@ static void start_services()
                     // Service died.
                     ThrowMessage("minimum uptime not met");
                 }
-                else if (do_shutdown) {
+                else if (SHUTDOWN_REQUESTED()) {
                     ExitTry();
                 }
                 msleep(500);
@@ -1226,7 +1243,7 @@ static void start_services()
                         // Service is ready, stop waiting.
                         break;
                     }
-                    else if (do_shutdown) {
+                    else if (SHUTDOWN_REQUESTED()) {
                         ExitTry();
                     }
 
@@ -1250,9 +1267,8 @@ static void start_services()
  *
  * @param[in] pid PID of the killed service.
  * @param[in] status Status information of the killed service.
- * @param[in] shutdown_in_progress Whether or not a shutdown is in progress.
  */
-static void handle_killed(pid_t killed, int status, bool shutdown_in_progress)
+static void handle_killed(pid_t killed, int status)
 {
     CEXCEPTION_T e;
 
@@ -1268,11 +1284,15 @@ static void handle_killed(pid_t killed, int status, bool shutdown_in_progress)
     else if ((sid = find_service_by_pid(killed)) >= 0) {
         if (WIFEXITED(status)) {
             if (WEXITSTATUS(status) != 0 || SRV(sid).interval == 0 || g_ctx.debug) {
-                log("service '%s' exited (with status %d).", SRV(sid).name, WEXITSTATUS(status));
+                log("service '%s' exited (with status %d).",
+                        SRV(sid).name,
+                        WEXITSTATUS(status));
             }
         }
         else if (WIFSIGNALED(status)) {
-            log("service '%s' exited (got signal %s).", SRV(sid).name, signal_to_str(WTERMSIG(status)));
+            log("service '%s' exited (got signal %s).",
+                    SRV(sid).name,
+                    signal_to_str(WTERMSIG(status)));
         }
         else {
             log("service '%s' exited.", SRV(sid).name);
@@ -1291,13 +1311,6 @@ static void handle_killed(pid_t killed, int status, bool shutdown_in_progress)
                 SRV(sid).name);
 
         // Close file descriptors.
-        // NOTE: This should be done after the thread termination.  The manual
-        //       page for `close` warns:
-        //           It is probably unwise to close file descriptors while they
-        //           may be in use by system calls in other threads in the same
-        //           process. Since a file descriptor may be reused, there are
-        //           some obscure race conditions that may cause unintended side
-        //           effects.
         close_fd(&SRV(sid).stdout_fd);
         close_fd(&SRV(sid).stderr_fd);
 
@@ -1324,14 +1337,11 @@ static void handle_killed(pid_t killed, int status, bool shutdown_in_progress)
                     SRV(sid).name, e.mMessage);
         }
 
-        // Check what we need to do with the service.
-        if (shutdown_in_progress) {
-            // We are shutting down all services.  Nothing to do.
-        }
-        else if (SRV(sid).shutdown_on_terminate) {
+        // Check if termination of this service should trigger a shutdown.
+        if (!SHUTDOWN_REQUESTED() && SRV(sid).shutdown_on_terminate) {
             // Termination of the service should cause a shutdown.
             log("service '%s' exited, shutting down...", SRV(sid).name);
-            do_shutdown = true;
+            REQUEST_SHUTDOWN();
 
             // We should exit with the same code as the service.
             if (WIFEXITED(status)) {
@@ -1345,34 +1355,21 @@ static void handle_killed(pid_t killed, int status, bool shutdown_in_progress)
                 g_ctx.exit_code = 1;
             }
         }
-        else if (SRV(sid).respawn) {
-            // Service needs to be restarted.
-            if (get_time() - SRV(sid).start_time < SERVICE_RESTART_DELAY) {
-                msleep(SERVICE_RESTART_DELAY);
-            }
-            log("restarting service '%s'.", SRV(sid).name);
-            start_service(sid);
-        }
-        else {
-            // Nothing to do when a one-shot service terminates.
-            SRV(sid).pid = 1;
-        }
     }
 }
 
 /**
  * Reap child processes that have died.
  *
- * @param[in] shutdown_in_progress Whether or not a shutdown is in progress.
  * @param[in] period The minimum amount of time (in milliseconds) the function
  *                   should perform reaping.  A value of -1 means until all
  *                   child processes have been reaped.
  * @param[in] service When set, the function will perform reaping until the
  *                    specified service gets reaped.
  *
- * @return True if all children have been reaped, false otherwise.
+ * @return True if *all* children have been reaped, false otherwise.
  */
-static bool child_handler(bool shutdown_in_progress, int period, int service)
+static bool child_handler(int period, int service)
 {
     time_t now = get_time();
     pid_t killed;
@@ -1382,12 +1379,11 @@ static bool child_handler(bool shutdown_in_progress, int period, int service)
 
         do {
             killed = waitpid(-1, &status, WNOHANG);
-            handle_killed(killed, status, shutdown_in_progress);
+            handle_killed(killed, status);
         } while (killed && killed != (pid_t)-1);
 
         if (killed == (pid_t)-1) {
             // All processes have terminated.
-            log("all services exited.");
             break;
         }
 
@@ -1435,6 +1431,9 @@ static void cinit_shutdown()
         else if (SRV(sid).is_service_group) {
             continue;
         }
+        else if (SRV(sid).pid == 0) {
+            continue;
+        }
 
         Try {
             stop_service(sid);
@@ -1443,13 +1442,13 @@ static void cinit_shutdown()
             log_err("failed to stop service '%s': %s", SRV(sid).name, e.mMessage);
         }
 
-        if (child_handler(true, 250, sid)) {
+        if (child_handler(250, sid)) {
             // All processes have terminated.
             return;
         }
     }
 
-    if (child_handler(true, 0, -1)) {
+    if (child_handler(0, -1)) {
         // All processes have terminated.
         return;
     }
@@ -1460,7 +1459,7 @@ static void cinit_shutdown()
 
     // Allow some time (default 5 seconds) for remaining processes to gracefully
     // terminate.
-    if (child_handler(true, g_ctx.services_gracetime, -1)) {
+    if (child_handler(g_ctx.services_gracetime, -1)) {
         // All processes have terminated.
         return;
     }
@@ -1470,7 +1469,7 @@ static void cinit_shutdown()
     kill(-1, SIGKILL);
 
     // Wait until we reap all processes.
-    child_handler(true, -1, -1);
+    child_handler(-1, -1);
 }
 
 static void cinit_exit(int status)
@@ -1556,7 +1555,6 @@ int main(int argc, char *argv[])
 {
     CEXCEPTION_T e;
 
-    bool perform_shutdown = false;
     int exit_status = 0;
 
     // Get the program name.
@@ -1623,7 +1621,7 @@ int main(int argc, char *argv[])
 #endif
         log("all services loaded.");
 
-        // Now that all services are known, update the log prefix log.
+        // Now that all services are known, update the log prefix length.
         FOR_EACH_SERVICE(sid) {
             if (SRV(sid).disabled || SRV(sid).is_service_group) {
                 continue;
@@ -1641,33 +1639,51 @@ int main(int argc, char *argv[])
     Catch (e) {
         log("%s", e.mMessage);
         exit_status = 1;
-        do_shutdown = true;
+        REQUEST_SHUTDOWN();
     }
 
     // Start the main loop.
     while (true) {
-        // Handle shutdown request.
-        if (do_shutdown) {
-            perform_shutdown = true;
-            // Break the main loop.
-            break;
-        }
+        // Check if shutdown has been requested.  We may have received a
+        // termination signal.
+        BREAK_IF_SHUTDOWN_REQUESTED();
 
         // Process killed services.
-        if (child_handler(false, 0, -1)) {
-            // All processes have terminated.  No need to shutdown services.
-            perform_shutdown = false;
-            // Break the main loop.
-            break;
+        bool all_children_terminated = child_handler(0, -1);
+ 
+        // Check if shutdown has been requested.  A terminated service may
+        // have triggered a shutdown.
+        BREAK_IF_SHUTDOWN_REQUESTED();
+
+        // If all processes are terminated and no service is scheduled to be
+        // restarted, trigger a shutdown.
+        if (all_children_terminated) {
+            bool services_to_be_restarted = false;
+
+            FOR_EACH_SERVICE(sid) {
+                if (SRV(sid).respawn && SRV(sid).pid == 0) {
+                    services_to_be_restarted = true;
+                    break;
+                }
+            }
+
+            if (!services_to_be_restarted) {
+                log("all services exited, shutting down..");
+                REQUEST_SHUTDOWN();
+                BREAK_IF_SHUTDOWN_REQUESTED();
+            }
         }
 
-        // Process services that needs to run at regular interval.
+        // Process services that need to run at regular interval.
         FOR_EACH_SERVICE(sid) {
             if (SRV(sid).interval > 0) {
                 if ((get_time() - SRV(sid).start_time) >= SRV(sid).interval * 1000) {
                     // Check if service still running.
-                    if (SRV(sid).pid > 0 && kill(SRV(sid).pid, 0) == 0) {
-                        log_err("service '%s' didn't terminate before its next interval.", SRV(sid).name);
+                    if (SRV(sid).pid > 0) {
+                        log_err("service '%s' didn't terminate within "
+                                "its defined interval of %d seconds.",
+                                SRV(sid).name,
+                                SRV(sid).interval);
                         SRV(sid).start_time = get_time();
                         continue;
                     }
@@ -1677,13 +1693,31 @@ int main(int argc, char *argv[])
                         start_service(sid);
                     }
                     Catch (e) {
-                        log_err("failed to start service '%s': %s", SRV(sid).name, e.mMessage);
+                        log_err("failed to start service '%s': %s",
+                                SRV(sid).name,
+                                e.mMessage);
                     }
                 }
             }
         }
 
-        // Pauses for 1 second.
+        // Process services that needs to be restarted.
+        FOR_EACH_SERVICE(sid) {
+            if (SRV(sid).respawn && SRV(sid).pid == 0) {
+                if (get_time() - SRV(sid).start_time > SERVICE_RESTART_DELAY) {
+                    log("restarting service '%s'.", SRV(sid).name);
+                    Try {
+                        start_service(sid);
+                    }
+                    Catch (e) {
+                        log_err("failed to restart service '%s': %s",
+                                SRV(sid).name, e.mMessage);
+                    }
+                }
+            }
+        }
+
+        // Pause for 1 second.
         msleep(1000);
     }
 
@@ -1692,9 +1726,8 @@ int main(int argc, char *argv[])
     }
 
     // Shutdown all services.
-    if (perform_shutdown) {
-        cinit_shutdown();
-    }
+    ASSERT_LOG(SHUTDOWN_REQUESTED(), "Performing shutdown without request.");
+    cinit_shutdown();
 
     // Unload services.
     unload_services();
