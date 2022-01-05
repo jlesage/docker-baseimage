@@ -284,6 +284,7 @@ int read_lines(int *fds, size_t num_fds, line_callback_t callback, void *callbac
 
             if (pfds[i].fd < 0) {
                 // This is a file descriptor to ignore.
+                continue;
             }
             else if (pfds[i].revents & POLLIN) {
                 // Ok, data available to read.
