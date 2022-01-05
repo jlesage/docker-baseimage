@@ -592,214 +592,223 @@ static int load_service(const char *service)
         ThrowMessage("maximum number of services reached");
     }
 
-    // Initialize service's structure.
-    memset(&SRV(sid), 0, sizeof(SRV(sid)));
-    SRV(sid).stdout_fd = -1;
-    SRV(sid).stderr_fd = -1;
-    SRV(sid).umask = SERVICE_DEFAULT_UMASK;
-    SRV(sid).ready_timeout = SERVICE_DEFAULT_READY_TIMEOUT;
-    SRV(sid).min_running_time = SERVICE_DEFAULT_MIN_RUNNING_TIME;
+    // Now fill the entry.
+    Try {
+        // Initialize service's structure.
+        memset(&SRV(sid), 0, sizeof(SRV(sid)));
+        SRV(sid).stdout_fd = -1;
+        SRV(sid).stderr_fd = -1;
+        SRV(sid).umask = SERVICE_DEFAULT_UMASK;
+        SRV(sid).ready_timeout = SERVICE_DEFAULT_READY_TIMEOUT;
+        SRV(sid).min_running_time = SERVICE_DEFAULT_MIN_RUNNING_TIME;
 
-    // Check if this is a service group.
-    SRV(sid).is_service_group = (access("run", F_OK) != 0);
+        // Check if this is a service group.
+        SRV(sid).is_service_group = (access("run", F_OK) != 0);
 
-    // Check if service is disabled.
-    load_value_as_bool("disabled", &SRV(sid).disabled);
+        // Check if service is disabled.
+        load_value_as_bool("disabled", &SRV(sid).disabled);
 
-    // Return now if nothing else to load.
-    if (SRV(sid).is_service_group || SRV(sid).disabled) {
-        strcpy(SRV(sid).name, service);
-        return sid;
-    }
-
-    // Make sure the run file is executable.
-    if (access("run", X_OK) != 0) {
-        ThrowMessage("run file not executable");
-    }
-
-    // Get service configuration.
-    {
-        SRV(sid).run_abs_path = realpath("run", NULL);
-        if (!SRV(sid).run_abs_path) {
-            ThrowMessageWithErrno("could not get realpath of run program");
+        // Return now if nothing else to load.
+        if (SRV(sid).is_service_group || SRV(sid).disabled) {
+            strcpy(SRV(sid).name, service);
+            ExitTry();
         }
-    }
-    {
-        char *buf = NULL;
 
-        load_value_as_string("params", &buf, 0);
-        if (buf) {
-            size_t param_list_size;
-            char **param_list = NULL;
+        // Make sure the run file is executable.
+        if (access("run", X_OK) != 0) {
+            ThrowMessage("run file not executable");
+        }
 
-            // Before spliting on line-endings, make sure there is no
-            // Windows-style line-endings ('\r\n').
-            remove_all_char(buf, '\r');
-            
-            param_list = split(trim(buf), '\n', &param_list_size, 0, 0);
+        // Save the absolute path of the run program.
+        {
+            SRV(sid).run_abs_path = realpath("run", NULL);
+            if (!SRV(sid).run_abs_path) {
+                ThrowMessageWithErrno("could not get realpath of run program");
+            }
+        }
 
-            Try {
-                if (!param_list) {
-                    ThrowMessage("out of memory");
-                }
-                else if (param_list_size > DIM(SRV(sid).param_list)) {
-                    ThrowMessage("too much parameters");
-                }
-                for (int i = 0; i < param_list_size; i++) {
-                    if (strlen(param_list[i]) > 0) {
-                        SRV(sid).param_list[i] = strdup(param_list[i]);
-                        if (SRV(sid).param_list[i] == NULL) {
-                            ThrowMessage("out of memory");
-                        }
-                        SRV(sid).param_list_size++;
+        // Get service configuration settings.
+        {
+            char *buf = NULL;
+
+            load_value_as_string("params", &buf, 0);
+            if (buf) {
+                size_t param_list_size;
+                char **param_list = NULL;
+
+                // Before spliting on line-endings, make sure there is no
+                // Windows-style line-endings ('\r\n').
+                remove_all_char(buf, '\r');
+
+                param_list = split(trim(buf), '\n', &param_list_size, 0, 0);
+
+                Try {
+                    if (!param_list) {
+                        ThrowMessage("out of memory");
                     }
-                }
-                free(param_list);
-                free(buf);
-            }
-            Catch (e) {
-                if (param_list) {
+                    else if (param_list_size > DIM(SRV(sid).param_list)) {
+                        ThrowMessage("too much parameters");
+                    }
+                    for (int i = 0; i < param_list_size; i++) {
+                        if (strlen(param_list[i]) > 0) {
+                            SRV(sid).param_list[i] = strdup(param_list[i]);
+                            if (SRV(sid).param_list[i] == NULL) {
+                                ThrowMessage("out of memory");
+                            }
+                            SRV(sid).param_list_size++;
+                        }
+                    }
                     free(param_list);
+                    free(buf);
                 }
-                free(buf);
-                ThrowMessage("could not load 'params': %s", e.mMessage);
+                Catch (e) {
+                    if (param_list) {
+                        free(param_list);
+                    }
+                    free(buf);
+                    ThrowMessage("could not load 'params': %s", e.mMessage);
+                }
             }
         }
-    }
-    {
-        char *buf = NULL;
+        {
+            char *buf = NULL;
 
-        load_value_as_string("environment", &buf, 0);
-        if (buf) {
-            size_t environment_size;
-            char **environment = NULL;
+            load_value_as_string("environment", &buf, 0);
+            if (buf) {
+                size_t environment_size;
+                char **environment = NULL;
 
-            // Before spliting on line-endings, make sure there is no
-            // Windows-style line-endings ('\r\n').
-            remove_all_char(buf, '\r');
+                // Before spliting on line-endings, make sure there is no
+                // Windows-style line-endings ('\r\n').
+                remove_all_char(buf, '\r');
 
-            environment = split(trim(buf), '\n', &environment_size, 0, 0);
+                environment = split(trim(buf), '\n', &environment_size, 0, 0);
 
-            Try {
-                if (!environment) {
-                    ThrowMessage("out of memory");
-                }
-                else if (environment_size > DIM(SRV(sid).environment)) {
-                    ThrowMessage("too much environment variables");
-                }
-                for (int i = 0; i < environment_size; i++) {
-                    if (strlen(environment[i]) > 0) {
-                        char *p = strchr(environment[i], '=');
-                        if (!p) {
-                            ThrowMessage("invalid environment variable format");
-                        }
-                        else if (isdigit(environment[i][0])) {
-                            ThrowMessage("invalid environment variable name");
-                        }
-                        else {
-                            for (unsigned int j = 0; ; j++) {
-                                char c = environment[i][j];
-                                if (c == '=') {
-                                    break;
-                                }
-                                else if (!isalnum(c) && c != '_') {
-                                    ThrowMessage("invalid environment variable name");
+                Try {
+                    if (!environment) {
+                        ThrowMessage("out of memory");
+                    }
+                    else if (environment_size > DIM(SRV(sid).environment)) {
+                        ThrowMessage("too much environment variables");
+                    }
+                    for (int i = 0; i < environment_size; i++) {
+                        if (strlen(environment[i]) > 0) {
+                            char *p = strchr(environment[i], '=');
+                            if (!p) {
+                                ThrowMessage("invalid environment variable format");
+                            }
+                            else if (isdigit(environment[i][0])) {
+                                ThrowMessage("invalid environment variable name");
+                            }
+                            else {
+                                for (unsigned int j = 0; ; j++) {
+                                    char c = environment[i][j];
+                                    if (c == '=') {
+                                        break;
+                                    }
+                                    else if (!isalnum(c) && c != '_') {
+                                        ThrowMessage("invalid environment variable name");
+                                    }
                                 }
                             }
+                            SRV(sid).environment[i] = strdup(environment[i]);
+                            if (SRV(sid).param_list[i] == NULL) {
+                                ThrowMessage("out of memory");
+                            }
+                            SRV(sid).environment_size++;
                         }
-                        SRV(sid).environment[i] = strdup(environment[i]);
-                        if (SRV(sid).param_list[i] == NULL) {
-                            ThrowMessage("out of memory");
-                        }
-                        SRV(sid).environment_size++;
                     }
-                }
-                free(environment);
-                free(buf);
-
-                // An empty file means no environment variables to pass.
-                if (SRV(sid).environment_size == 0) {
-                    SRV(sid).environment[0] = NULL;
-                    SRV(sid).environment_size = 1;
-                }
-            }
-            Catch (e) {
-                if (environment) {
                     free(environment);
-                }
-                free(buf);
-                ThrowMessage("could not load 'params': %s", e.mMessage);
-            }
-        }
-    }
-    load_value_as_uid("uid", &SRV(sid).uid);
-    load_value_as_gid("gid", &SRV(sid).gid);
-    {
-        char *buf = NULL;
+                    free(buf);
 
-        load_value_as_string("sgid", &buf, 0);
-        if (buf) {
-            size_t sgid_list_size;
-            char **sgid_list = NULL;
-
-            // Before spliting on line-endings, make sure there is no
-            // Windows-style line-endings ('\r\n').
-            remove_all_char(buf, '\r');
-            
-            sgid_list = split(trim(buf), '\n', &sgid_list_size, 0, 0);
-
-            Try {
-                if (!sgid_list) {
-                    ThrowMessage("out of memory");
-                }
-                else if (sgid_list_size > DIM(SRV(sid).sgid_list)) {
-                    ThrowMessage("too much supplementary groups");
-                }
-                for (int i = 0; i < sgid_list_size; i++) {
-                    if (strlen(sgid_list[i]) > 0) {
-                        string_to_gid(sgid_list[i], &SRV(sid).sgid_list[i]);
-                        SRV(sid).sgid_list_size++;
+                    // An empty file means no environment variables to pass.
+                    if (SRV(sid).environment_size == 0) {
+                        SRV(sid).environment[0] = NULL;
+                        SRV(sid).environment_size = 1;
                     }
                 }
-                free(sgid_list);
-                free(buf);
-            }
-            Catch (e) {
-                if (sgid_list) {
-                    free(sgid_list);
+                Catch (e) {
+                    if (environment) {
+                        free(environment);
+                    }
+                    free(buf);
+                    ThrowMessage("could not load 'params': %s", e.mMessage);
                 }
-                free(buf);
-                ThrowMessage("could not load 'sgid': %s", e.mMessage);
             }
         }
-    }
-    load_value_as_mode("umask", &SRV(sid).umask);
-    load_value_as_int("priority", &SRV(sid).priority);
-    {
-        char *ptr = SRV(sid).working_directory;
-        load_value_as_string("workdir", &ptr, sizeof(SRV(sid).working_directory));
-    }
-    load_value_as_bool("respawn", &SRV(sid).respawn);
-    load_value_as_bool("sync", &SRV(sid).sync);
-    load_value_as_bool("ignore_failure", &SRV(sid).ignore_failure);
-    load_value_as_bool("shutdown_on_terminate", &SRV(sid).shutdown_on_terminate);
-    load_value_as_uint("min_running_time", &SRV(sid).min_running_time);
-    load_value_as_uint("ready_timeout", &SRV(sid).ready_timeout);
-    load_value_as_interval("interval", &SRV(sid).interval);
+        load_value_as_uid("uid", &SRV(sid).uid);
+        load_value_as_gid("gid", &SRV(sid).gid);
+        {
+            char *buf = NULL;
 
-    // Do some validations.
-    if (SRV(sid).respawn && SRV(sid).sync) {
-        ThrowMessage("'respawn' and 'sync' flags are exclusive");
-    }
-    else if (SRV(sid).respawn && SRV(sid).interval > 0) {
-        ThrowMessage("interval cannot be used with respawned service");
-    }
+            load_value_as_string("sgid", &buf, 0);
+            if (buf) {
+                size_t sgid_list_size;
+                char **sgid_list = NULL;
 
-    // PID of 0 means service not running.
-    SRV(sid).pid = 0;
+                // Before spliting on line-endings, make sure there is no
+                // Windows-style line-endings ('\r\n').
+                remove_all_char(buf, '\r');
 
-    // Set the service name at the end, when all validation is done.
-    strcpy(SRV(sid).name, service);
+                sgid_list = split(trim(buf), '\n', &sgid_list_size, 0, 0);
+
+                Try {
+                    if (!sgid_list) {
+                        ThrowMessage("out of memory");
+                    }
+                    else if (sgid_list_size > DIM(SRV(sid).sgid_list)) {
+                        ThrowMessage("too much supplementary groups");
+                    }
+                    for (int i = 0; i < sgid_list_size; i++) {
+                        if (strlen(sgid_list[i]) > 0) {
+                            string_to_gid(sgid_list[i], &SRV(sid).sgid_list[i]);
+                            SRV(sid).sgid_list_size++;
+                        }
+                    }
+                    free(sgid_list);
+                    free(buf);
+                }
+                Catch (e) {
+                    if (sgid_list) {
+                        free(sgid_list);
+                    }
+                    free(buf);
+                    ThrowMessage("could not load 'sgid': %s", e.mMessage);
+                }
+            }
+        }
+        load_value_as_mode("umask", &SRV(sid).umask);
+        load_value_as_int("priority", &SRV(sid).priority);
+        {
+            char *ptr = SRV(sid).working_directory;
+            load_value_as_string("workdir", &ptr, sizeof(SRV(sid).working_directory));
+        }
+        load_value_as_bool("respawn", &SRV(sid).respawn);
+        load_value_as_bool("sync", &SRV(sid).sync);
+        load_value_as_bool("ignore_failure", &SRV(sid).ignore_failure);
+        load_value_as_bool("shutdown_on_terminate", &SRV(sid).shutdown_on_terminate);
+        load_value_as_uint("min_running_time", &SRV(sid).min_running_time);
+        load_value_as_uint("ready_timeout", &SRV(sid).ready_timeout);
+        load_value_as_interval("interval", &SRV(sid).interval);
+
+        // Do some validations.
+        if (SRV(sid).respawn && SRV(sid).sync) {
+            ThrowMessage("'respawn' and 'sync' flags are exclusive");
+        }
+        else if (SRV(sid).respawn && SRV(sid).interval > 0) {
+            ThrowMessage("interval cannot be used with respawned service");
+        }
+
+        // PID of 0 means service not running.
+        SRV(sid).pid = 0;
+
+        // Set the service name at the end, when all validation is done.
+        strcpy(SRV(sid).name, service);
+    }
+    Catch (e) {
+        unload_service(sid);
+        ThrowMessage("%s", e.mMessage);
+    }
 
     return sid;
 }
