@@ -6,7 +6,8 @@ set -u # Treat unset variables as an error.
 STAGE=init
 
 log() {
-    printf "[%-12s] $*\n" "$STAGE"
+    printf "[%-12s] " "$STAGE"
+    echo "$*"
 }
 
 log_script() {
