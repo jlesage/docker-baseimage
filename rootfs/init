@@ -39,38 +39,6 @@ load_env_var() {
     fi
 }
 
-# http://cfajohnson.com/shell/cus-faq-2.html#Q11
-run() {
-    j=1
-    while eval "\${pipestatus_$j+:} false"; do
-        unset pipestatus_$j
-        j=$(($j+1))
-    done
-    j=1 com= k=1 l=
-    for a; do
-        if [ "x$a" = 'x|' ]; then
-            com="$com { $l "'3>&-
-                          echo "pipestatus_'$j'=$?" >&3
-                      } 4>&- |'
-            j=$(($j+1)) l=
-        else
-            l="$l \"\$$k\""
-        fi
-        k=$(($k+1))
-    done
-    com="$com $l"' 3>&- >&4 4>&-
-        echo "pipestatus_'$j'=$?"'
-    exec 4>&1
-    eval "$(exec 3>&1; eval "$com")"
-    exec 4>&-
-    j=1
-    while eval "\${pipestatus_$j+:} false"; do
-        eval "[ \$pipestatus_$j -eq 0 ] || return 1"
-        j=$(($j+1))
-    done
-    return 0
-}
-
 log "container is starting..."
 
 # Install container environment variables.
@@ -160,8 +128,9 @@ if [ -d /etc/cont-init.d ]; then
         echo "executing..." | log_script "$FILENAME"
 
         set +e
-        run sh -c "$FILE 2>&1" \| log_script "$FILENAME"
-        RC=$pipestatus_1
+        # https://unix.stackexchange.com/a/70675
+        (((("$FILE" 2>&1; echo $? >&3) | log_script "$FILENAME" >&4) 3>&1) | (read xs; exit $xs)) 4>&1
+        RC=$?
         set -e
 
         if [ $RC -eq 0 ]; then
