@@ -36,19 +36,19 @@ jobs:
       fail-fast: false
       matrix:
         info:
-          - '{ "tag_prefix": "alpine-3.10",  "baseimage": "alpine:3.10",    "platforms": "linux/amd64,linux/386,linux/arm/v6,linux/arm/v7,linux/arm64/v8" }'
-          - '{ "tag_prefix": "alpine-3.11",  "baseimage": "alpine:3.11",    "platforms": "linux/amd64,linux/386,linux/arm/v6,linux/arm/v7,linux/arm64/v8" }'
-          - '{ "tag_prefix": "alpine-3.12",  "baseimage": "alpine:3.12",    "platforms": "linux/amd64,linux/386,linux/arm/v6,linux/arm/v7,linux/arm64/v8" }'
-          - '{ "tag_prefix": "alpine-3.13",  "baseimage": "alpine:3.13",    "platforms": "linux/amd64,linux/386,linux/arm/v6,linux/arm/v7,linux/arm64/v8" }'
-          - '{ "tag_prefix": "alpine-3.14",  "baseimage": "alpine:3.14",    "platforms": "linux/amd64,linux/386,linux/arm/v6,linux/arm/v7,linux/arm64/v8" }'
-          - '{ "tag_prefix": "alpine-3.15",  "baseimage": "alpine:3.15",    "platforms": "linux/amd64,linux/386,linux/arm/v6,linux/arm/v7,linux/arm64/v8" }'
+          - '{ "tag_prefix": "alpine-3.10",  "baseimage": "alpine:3.10",    "platforms": "linux/amd64,linux/386,linux/arm/v6,linux/arm/v7,linux/arm64/v8,linux/s390x" }'
+          - '{ "tag_prefix": "alpine-3.11",  "baseimage": "alpine:3.11",    "platforms": "linux/amd64,linux/386,linux/arm/v6,linux/arm/v7,linux/arm64/v8,linux/s390x" }'
+          - '{ "tag_prefix": "alpine-3.12",  "baseimage": "alpine:3.12",    "platforms": "linux/amd64,linux/386,linux/arm/v6,linux/arm/v7,linux/arm64/v8,linux/s390x" }'
+          - '{ "tag_prefix": "alpine-3.13",  "baseimage": "alpine:3.13",    "platforms": "linux/amd64,linux/386,linux/arm/v6,linux/arm/v7,linux/arm64/v8,linux/s390x" }'
+          - '{ "tag_prefix": "alpine-3.14",  "baseimage": "alpine:3.14",    "platforms": "linux/amd64,linux/386,linux/arm/v6,linux/arm/v7,linux/arm64/v8,linux/s390x" }'
+          - '{ "tag_prefix": "alpine-3.15",  "baseimage": "alpine:3.15",    "platforms": "linux/amd64,linux/386,linux/arm/v6,linux/arm/v7,linux/arm64/v8,linux/s390x" }'
           - '{ "tag_prefix": "debian-8",     "baseimage": "debian:8-slim",  "platforms": "linux/amd64,linux/386,linux/arm/v7" }'
           - '{ "tag_prefix": "debian-9",     "baseimage": "debian:9-slim",  "platforms": "linux/amd64,linux/386,linux/arm/v7,linux/arm64/v8" }'
-          - '{ "tag_prefix": "debian-10",    "baseimage": "debian:10-slim", "platforms": "linux/amd64,linux/386,linux/arm/v7,linux/arm64/v8" }'
-          - '{ "tag_prefix": "debian-11",    "baseimage": "debian:11-slim", "platforms": "linux/amd64,linux/386,linux/arm/v7,linux/arm64/v8" }'
-          - '{ "tag_prefix": "ubuntu-16.04", "baseimage": "ubuntu:16.04",   "platforms": "linux/amd64,linux/386,linux/arm/v7,linux/arm64/v8" }'
-          - '{ "tag_prefix": "ubuntu-18.04", "baseimage": "ubuntu:18.04",   "platforms": "linux/amd64,linux/386,linux/arm/v7,linux/arm64/v8" }'
-          - '{ "tag_prefix": "ubuntu-20.04", "baseimage": "ubuntu:20.04",   "platforms": "linux/amd64,linux/arm/v7,linux/arm64/v8" }'
+          - '{ "tag_prefix": "debian-10",    "baseimage": "debian:10-slim", "platforms": "linux/amd64,linux/386,linux/arm/v7,linux/arm64/v8,linux/s390x" }'
+          - '{ "tag_prefix": "debian-11",    "baseimage": "debian:11-slim", "platforms": "linux/amd64,linux/386,linux/arm/v7,linux/arm64/v8,linux/s390x" }'
+          - '{ "tag_prefix": "ubuntu-16.04", "baseimage": "ubuntu:16.04",   "platforms": "linux/amd64,linux/386,linux/arm/v7,linux/arm64/v8,linux/s390x" }'
+          - '{ "tag_prefix": "ubuntu-18.04", "baseimage": "ubuntu:18.04",   "platforms": "linux/amd64,linux/386,linux/arm/v7,linux/arm64/v8,linux/s390x" }'
+          - '{ "tag_prefix": "ubuntu-20.04", "baseimage": "ubuntu:20.04",   "platforms": "linux/amd64,linux/arm/v7,linux/arm64/v8,linux/s390x" }'
 
     steps:
       - name: Prepare
