@@ -34,7 +34,7 @@ long-lived application.
          * [Configuration Directory](#configuration-directory)
             * [Application's Data Directories](#applications-data-directories)
          * [Adding/Removing Packages](#addingremoving-packages)
-         * [System Logging](#system-logging)
+         * [Container Log](#container-log)
          * [Log Monitor](#log-monitor)
             * [Monitored Files](#monitored-files)
             * [Notification Definition](#notification-definition)
@@ -128,6 +128,8 @@ Here is an example of a docker file that would be used to run a simple web
 NodeJS server.
 In `Dockerfile`:
 ```Dockerfile
+ARG APP_NAME=http-server
+
 # Pull base image.
 FROM jlesage/baseimage:alpine-3.15-v3
 
@@ -139,7 +141,7 @@ RUN add-pkg nodejs-npm && \
 COPY startapp.sh /startapp.sh
 
 # Set the name of the application.
-RUN echo "http-server" > /etc/cont-env.d/APP_NAME
+RUN set-cont-env APP_NAME "$APP_NAME"
 
 # Expose ports.
 EXPOSE 8080
@@ -232,11 +234,11 @@ and its application.
 There are two types of environment variables:
 
   - **Public**: These variables are targeted to people using the container.
-    They provide a way to configure configure it.  They are declared in the
-    `Dockerfile`, via the `ENV` instruction.  Their value can be set by users
-    during the creation of the container, via the `-e "<VAR>=<VALUE>"` argument
-    of the `docker run` command.  Also, many Docker container management systems
-    use these variables to automatically provide configuration parameters to the
+    They provide a way to configure it.  They are declared in the `Dockerfile`,
+    via the `ENV` instruction.  Their value can be set by users during the
+    creation of the container, via the `-e "<VAR>=<VALUE>"` argument of the
+    `docker run` command.  Also, many Docker container management systems use
+    these variables to automatically provide configuration parameters to the
     users.
 
   - **Internal**: These variables are the ones thay don't need to be exposed to
@@ -259,7 +261,7 @@ The following public environment variables are provided by the baseimage:
 |`TZ`| [TimeZone](http://en.wikipedia.org/wiki/List_of_tz_database_time_zones) used by the container.  Timezone can also be set by mapping `/etc/localtime` between the host and the container. | `Etc/UTC` |
 |`KEEP_APP_RUNNING`| When set to `1`, the application will be automatically restarted when it crashes or terminates. | `0` |
 |`APP_NICENESS`| Priority at which the application should run.  A niceness value of -20 is the highest priority and 19 is the lowest priority.  The default niceness value is 0.  **NOTE**: A negative niceness (priority increase) requires additional permissions.  In this case, the container should be run with the docker option `--cap-add=SYS_NICE`. | `0` |
-|`INSTALL_PACKAGES`| Space-separated list of packages to install during the startup of the container.  Packages are installed from the repository of the Linux distribution this container is based on.  **ATTENTION**: Installing a package that override existing container files (e.g. binaries) can break it. | `""` |
+|`INSTALL_PACKAGES`| Space-separated list of packages to install during the startup of the container.  Packages are installed from the repository of the Linux distribution this container is based on.  **ATTENTION**: Container functionality can be affected when installing a package that overrides existing container files (e.g. binaries). | `""` |
 |`CONTAINER_DEBUG`| Set to `1` to enable debug logging. | `0` |
 
 #### Internal Environment Variables
@@ -268,7 +270,9 @@ The following internal environment variables are provided by the baseimage:
 
 | Variable       | Description                                  | Default |
 |----------------|----------------------------------------------|---------|
-|`APP_NAME`| Name of the application. | `DockerApp` |
+|`APP_NAME`| Name of the implemented application. | `DockerApp` |
+|`APP_VERSION`| Version of the implemented application. | (unset) |
+|`DOCKER_IMAGE_VERSION`| Version of the Docker image that implements the application. | (unset) |
 |`HOME`| Home directory. | `""` |
 |`XDG_CONFIG_HOME`| Defines the base directory relative to which user specific configuration files should be stored. | `/config/xdg/config` |
 |`XDG_DATA_HOME`| Defines the base directory relative to which user specific data files should be stored. | `/config/xdg/data` |
@@ -285,6 +289,9 @@ If the file has execute permission, the init process will execute the program
 and the value of the environment variable is expected to be printed to its
 standard output.  If the script exits with the return code `100`, the
 environment variable is not set.
+
+**NOTE**: The helper `set-cont-env` can be used to set internal environment
+          variables from the Dockerfile.
 
 #### Availability
 
@@ -316,7 +323,7 @@ For example, for a secret named `CONT_ENV_MY_PASSWORD`, the environment variable
 
 When using data volumes (`-v` flags), permissions issues can occur between the
 host and the container.  For example, the user within the container may not
-exists on the host.  This could prevent the host from properly accessing files
+exists on the host.  This could prevent the container from properly accessing files
 and folders on the shared volume.
 
 To avoid any problem, you can specify the user the application should run as.
@@ -407,10 +414,10 @@ setting.
 | sync                   | Boolean          | Whether or not the process supervisor waits until the service ends.  This is mutually exclusive with `respawn`. | `FALSE` |
 | ready_timeout          | Unsigned integer | Maximum amount of time (in milliseconds) to wait for the service to be ready. | `5000` |
 | interval               | Interval         | Interval, in seconds, at which the service should be executed.  This is mutually exclusive with `respawn`. | No interval |
-| uid                    | Unsigned integer | The user ID under which the service will run. | `1000` |
-| gid                    | Unsigned integer | The group ID under which the service will run. | `1000` |
-| sgid                   | Unsigned integer | List of supplementary group IDs of the service.  One group ID per line. | No supplementary group IDs |
-| umask                  | Octal integer    | The umask value of the service. | `0022` |
+| uid                    | Unsigned integer | The user ID under which the service will run. | `$USER_ID` |
+| gid                    | Unsigned integer | The group ID under which the service will run. | `$GROUP_ID` |
+| sgid                   | Unsigned integer | List of supplementary group IDs of the service.  One group ID per line. | `$SUP_GROUP_IDS` |
+| umask                  | Octal integer    | The umask value (in octal notation) of the service. | `$UMASK` |
 | priority               | Signed integer   | Priority at which the service should run.  A niceness value of -20 is the highest priority and 19 is the lowest priority. | `0` |
 | workdir                | String           | The working directory of the service. | Service's directory path  |
 | ignore_failure         | Boolean          | When set, the inability to start the service won't prevent the container to start. | `FALSE` |
@@ -492,14 +499,14 @@ packages).
 
 Note that if a specified package is already installed, it will be ignored and
 will not be removed automatically.  For example, the following commands could be
-added to `Dockerfile` to compile project:
+added to `Dockerfile` to compile a project:
 
 ```Dockerfile
 RUN \
     add-pkg --virtual build-dependencies build-base cmake git && \
-    # Compile your project here...
     git clone https://myproject.com/myproject.git
-    ... && \
+    make -C myproject && \
+    make -C myproject install && \
     del-pkg build-dependencies
 ```
 
@@ -507,7 +514,7 @@ Supposing that, in the example above, the `git` package was already installed
 when the call to `add-pkg` is performed, running `del-pkg build-dependencies`
 doesn't remove it.
 
-### System Logging
+### Container Log
 
 Everything written to the standard output and standard error output of scripts
 executed by the init process and services is saved into the container's log.
@@ -516,7 +523,7 @@ The container log can be viewed with the command
 
 To ease consultation of the log, all messages are prefixed with the name of the
 service or script.  Also, it is a good idea to limit the number of information
-written to this log.  If an program's output is too verbose, it is preferable
+written to this log.  If a program's output is too verbose, it is preferable
 to redirect it to a file.  For example, the `run` command of a service that
 redirects the standard output and standard error output to different files
 could be:
