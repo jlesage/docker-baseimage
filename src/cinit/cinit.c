@@ -87,6 +87,16 @@
 #define SERVICE_DEFAULT_MIN_RUNNING_TIME 500
 
 /**
+ * Default UID to use for services.
+ */
+#define SERVICE_DEFAULT_UID 1000
+
+/**
+ * Default UID to use for services.
+ */
+#define SERVICE_DEFAULT_GID 1000
+
+/**
  * Default service's umask value.
  */
 #define SERVICE_DEFAULT_UMASK 0022
@@ -168,6 +178,12 @@ typedef struct {
     bool debug;                           /**< Whether or not debug is enabled. */
     unsigned int services_gracetime;      /**< Services gracetimes (msec). */
 
+    uid_t default_srv_uid;                /**< Default UID of services. */
+    gid_t default_srv_gid;                /**< Default UID of services. */
+    gid_t default_srv_sgid_list[SERVICE_SGID_LIST_SIZE]; /**< Default supplementary group list of services. */
+    size_t default_srv_sgid_list_size;    /**< Size of the default supplementary group list. */
+    mode_t default_srv_umask;             /**< Default umask value of services. */
+
     service_t services[MAX_NUM_SERVICES]; /**< Table of services. */
     int start_order[MAX_NUM_SERVICES];    /**< Start order of services. */
     int exit_code;                        /**< Exit code to use when exiting. */
@@ -184,16 +200,25 @@ static context_t g_ctx = {
     .log_prefix_length = strlen(DEFAULT_PROGRAM_NAME),
     .debug = false,
     .services_gracetime = SERVICES_DEFAULT_GRACETIME,
+    .default_srv_uid = SERVICE_DEFAULT_UID,
+    .default_srv_gid = SERVICE_DEFAULT_GID,
+    .default_srv_sgid_list = { 0 },
+    .default_srv_sgid_list_size = 0,
+    .default_srv_umask = SERVICE_DEFAULT_UMASK,
     .services = {},
     .exit_code = 0,
 };
 
-static const char* const short_options = "dhr:g:p:";
+static const char* const short_options = "dhr:g:p:u:i:m:s:";
 static struct option long_options[] = {
     { "debug", no_argument, NULL, 'd' },
     { "progname", required_argument, NULL, 'p' },
     { "root-directory", required_argument, NULL, 'r' },
     { "services-gracetime", required_argument, NULL, 'g' },
+    { "default-service-uid", required_argument, NULL, 'u' },
+    { "default-service-gid", required_argument, NULL, 'i' },
+    { "default-service-sgid-list", required_argument, NULL, 's' },
+    { "default-service-umask", required_argument, NULL, 'm' },
     { "help", no_argument, NULL, 'h' },
     { NULL, 0, NULL, 0 }
 };
@@ -598,7 +623,11 @@ static int load_service(const char *service)
         memset(&SRV(sid), 0, sizeof(SRV(sid)));
         SRV(sid).stdout_fd = -1;
         SRV(sid).stderr_fd = -1;
-        SRV(sid).umask = SERVICE_DEFAULT_UMASK;
+        SRV(sid).uid = g_ctx.default_srv_uid;
+        SRV(sid).gid = g_ctx.default_srv_gid;
+        memcpy(SRV(sid).sgid_list, g_ctx.default_srv_sgid_list, sizeof(SRV(sid).sgid_list));
+        SRV(sid).sgid_list_size = g_ctx.default_srv_sgid_list_size;
+        SRV(sid).umask = g_ctx.default_srv_umask;
         SRV(sid).ready_timeout = SERVICE_DEFAULT_READY_TIMEOUT;
         SRV(sid).min_running_time = SERVICE_DEFAULT_MIN_RUNNING_TIME;
 
@@ -1535,6 +1564,69 @@ static void parse_args(int argc, char *argv[])
                             optarg, e.mMessage);
                 }
                 break;
+            case 'u':
+                Try {
+                    string_to_uid(optarg, &g_ctx.default_srv_uid);
+                }
+                Catch (e) {
+                    ThrowMessage("Invalid default service UID value '%s': %s.",
+                            optarg, e.mMessage);
+                }
+                break;
+            case 'i':
+                Try {
+                    string_to_gid(optarg, &g_ctx.default_srv_gid);
+                }
+                Catch (e) {
+                    ThrowMessage("Invalid default service GID value '%s': %s.",
+                            optarg, e.mMessage);
+                }
+                break;
+            case 's':
+            {
+                size_t sgid_list_size;
+                char **sgid_list = NULL;
+
+                sgid_list = split(trim(optarg), ',', &sgid_list_size, 0, 0);
+
+                Try {
+                    if (!sgid_list) {
+                        ThrowMessage("failed to process list");
+                    }
+                    else if (sgid_list_size > DIM(g_ctx.default_srv_sgid_list)) {
+                        ThrowMessage("too much groups");
+                    }
+                    for (int i = 0; i < sgid_list_size; i++) {
+                        if (strlen(sgid_list[i]) > 0) {
+                            Try {
+                                string_to_gid(sgid_list[i], &g_ctx.default_srv_sgid_list[i]);
+                            }
+                            Catch (e) {
+                                ThrowMessage("invalid GID '%s': %s", sgid_list[i], e.mMessage);
+                            }
+                            g_ctx.default_srv_sgid_list_size++;
+                        }
+                    }
+                    free(sgid_list);
+                }
+                Catch (e) {
+                    if (sgid_list) {
+                        free(sgid_list);
+                    }
+                    ThrowMessage("Invalid default service supplementary group list '%s': %s",
+                            optarg, e.mMessage);
+                }
+                break;
+            }
+            case 'm':
+                Try {
+                    string_to_mode(optarg, &g_ctx.default_srv_umask);
+                }
+                Catch (e) {
+                    ThrowMessage("Invalid default service umask value '%s': %s.",
+                            optarg, e.mMessage);
+                }
+                break;
             case 'h':
             case '?':
                 ThrowMessage("help");
@@ -1551,13 +1643,21 @@ static void usage(const char *progname)
     printf("Usage: %s [OPTIONS...]\n", progname);
     printf("\n");
     printf("Options:\n");
-    printf("  -d, --debug                      Enable debug logging.\n");
-    printf("  -p, --progname <NAME>            Override the name that will be displayed in log messages to NAME.\n");
-    printf("  -r, --root-directory <DIR>       Set the root directory to DIR.  Default is " SERVICES_DEFAULT_ROOT ".\n");
-    printf("  -g, --services-gracetime <VALUE> Set the amount of time (in msec) allowed to\n"
-           "                                   services to gracefully terminate before sending\n"
-           "                                   the KILL signal to everyone.  Default is %d msec.\n", SERVICES_DEFAULT_GRACETIME);
-    printf("  -h, --help                       Display this help and exit.\n");
+    printf("  -d, --debug                            Enable debug logging.\n");
+    printf("  -p, --progname <NAME>                  Override the name that will be displayed in log messages to NAME.\n");
+    printf("  -r, --root-directory <DIR>             Set the root directory to DIR.  Default is " SERVICES_DEFAULT_ROOT ".\n");
+    printf("  -g, --services-gracetime <VALUE>       Set the amount of time (in msec) allowed to\n"
+           "                                         services to gracefully terminate before sending\n"
+           "                                         the KILL signal to everyone.  Default is %d msec.\n", SERVICES_DEFAULT_GRACETIME);
+    printf("  -u, --default-service-uid <VALUE>      UID to apply when not set in service's definition directory.\n");
+    printf("                                         Default is %d.\n", SERVICE_DEFAULT_UID);
+    printf("  -i, --default-service-gid <VALUE>      GID to apply when not set in service's definition directory.\n");
+    printf("                                         Default is %d.\n", SERVICE_DEFAULT_GID);
+    printf("  -s, --default-service-sgid-list <LIST> Comma-separated list of supplementary groups to apply when not\n");
+    printf("                                         set in service's definition directory.  No group by default.\n");
+    printf("  -m, --default-service-umask <VALUE>    Umask value (in octal notation) to apply when not set in service's\n");
+    printf("                                         definition directory.  Default is 0022.\n");
+    printf("  -h, --help                             Display this help and exit.\n");
 }
 
 int main(int argc, char *argv[])
