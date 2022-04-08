@@ -6,13 +6,24 @@ set -u # Treat unset variables as an error.
 STAGE=init
 
 log() {
-    printf "[%-12s] " "$STAGE"
-    echo "$*"
+    case "$1" in
+        :::*)
+            echo "$*" | cut -c 3-
+            ;;
+        *)
+            printf "[%-12s] " "$STAGE"
+            echo "$*"
+            ;;
+    esac
 }
 
 log_script() {
     while IFS= read OUTPUT; do
-        log "$1: $OUTPUT"
+        case "$OUTPUT" in
+            :::*) log "$OUTPUT";;
+            *) log "$1: $OUTPUT";;
+        esac
+#        log "$1: $OUTPUT"
     done
 }
 

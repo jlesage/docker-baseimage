@@ -23,16 +23,18 @@ static pthread_mutex_t g_stderr_mutex = PTHREAD_MUTEX_INITIALIZER;
 static void log_prefixer_callback(int fd, const char *line, void *data)
 {
     log_prefixer_ctx_t *ctx = (log_prefixer_ctx_t *)data;
+    const char *prefix = ctx->prefix ? ctx->prefix : "";
+
+    // If line starts with ':::', do not add the prefix.
+    if (line[0] == ':' && line[1] == ':' && line[2] == ':') {
+        prefix = "";
+    }
 
     if (fd == ctx->fds[STDOUT_IDX]) {
-        log_stdout("%s%s\n",
-                ctx->prefix ? ctx->prefix : "",
-                line);
+        log_stdout("%s%s\n", prefix, line);
     }
     else if (fd == ctx->fds[STDERR_IDX]) {
-        log_stderr("%s%s\n",
-                ctx->prefix ? ctx->prefix : "",
-                line);
+        log_stderr("%s%s\n", prefix, line);
     }
     else {
         assert(!"Unexpected file descriptor.");
