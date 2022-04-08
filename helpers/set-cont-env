@@ -1,0 +1,55 @@
+#!/bin/sh
+
+set -e # Exit immediately if a command exits with a non-zero status.
+set -u # Treat unset variables as an error.
+
+usage() {
+    echo "usage: $(basename "$0") NAME [VALUE]
+
+Save a container enviroment variable.
+
+Arguments:
+
+  NAME       Name of the environment variable.
+  VALUE      Value of the environment variable.
+"
+}
+
+valid_env_var_name() {
+    case "$1" in
+        *[!A-Z0-9_]*|[0-9]*)
+            return 1
+            ;;
+        *)
+            return 0
+            ;;
+    esac
+}
+
+ENV_NAME="${1:-}"
+ENV_VAL="${2:-}"
+
+if [ "$ENV_NAME" = "-h" ] || [ "$ENV_NAME" = "--help" ]
+then
+    usage
+    exit 1
+fi
+
+if [ -z "$ENV_NAME" ]
+then
+    echo "ERROR: Name of the environment variable missing."
+    echo ""
+    usage
+    exit 1
+fi
+
+if ! valid_env_var_name "$ENV_NAME"
+then
+    echo "ERROR: Invalid environment variable name."
+    exit 1
+fi
+
+# Write the environment variable.
+echo -n "$ENV_VAL" > /etc/cont-env.d/"$ENV_NAME"
+
+# vim:ft=sh:ts=4:sw=4:et:sts=4
