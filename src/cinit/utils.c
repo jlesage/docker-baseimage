@@ -611,6 +611,10 @@ void string_to_mode(const char *str, mode_t *result)
         // Out of range of type unsigned int.
         ThrowMessage("out of range");
     }
+    else if (val > 0777) {
+        // Out of range of umask value.
+        ThrowMessage("out of range");
+    }
 
     *result = val;
 }
