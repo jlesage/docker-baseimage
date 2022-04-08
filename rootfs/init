@@ -158,7 +158,15 @@ log "all container initialization scripts executed."
 # Finally, invoke the process supervisor.
 STAGE=init
 
-CINIT_ARGS="-p supervisor"
+CINIT_ARGS="--progname supervisor \
+    --default-service-uid $USER_ID \
+    --default-service-gid $GROUP_ID \
+    --default-service-umask $UMASK"
+
+if [ -n "$SUP_GROUP_IDS" ]; then
+    CINIT_ARGS="$CINIT_ARGS --default-service-sgid-list $SUP_GROUP_IDS"
+fi
+
 if [ "${CONTAINER_DEBUG:-0}" -eq 1 ]; then
     CINIT_ARGS="$CINIT_ARGS --debug"
 fi
