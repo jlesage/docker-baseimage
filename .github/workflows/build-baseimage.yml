@@ -35,8 +35,6 @@ jobs:
       fail-fast: false
       matrix:
         info:
-          - '{ "tag_prefix": "alpine-3.10",  "baseimage": "alpine:3.10",    "platforms": "linux/amd64,linux/386,linux/arm/v6,linux/arm/v7,linux/arm64/v8" }'
-          - '{ "tag_prefix": "alpine-3.11",  "baseimage": "alpine:3.11",    "platforms": "linux/amd64,linux/386,linux/arm/v6,linux/arm/v7,linux/arm64/v8" }'
           - '{ "tag_prefix": "alpine-3.12",  "baseimage": "alpine:3.12",    "platforms": "linux/amd64,linux/386,linux/arm/v6,linux/arm/v7,linux/arm64/v8" }'
           - '{ "tag_prefix": "alpine-3.13",  "baseimage": "alpine:3.13",    "platforms": "linux/amd64,linux/386,linux/arm/v6,linux/arm/v7,linux/arm64/v8" }'
           - '{ "tag_prefix": "alpine-3.14",  "baseimage": "alpine:3.14",    "platforms": "linux/amd64,linux/386,linux/arm/v6,linux/arm/v7,linux/arm64/v8" }'
