@@ -329,7 +329,7 @@ static int invoke_exec(const char *filter_exe, const char *args[], unsigned int 
         assert(pid != 0);
 
         // Handle output from the child.
-        if (output && outputsize > 0) {
+        if (redirect_stdout) {
             // Make sure to keep one byte for the null terminating character.
             ssize_t count = full_read(pipefds[0], output, outputsize - 1);
             if (count < 0) {
@@ -489,7 +489,7 @@ static void free_notification(lm_notification_t *notif) {
         if (notif->filter) free(notif->filter);
         if (notif->title) free(notif->title);
         if (notif->desc) free(notif->desc);
-        if (notif->title) free(notif->title);
+        if (notif->level) free(notif->level);
 
         memset(notif, 0, sizeof(*notif));
         free(notif);
