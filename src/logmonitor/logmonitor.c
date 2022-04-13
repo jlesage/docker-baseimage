@@ -1084,6 +1084,15 @@ int main(int argc, char **argv)
         }
     }
 
+    // Display monitored files.
+    if (IS_SUCCESS(retval)) {
+        FOR_EACH_MONITORED_FILE(ctx, mf, mfidx) {
+            INFO("Monitoring %s file: %s",
+                    mf->is_status ? "status" : "log",
+                    mf->path);
+        }
+    }
+
     // Tail the files.
     while (IS_SUCCESS(retval)) {
         int i = 0 ;
