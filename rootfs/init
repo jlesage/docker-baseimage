@@ -53,6 +53,9 @@ load_env_var() {
 
 log "container is starting..."
 
+# Set the default umask, just in case the distro decided to set something else.
+umask 022
+
 # Install container environment variables.
 STAGE=cont-env
 log "loading container environment variables..."
