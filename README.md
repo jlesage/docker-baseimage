@@ -412,8 +412,8 @@ setting.
 | interval               | Interval         | Interval, in seconds, at which the service should be executed.  This is mutually exclusive with `respawn`. | No interval |
 | uid                    | Unsigned integer | The user ID under which the service will run. | `$USER_ID` |
 | gid                    | Unsigned integer | The group ID under which the service will run. | `$GROUP_ID` |
-| sgid                   | Unsigned integer | List of supplementary group IDs of the service.  One group ID per line. | `$SUP_GROUP_IDS` |
-| umask                  | Octal integer    | The umask value (in octal notation) of the service. | `$UMASK` |
+| sgid                   | Unsigned integer | List of supplementary group IDs of the service.  One group ID per line. | Empty list |
+| umask                  | Octal integer    | The umask value (in octal notation) of the service. | `0022` |
 | priority               | Signed integer   | Priority at which the service should run.  A niceness value of -20 is the highest priority and 19 is the lowest priority. | `0` |
 | workdir                | String           | The working directory of the service. | Service's directory path  |
 | ignore_failure         | Boolean          | When set, the inability to start the service won't prevent the container to start. | `FALSE` |
