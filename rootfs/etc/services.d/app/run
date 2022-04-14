@@ -2,7 +2,6 @@
 
 set -u # Treat unset variables as an error.
 
-echo "starting ${APP_NAME:-Docker application}..."
 if [ -x /startapp.sh ]; then
     # Start the application.
     exec 2>&1 /startapp.sh
