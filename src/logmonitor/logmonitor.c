@@ -34,6 +34,8 @@
 
 #define DEFAULT_CONFIG_DIR "/etc/logmonitor"
 
+#define MAIN_LOOP_SLEEP_PERIOD 1
+
 #define MAX_NUM_MONITORED_FILES 16
 #define MAX_NUM_NOTIFICATIONS 16
 #define MAX_NUM_TARGETS 16
@@ -175,13 +177,10 @@ static ssize_t safe_read(int fd, void *buf, size_t count)
  */
 static ssize_t full_read(int fd, void *buf, size_t len)
 {
-    ssize_t cc;
-    ssize_t total;
-
-    total = 0;
+    ssize_t total = 0;
 
     while (len) {
-        cc = safe_read(fd, buf, len);
+        ssize_t cc = safe_read(fd, buf, len);
 
         if (cc < 0) {
             if (total) {
@@ -1014,7 +1013,6 @@ int main(int argc, char **argv)
 {
     int retval = LM_SUCCESS;
     lm_context_t *ctx = NULL;
-    unsigned sleep_period = 1;
     const char *cfgdir = DEFAULT_CONFIG_DIR;
 
     char *tailbuf = NULL;
@@ -1096,21 +1094,21 @@ int main(int argc, char **argv)
     // Tail the files.
     while (IS_SUCCESS(retval)) {
         int i = 0 ;
-        sleep(sleep_period);
+        sleep(MAIN_LOOP_SLEEP_PERIOD);
 
         do {
             int nread;
             const char *filename = ctx->monitored_files[i].path;
             int fd = ctx->monitored_files[i].fd;
 
-            /* skip reading status file if we just read it */
+            // Skip status file if we read it recently.
             if (ctx->monitored_files[i].is_status) {
                 if (time(NULL) - ctx->monitored_files[i].last_read < STATUS_FILE_READ_INTERVAL) {
                     continue;
                 }
             }
 
-            /* re-open the file if needed */
+            // Re-open the file if needed.
             {
                 struct stat sbuf, fsbuf;
 
@@ -1122,47 +1120,49 @@ int main(int argc, char **argv)
                 ) {
                     int new_fd;
 
-                    if (fd >= 0)
+                    if (fd >= 0) {
                         close(fd);
+                    }
                     new_fd = open(filename, O_RDONLY);
                     if (new_fd >= 0) {
                         DEBUG("%s has %s; following end of new file.",
-                            filename, (fd < 0) ? "appeared" : "been replaced"
-                        );
+                            filename, (fd < 0) ? "appeared" : "been replaced");
                     } else if (fd >= 0) {
                         DEBUG("%s has become inaccessible.", filename);
                     }
                     ctx->monitored_files[i].fd = fd = new_fd;
                 }
             }
-            if (fd < 0)
+            if (fd < 0) {
                  continue;
+            }
 
-            /* make sure status files are read from the beginning */
+            // Make sure status files are read from the beginning.
             if (ctx->monitored_files[i].is_status) {
                 lseek(fd, 0, SEEK_SET);
             }
 
+            // Read the file until its end.
             for (;;) {
-                /* tail -f keeps following files even if they are truncated */
                 struct stat sbuf;
-                /* /proc files report zero st_size, don't lseek them */
-                if (fstat(fd, &sbuf) == 0 && sbuf.st_size > 0) {
+                if (fstat(fd, &sbuf) == 0) {
                     off_t current = lseek(fd, 0, SEEK_CUR);
-                    if (sbuf.st_size < current)
+                    if (sbuf.st_size < current) {
                         lseek(fd, 0, SEEK_SET);
+                    }
                 }
 
                 nread = tail_read(fd, tailbuf, BUFSIZ);
-                if (nread <= 0)
+                if (nread <= 0) {
                     break;
+                }
                 tailbuf[nread] = '\0';
                 handle_read(ctx, i, tailbuf);
             }
 
             ctx->monitored_files[i].last_read = time(NULL);
         } while (++i < ctx->num_monitored_files);
-    } /* while (1) */
+    }
 
     if (tailbuf) {
         free(tailbuf);
