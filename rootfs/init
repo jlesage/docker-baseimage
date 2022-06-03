@@ -23,7 +23,6 @@ log_script() {
             :::*) log "$OUTPUT";;
             *) log "$1: $OUTPUT";;
         esac
-#        log "$1: $OUTPUT"
     done
 }
 
