@@ -239,7 +239,7 @@ There are two types of environment variables:
     these variables to automatically provide configuration parameters to the
     users.
 
-  - **Internal**: These variables are the ones thay don't need to be exposed to
+  - **Internal**: These variables are the ones that don't need to be exposed to
     users.  They are useful for the application itself, but are not intended to
     be changed by users.
 
@@ -419,7 +419,7 @@ setting.
 | priority               | Signed integer   | Priority at which the service should run.  A niceness value of -20 is the highest priority and 19 is the lowest priority. | `0` |
 | workdir                | String           | The working directory of the service. | Service's directory path  |
 | ignore_failure         | Boolean          | When set, the inability to start the service won't prevent the container to start. | `FALSE` |
-| shutdown_on_terminate  | Boolean          | Indicates that the container should be shutted down when the service terminates. | `FALSE` |
+| shutdown_on_terminate  | Boolean          | Indicates that the container should be shut down when the service terminates. | `FALSE` |
 | min_running_time       | Unsigned integer | The minimum amount of time (in milliseconds) the service should be running before considering it as ready. | `500` |
 | disabled               | Boolean          | Indicates that the service is disabled, meaning that it won't be loaded nor started. | `FALSE` |
 | <service>.dep          | Boolean          | Indicates that the service depends on another one.  For example, having `srvB.dep` means that `srvB` should be started before this service. | N/A |
