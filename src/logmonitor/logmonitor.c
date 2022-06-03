@@ -270,7 +270,7 @@ static char *file2str(const char *filepath)
     return buf;
 }
 
-static int invoke_exec(const char *filter_exe, const char *args[], unsigned int num_args, int *exit_code, char *output, size_t outputsize)
+static int invoke_exec(const char *exec, const char *args[], unsigned int num_args, int *exit_code, char *output, size_t outputsize)
 {
     int retval = LM_SUCCESS;
     pid_t pid;
@@ -297,7 +297,7 @@ static int invoke_exec(const char *filter_exe, const char *args[], unsigned int 
         if (pid == 0) {
             const char *all_args[num_args + 2];
 
-            all_args[0] = filter_exe;
+            all_args[0] = exec;
             for (int i = 1; i <= num_args; i++) {
                 all_args[i] = args[i-1];
             }
@@ -310,7 +310,7 @@ static int invoke_exec(const char *filter_exe, const char *args[], unsigned int 
                 close(pipefds[0]);
             }
 
-            if (execv(filter_exe, (char *const *)all_args) == -1) {
+            if (execv(exec, (char *const *)all_args) == -1) {
                 exit(127);
             }
         }
@@ -393,11 +393,149 @@ static int invoke_target(const char *send_exe, const char *title, const char *de
 
 static void handle_line(lm_context_t *ctx, char *buf)
 {
+#define BUFFER_SIZE 512
+
     FOR_EACH_NOTIFICATION(ctx, notif, nidx) {
         DEBUG("Invoking filter for notification '%s'...", notif->name);
         if (invoke_filter(notif->filter, buf) == LM_SUCCESS) {
+            char *title = NULL;
+            char *desc = NULL;
+            char *level = NULL;
+
             // Filter indicated a match.
             DEBUG("Filter result: match.");
+
+            // Get the notification title.
+            if (notif->is_title_exe) {
+                title = calloc(1, BUFFER_SIZE);
+                if (title) {
+                    int retval = LM_SUCCESS;
+                    const char *args[] = { buf };
+                    int exit_code;
+
+                    retval = invoke_exec(notif->title, args, DIM(args), &exit_code, title, BUFFER_SIZE);
+                    if (IS_SUCCESS(retval)) {
+                        if (exit_code == 0) {
+                            terminate_str_at_first_eol(title);
+                        }
+                        else {
+                            ERROR("Notification title execution exited with code %d: %s.",
+                                    exit_code,
+                                    notif->title);
+                            free(title);
+                            title = NULL;
+                        }
+                    }
+                    else{
+                        ERROR("Notification title execution failure: %s.",
+                                notif->title);
+                        free(title);
+                        title = NULL;
+                    }
+                }
+                else {
+                    ERROR("Notification title memory allocation failure: %s.",
+                            notif->title);
+                }
+
+                if (!title) {
+                    title = "EXECERROR";
+                }
+            }
+            else {
+                title = notif->title;
+            }
+
+            // Get the notification description.
+            if (notif->is_desc_exe) {
+                desc = calloc(1, BUFFER_SIZE);
+                if (desc) {
+                    int retval = LM_SUCCESS;
+                    const char *args[] = { buf };
+                    int exit_code;
+
+                    retval = invoke_exec(notif->desc, args, DIM(args), &exit_code, desc, BUFFER_SIZE);
+                    if (IS_SUCCESS(retval)) {
+                        if (exit_code == 0) {
+                            terminate_str_at_first_eol(desc);
+                        }
+                        else {
+                            ERROR("Notification description execution exited with code %d: %s.",
+                                    exit_code,
+                                    notif->desc);
+                            free(desc);
+                            desc = NULL;
+                        }
+                    }
+                    else{
+                        ERROR("Notification description execution failure: %s.",
+                                notif->desc);
+                        free(desc);
+                        desc = NULL;
+                    }
+                }
+                else {
+                    ERROR("Notification description memory allocation failure: %s.",
+                            notif->desc);
+                }
+
+                if (!desc) {
+                    desc = "EXECERROR";
+                }
+            }
+            else {
+                desc = notif->desc;
+            }
+
+            // Get the notification level.
+            if (notif->is_level_exe) {
+                level = calloc(1, BUFFER_SIZE);
+                if (level) {
+                    int retval = LM_SUCCESS;
+                    const char *args[] = { buf };
+                    int exit_code;
+
+                    retval = invoke_exec(notif->level, args, DIM(args), &exit_code, level, BUFFER_SIZE);
+                    if (IS_SUCCESS(retval)) {
+                        if (exit_code == 0) {
+                            terminate_str_at_first_eol(level);
+                            if (strcmp(level, "ERROR") &&
+                                strcmp(level, "WARNING") &&
+                                strcmp(level, "INFO")) {
+                                ERROR("Notification level level '%s' invalid: %s.",
+                                        level,
+                                        notif->level);
+                                free(level);
+                                level = NULL;
+                            }
+                        }
+                        else {
+                            ERROR("Notification level execution exited with code %d: %s.",
+                                    exit_code,
+                                    notif->level);
+                            free(level);
+                            level = NULL;
+                        }
+                    }
+                    else{
+                        ERROR("Notification level execution failure: %s.",
+                                notif->level);
+                        free(level);
+                        level = NULL;
+                    }
+                }
+                else {
+                    ERROR("Notification level memory allocation failure: %s.",
+                            notif->level);
+                }
+
+                if (!level) {
+                    title = "EXECERROR";
+                }
+            }
+            else {
+                level = notif->level;
+            }
 
             FOR_EACH_TARGET(ctx, target, tidx) {
                 if ((time(NULL) - target->last_notif_sent[nidx]) < target->debouncing) {
@@ -407,8 +545,18 @@ static void handle_line(lm_context_t *ctx, char *buf)
 
                 // Send the target.
                 DEBUG("Invoking target '%s'...", target->name);
-                invoke_target(target->send, notif->title, notif->desc, notif->level);
+                invoke_target(target->send, title, desc, level);
                 target->last_notif_sent[nidx] = time(NULL);
+            }
+
+            if (notif->is_title_exe && title) {
+                free(title);
+            }
+            if (notif->is_desc_exe && desc) {
+                free(desc);
+            }
+            if (notif->is_level_exe && level) {
+                free(level);
             }
         }
         else {
