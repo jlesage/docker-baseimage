@@ -126,7 +126,7 @@ static bool str_ends_with(const char *str, const char c)
 
 static bool str_starts_with(const char *str, const char c)
 {
-    return (str && strlen(str) > 0 && str[0] == 'c');
+    return (str && strlen(str) > 0 && str[0] == c);
 }
 
 static char *join_path(const char *dir, const char *file)
