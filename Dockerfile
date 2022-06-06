@@ -22,7 +22,7 @@ ARG DEBIAN_PKGS="\
 FROM --platform=$BUILDPLATFORM tonistiigi/xx AS xx
 
 # Build UPX.
-# NOTE: The latest official releast of UPX (version 3.96) produces binaries that
+# NOTE: The latest official release of UPX (version 3.96) produces binaries that
 # crash on ARM.  We need to manually compile it with all latest fixes.
 FROM --platform=$BUILDPLATFORM alpine:3.15 AS upx
 RUN apk --no-cache add build-base git bash perl ucl-dev zlib-dev zlib-static && \
