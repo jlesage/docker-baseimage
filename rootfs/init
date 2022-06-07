@@ -5,13 +5,15 @@ set -u # Treat unset variables as an error.
 
 STAGE=init
 
+MIN_LOG_PREFIX_LENGTH=12
+
 log() {
     case "$1" in
         :::*)
             echo "$*" | cut -c 4-
             ;;
         *)
-            printf "[%-12s] " "$STAGE"
+            printf "[%-${MIN_LOG_PREFIX_LENGTH}s] " "$STAGE"
             echo "$*"
             ;;
     esac
@@ -23,6 +25,15 @@ log_script() {
             :::*) log "$OUTPUT";;
             *) log "$1: $OUTPUT";;
         esac
+    done
+}
+
+set_min_log_prefix_length() {
+    find /etc/services.d -maxdepth 1 -type d | while read DIR
+    do
+        if [ "${#DIR}" -gt "$MIN_LOG_PREFIX_LENGTH" ]; then
+            MIN_LOG_PREFIX_LENGTH="${#DIR}"
+        fi
     done
 }
 
@@ -49,6 +60,8 @@ load_env_var() {
         export "$VAR_NAME"="$VAR_VAL"
     fi
 }
+
+set_min_log_prefix_length
 
 log "container is starting..."
 
