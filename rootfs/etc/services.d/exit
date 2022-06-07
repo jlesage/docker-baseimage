@@ -7,15 +7,36 @@
 set -e # Exit immediately if a command exits with a non-zero status.
 set -u # Treat unset variables as an error.
 
+STAGE=finish
+
 EXIT_CODE=${1:-1}
 
+MIN_LOG_PREFIX_LENGTH=12
+
 log() {
-    printf "[%-12s] $*\n" "finish"
+    case "$1" in
+        :::*)
+            echo "$*" | cut -c 4-
+            ;;
+        *)
+            printf "[%-${MIN_LOG_PREFIX_LENGTH}s] " "$STAGE"
+            echo "$*"
+            ;;
+    esac
 }
 
 log_script() {
     while read OUTPUT; do
         log "$1: $OUTPUT"
+    done
+}
+
+set_min_log_prefix_length() {
+    find /etc/services.d -maxdepth 1 -type d | while read DIR
+    do
+        if [ "${#DIR}" -gt "$MIN_LOG_PREFIX_LENGTH" ]; then
+            MIN_LOG_PREFIX_LENGTH="${#DIR}"
+        fi
     done
 }
 
@@ -50,6 +71,8 @@ run() {
     done
     return 0
 }
+
+set_min_log_prefix_length
 
 # Invoke finish scripts.
 log "executing container finish scripts..."
