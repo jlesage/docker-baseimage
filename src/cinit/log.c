@@ -28,6 +28,7 @@ static void log_prefixer_callback(int fd, const char *line, void *data)
     // If line starts with ':::', do not add the prefix.
     if (line[0] == ':' && line[1] == ':' && line[2] == ':') {
         prefix = "";
+        line += 3;
     }
 
     if (fd == ctx->fds[STDOUT_IDX]) {
