@@ -171,8 +171,7 @@ jobs:
           do
             export DOCKER_IMAGE=localhost:5000/${{ env.DOCKER_IMAGE_NAME }}:github-ci@$SHA
             docker pull $DOCKER_IMAGE
-            CURRENT_ARCH="$(docker run --rm $DOCKER_IMAGE sh -c 'uname -m')"
-            echo "Testing image on $CURRENT_ARCH..."
+            docker run --rm $DOCKER_IMAGE sh -c 'echo Testing image on $(uname -m)...'
             bats tests
           done
 
