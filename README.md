@@ -42,7 +42,7 @@ long-lived application.
          * [Adding glibc](#adding-glibc)
          * [Modifying Files With Sed](#modifying-files-with-sed)
          * [Tips and Best Practices](#tips-and-best-practices)
-            * [Do Not Modifying Baseimage Content](#do-not-modifying-baseimage-content)
+            * [Do Not Modify Baseimage Content](#do-not-modify-baseimage-content)
             * [Default Configuration Files](#default-configuration-files)
             * [The $HOME Variable](#the-home-variable)
             * [Referencing Linux User/Group](#referencing-linux-usergroup)
@@ -590,6 +590,7 @@ By default, the baseimage contains the following notification backends:
 | Backend  | Description | Debouncing time |
 |----------|-------------|-----------------|
 | `stdout` | Display a message to the standard output, make it visible in the container's log.  Message of the format is `{LEVEL}: {TITLE} {MESSAGE}`. | 21 600s (6 hours) |
+
 ### Adding glibc
 
 For baseimages based on Alpine Linux, glibc can be installed to the image by
@@ -629,7 +630,7 @@ command fails and thus, the Docker build also.
 
 ### Tips and Best Practices
 
-#### Do Not Modifying Baseimage Content
+#### Do Not Modify Baseimage Content
 
 Try to avoid modifications to files provided by the baseimage.  This minimizes
 the risk of breaking your container after using a new version of the baseimage.
