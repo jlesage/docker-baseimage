@@ -19,6 +19,8 @@ typedef void (*exec_cmd_line_callback_t)(const char *line, std_output_t src, voi
 
 typedef void (*line_callback_t)(int fd, const char *line, void *data);
 
+typedef bool (*exit_callback_t)(void *data);
+
 /**
  * Execute a command and wait for its completion.
  *
@@ -125,12 +127,13 @@ char **split(char *buf, int c, size_t *len, int plus, int ofs);
  *
  * @param[in] fds Table of file descriptors to read from.
  * @param[in] num_fds Number of file descriptors int the table.
- * @param[in] callback Function to be invoked.
+ * @param[in] callback Function to be invoked for each line.
+ * @param[in] callback Optional function that determines if it's time to exit.
  * @param[in] callback_data Custom data to be passed to the callback function.
  *
  * @return 0 on success, -1 if error occurred.
  */
-int read_lines(int *fds, size_t num_fds, line_callback_t callback, void *callback_data);
+int read_lines(int *fds, size_t num_fds, line_callback_t callback, exit_callback_t exit_callback, void *callback_data);
 
 /**
  * Store the content of a text file into the provided buffer.
