@@ -166,6 +166,10 @@ static ssize_t safe_read(int fd, void *buf, size_t count)
         n = read(fd, buf, count);
     } while (n < 0 && errno == EINTR);
 
+    if (n < 0 && errno == EAGAIN) {
+        n = 0;
+    }
+
     return n;
 }
 
@@ -1212,7 +1216,7 @@ int main(int argc, char **argv)
     if (IS_SUCCESS(retval)) {
         FOR_EACH_MONITORED_FILE(ctx, mf, mfidx) {
             const char *filename = mf->path;
-            int fd = open(filename, O_RDONLY);
+            int fd = open(filename, O_RDONLY|O_NONBLOCK);
 
             if (fd >= 0 && !mf->is_status) {
                 lseek(fd, 0, SEEK_END);
@@ -1271,7 +1275,7 @@ int main(int argc, char **argv)
                     if (fd >= 0) {
                         close(fd);
                     }
-                    new_fd = open(filename, O_RDONLY);
+                    new_fd = open(filename, O_RDONLY|O_NONBLOCK);
                     if (new_fd >= 0) {
                         DEBUG("%s has %s; following end of new file.",
                             filename, (fd < 0) ? "appeared" : "been replaced");
