@@ -167,6 +167,7 @@ typedef struct {
     int stdout_fd;
     int stderr_fd;
     pthread_t logger;
+    atomic_bool logger_exit;
     bool logger_started;
 } service_t;
 
@@ -434,7 +435,7 @@ static void *service_logger(void *p)
     snprintf(prefix, sizeof(prefix), "[%-*s] ", g_ctx.log_prefix_length, SRV(service).name);
 
     // Start the logger.
-    log_prefixer(prefix, SRV(service).stdout_fd, SRV(service).stderr_fd);
+    log_prefixer(prefix, SRV(service).stdout_fd, SRV(service).stderr_fd, &SRV(service).logger_exit);
 
     return NULL;
 }
@@ -1043,6 +1044,7 @@ static void start_service(int service)
             // Create and start the logger thread.
             int *service_arg = malloc(sizeof(int));
             *service_arg = service;
+            atomic_store(&SRV(service).logger_exit, false);
             int rc = pthread_create(&SRV(service).logger, NULL, service_logger, service_arg);
             ASSERT_LOG(rc == 0, "Failed to create logger thread of service '%s': %s.",
                     SRV(service).name,
@@ -1342,6 +1344,7 @@ static void handle_killed(pid_t killed, int status)
         // Join the logger thread.
         log_debug("waiting termination of logger thread of service '%s'...",
                 SRV(sid).name);
+        atomic_store(&SRV(sid).logger_exit, true);
         int rc = pthread_join(SRV(sid).logger, NULL);
         ASSERT_LOG(rc == 0, "Failed to join logger thread of service '%s': %s.",
                 SRV(sid).name, strerror(rc));

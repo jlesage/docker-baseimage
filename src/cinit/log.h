@@ -1,6 +1,8 @@
 #ifndef __CINIT_LOG_H__
 #define __CINIT_LOG_H__
 
+#include <stdatomic.h>
+
 /**
  * Log to stdout.
  *
@@ -27,9 +29,10 @@ void log_stderr(const char *format, ...);
  * @param[in] prefix Prefix to be added.
  * @param[in] stdout_fd File descriptor associated to stdout.
  * @param[in] stderr_fd File descriptor associated to stderr.
+ * @param[in] time_to_exit Pointer to boolean indicating if it's time to stop.
  *
  * @return -1 if an error occurred, 0 otherwise.
  */
-int log_prefixer(const char *prefix, int stdout_fd, int stderr_fd);
+int log_prefixer(const char *prefix, int stdout_fd, int stderr_fd, atomic_bool *time_to_exit);
 
 #endif // __CINIT_LOG_H__

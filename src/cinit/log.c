@@ -15,6 +15,7 @@
 typedef struct {
     int fds[2];
     const char *prefix;
+    atomic_bool *time_to_exit;
 } log_prefixer_ctx_t;
 
 static pthread_mutex_t g_stdout_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -42,6 +43,12 @@ static void log_prefixer_callback(int fd, const char *line, void *data)
     }
 }
 
+static bool log_prefixer_exit_callback(void *data)
+{
+    log_prefixer_ctx_t *ctx = (log_prefixer_ctx_t *)data;
+    return atomic_load(ctx->time_to_exit);
+}
+
 void log_stdout(const char *format, ...)
 {
     pthread_mutex_lock(&g_stdout_mutex);
@@ -66,12 +73,13 @@ void log_stderr(const char *format, ...)
     pthread_mutex_unlock(&g_stderr_mutex);
 }
 
-int log_prefixer(const char *prefix, int stdout_fd, int stderr_fd)
+int log_prefixer(const char *prefix, int stdout_fd, int stderr_fd, atomic_bool *time_to_exit)
 {
     log_prefixer_ctx_t ctx = {
         { stdout_fd, stderr_fd },
         prefix,
+        time_to_exit,
     };
 
-    return read_lines(ctx.fds, DIM(ctx.fds), log_prefixer_callback, &ctx);
+    return read_lines(ctx.fds, DIM(ctx.fds), log_prefixer_callback, time_to_exit ? log_prefixer_exit_callback : NULL, &ctx);
 }

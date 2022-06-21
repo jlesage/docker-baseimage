@@ -239,7 +239,7 @@ char **split(char *buf, int c, size_t *len, int plus, int ofs)
     return vector;
 }
 
-int read_lines(int *fds, size_t num_fds, line_callback_t callback, void *callback_data)
+int read_lines(int *fds, size_t num_fds, line_callback_t callback, exit_callback_t exit_callback, void *callback_data)
 {
     int retval = 0;
     bool done = false;
@@ -268,13 +268,25 @@ int read_lines(int *fds, size_t num_fds, line_callback_t callback, void *callbac
         }
 
         // Poll.
-        if (poll(pfds, num_fds, -1) < 0) {
+        int rc = poll(pfds, num_fds, exit_callback ? 1000 : -1);
+        if (rc < 0) {
             if (errno == EINTR) {
                 continue;
             }
             else {
                 retval = -1;
                 break;
+            }
+        }
+        else if (rc == 0) {
+            // Timeout occurred.
+            assert(exit_callback);
+            if (exit_callback(callback_data)) {
+                done = true;
+                break;
+            }
+            else {
+                continue;
             }
         }
 
@@ -374,10 +386,16 @@ int read_lines(int *fds, size_t num_fds, line_callback_t callback, void *callbac
         // Check if all file descriptors are done.
         done = true;
         for (unsigned int i = 0; i < num_fds; i++) {
-            if (!read_states[i].eof) {
+            if (pfds[i].fd >= 0 && !read_states[i].eof) {
                 done = false;
                 break;
             }
+        }
+
+        // Check if it's time to exit.
+        if (exit_callback && exit_callback(callback_data)) {
+            done = true;
+            break;
         }
     }
 
