@@ -958,18 +958,18 @@ static pid_t fork_and_exec(int service)
                 umask(SRV(service).umask);
             }
 
-            // Set GID.
-            if (SRV(service).gid > 0) {
-               if (setgid(SRV(service).gid) < 0) {
-                   err(50, "setgid(%i)", SRV(service).gid);
-               }
-            }
-
             // Set SGIDs.
             if (SRV(service).sgid_list_size > 0) {
                 if (setgroups(SRV(service).sgid_list_size, SRV(service).sgid_list) < 0) {
                     err(50, "setgroups");
                 }
+            }
+
+            // Set GID.
+            if (SRV(service).gid > 0) {
+               if (setgid(SRV(service).gid) < 0) {
+                   err(50, "setgid(%i)", SRV(service).gid);
+               }
             }
 
             // Set UID.
