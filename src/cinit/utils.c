@@ -554,19 +554,19 @@ void string_to_uint(const char *str, unsigned int *result)
 
 void string_to_interval(const char *str, unsigned int *result)
 {
-    if (strcmp(str, "yearly") == 0) {
+    if (strcasecmp(str, "yearly") == 0) {
         *result = 60 * 60 * 24 * 7 * 365;
     }
-    else if (strcmp(str, "monthly") == 0) {
+    else if (strcasecmp(str, "monthly") == 0) {
         *result = 60 * 60 * 24 * 7 * 30;
     }
-    else if (strcmp(str, "weekly") == 0) {
+    else if (strcasecmp(str, "weekly") == 0) {
         *result = 60 * 60 * 24 * 7;
     }
-    else if (strcmp(str, "daily") == 0) {
+    else if (strcasecmp(str, "daily") == 0) {
         *result = 60 * 60 * 24;
     }
-    else if (strcmp(str, "hourly") == 0) {
+    else if (strcasecmp(str, "hourly") == 0) {
         *result = 60 * 60;
     }
 
