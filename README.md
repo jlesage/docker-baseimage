@@ -237,7 +237,7 @@ There are two types of environment variables:
     creation of the container, via the `-e "<VAR>=<VALUE>"` argument of the
     `docker run` command.  Also, many Docker container management systems use
     these variables to automatically provide configuration parameters to the
-    users.
+    user.
 
   - **Internal**: These variables are the ones that don't need to be exposed to
     users.  They are useful for the application itself, but are not intended to
@@ -285,8 +285,11 @@ of the variable and its value is defined by the content of the file.
 
 If the file has execute permission, the init process will execute the program
 and the value of the environment variable is expected to be printed to its
-standard output.  If the script exits with the return code `100`, the
-environment variable is not set.
+standard output.
+
+**NOTE**: If the script exits with the return code `100`, the environment
+          variable is not set (this is different than being set with an empty
+          value).
 
 **NOTE**: The helper `set-cont-env` can be used to set internal environment
           variables from the Dockerfile.
@@ -294,12 +297,12 @@ environment variable is not set.
 #### Availability
 
 Since public environment variables are defined during the creation of the
-container, they are always available, to all your scripts and services.
+container, they are always available to all your scripts and services, as soon
+as the container starts.
 
-For internal environment variables, keep in mind that they need to be loaded
-first during the startup of the container before being available.  Since this
-is done before running init scripts and services, availability should not be an
-issue.
+For internal environment variables, they first need to be loaded during the
+startup of the container before they can be used.  Since this is done before
+running init scripts and services, availability should not be an issue.
 
 #### Docker Secrets
 
@@ -319,12 +322,14 @@ For example, for a secret named `CONT_ENV_MY_PASSWORD`, the environment variable
 
 ### User/Group IDs
 
-When using data volumes (`-v` flags), permissions issues can occur between the
-host and the container.  For example, the user within the container may not
-exists on the host.  This could prevent the container from properly accessing files
+When mapping data volumes (via the `-v` flag of the `docker run` command),
+permissions issues can occur between the host and the container.  Files and
+folders of a data volume are owned by a user, which is probably not the same as
+the default user under which the implemented application is running.  Depending
+on permissions, this situation could prevent the container from accessing files
 and folders on the shared volume.
 
-To avoid any problem, you can specify the user the application should run as.
+To avoid this problem, you can specify the user the application should run as.
 
 This is done by passing the user ID and group ID to the container via the
 `USER_ID` and `GROUP_ID` environment variables.
@@ -375,13 +380,14 @@ The following ranges are used by the baseimage:
   - 10-29
   - 70-89
 
-Unless specific needs are needed, containers built with this baseimage normally
-use the range 50-59.
+Unless specific needs are required, containers built against this baseimage
+should use the range 50-59.
 
 ### Finalization Scripts
 
 Finalization scripts are executed, in alphabetical order, during the shutdown
-process of the container.  They are executed after all services are stopped.
+process of the container.  They are executed after all services have been
+stopped.
 
 Finalization scripts are located under `/etc/cont-finish.d/` inside the
 container.
@@ -429,8 +435,8 @@ The following table provides more details about some value types:
 | Type     | Description |
 |----------|-------------|
 | Program  | An executable binary, a script or a symbolic link to the program to run.  The program file must have the execute permission. |
-| Boolean  | A boolean value.  A *true* value can be `1`, `true`, `on`, `yes`, `enable`, `enabled`.  A *false* value can  be `0`, `false`, `off`, `no`, `disable`, `disabled`.  Also, the presence of an empty file indicates a *true* value (i.e. the file can be "touched"). |
-| Interval | An unsigned integer value.  The following values are also accepted: `yearly`, `monthly`, `weekly`, `daily`, `hourly`. |
+| Boolean  | A boolean value.  A *true* value can be `1`, `true`, `on`, `yes`, `enable`, `enabled`.  A *false* value can  be `0`, `false`, `off`, `no`, `disable`, `disabled`.  Values are case insensitive.  Also, the presence of an empty file indicates a *true* value (i.e. the file can be "touched"). |
+| Interval | An unsigned integer value.  The following values are also accepted (case insensitive): `yearly`, `monthly`, `weekly`, `daily`, `hourly`. |
 
 #### Service Group
 
@@ -450,7 +456,7 @@ and ran for a minimum amount of time (500ms by default).
 
 This behavior can be adjusted with the following methods:
   - By adjusting the minimum amount of time the service should run before 
-    considering it as read.  This can be done by adding the
+    considering it as ready.  This can be done by adding the
     `min_running_time` file to the service's directory.
   - By informing the process supervisor when the service is ready.  This is done
     by adding the `is_ready` program to the service's directory, along with
@@ -465,10 +471,11 @@ Inside the container, this data should be stored under the `/config` directory.
 This directory is intended to be mapped to a folder on the host.  The goal is to
 write stuff outside the container to keep this data persistent.
 
-NOTE: During the container startup, ownership of this folder and all its content
-      is taken.  This is to make sure that `/config` can be accessed by the user
-      configured through `USER_ID`/`GROUP_ID`.  This behavior can be adjusted
-      via the `TAKE_CONFIG_OWNERSHIP` environment variable.
+**NOTE**: During the container startup, ownership of this folder and all its
+          content is taken.  This is to make sure that `/config` can be accessed
+          by the user configured through `USER_ID`/`GROUP_ID`.  This behavior
+          can be adjusted via the `TAKE_CONFIG_OWNERSHIP` internal environment
+          variable.
 
 #### Application's Data Directories
 
@@ -536,7 +543,7 @@ exec /usr/bin/my_service > /config/log/my_service_out.log 2> /config/log/my_serv
 The baseimage include a simple log monitor.  This monitor allows sending
 notification(s) when a particular message is detected in a log or status file.
 
-This system has two main components: notification definitions and notifications
+This system has two main components: notification definitions and notification
 backends (targets).  Definitions describe properties of a notification (title,
 message, severity, etc) and how it is triggered (filtering function).  Once a
 matching string is found in a file, a notification is triggered and sent to one
@@ -558,7 +565,9 @@ File(s) to be monitored can be set in the configuration file located at
 
 The definition of a notification consists in multiple files, stored in a
 directory under `/etc/logmonitor/notifications.d`.  For example, definition of
-notification `NOTIF` is found under `/etc/logmonitor/notifications.d/NOTIF/`.
+notification `MYNOTIF` is found under
+`/etc/logmonitor/notifications.d/MYNOTIF/`.
+
 The following table describe files part of the definition:
 
 | File     | Mandatory? | Description |
@@ -581,15 +590,14 @@ describe files part of the definition:
 | `debouncing` | No         | File containing the minimum amount time (in seconds) that must elapse before sending the same notification with this backend.  A value of `0` means infinite (notification is sent once).  If this file is missing, no debouncing is done. |
 
 **NOTE**: The log monitor invokes the notification backend and then waits for
-its termination.  So to prevent the log monitor from being blocked indefinitely,
-it is important to make sure that the execution of the `send` program terminates
-after a reasonable amount of time.
+its termination.  So it is important to make sure that the execution of the
+`send` program terminates after a reasonable amount of time.
 
 By default, the baseimage contains the following notification backends:
 
 | Backend  | Description | Debouncing time |
 |----------|-------------|-----------------|
-| `stdout` | Display a message to the standard output, make it visible in the container's log.  Message of the format is `{LEVEL}: {TITLE} {MESSAGE}`. | 21 600s (6 hours) |
+| `stdout` | Display a message to the standard output, making it visible in the container's log.  Message of the format is `{LEVEL}: {TITLE} {MESSAGE}`. | 21 600s (6 hours) |
 
 ### Adding glibc
 
@@ -607,9 +615,9 @@ one downside of this method is that there is no easy way to determine if `sed`
 actually modified the file or not.
 
 It's for this reason that the baseimage includes a helper that gives `sed` a
-"patch-like" behavior:  if the application of a sed expression results in no
-change on the target file, then an error is reported.  This helper is named
-`sed-patch` and has the following usage:
+"patch-like" behavior:  if applying a sed expression results in no change on the
+target file, then an error is reported.  This helper is named `sed-patch` and
+has the following usage:
 
 ```shell
 sed-patch [SED_OPT]... SED_EXPRESSION FILE
