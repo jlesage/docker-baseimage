@@ -85,12 +85,30 @@ if [ -d /etc/cont-env.d ]; then
         fi
 
         if [ -x "$FILE" ]; then
+            # The file is an executable.  The value of the environment variable
+            # is the stdout of the program.  Anything printed to stderr is
+            # redirected to the container's log.
+
             echo "executing..." | log_script "$FILENAME"
 
+            # Create a file descriptor used to store the stderr output of
+            # the program.
+            CMDOUT="$(mktemp)"
+            exec 4>"$CMDOUT" # Open for writing on file descriptor 4.
+
+            # Execute the program.
             set +e
-            VAL="$($FILE 2>/dev/null | head -n1)"
+            VAL="$($FILE 2>&4 | head -n1)"
             RC="$?"
             set -e
+
+            # Log any stderr output from the program.
+            log_script "$FILENAME" < "$CMDOUT"
+
+            # Remove file descriptor used to store the stderr output of the
+            # program.
+            exec 4>&- # Close file descriptor.
+            rm "$CMDOUT"
 
             if [ $RC -eq 0 ] || [ $RC -eq 100 ]; then
                 echo "terminated successfully." | log_script "$FILENAME"
@@ -99,6 +117,7 @@ if [ -d /etc/cont-env.d ]; then
                 exit $RC
             fi
 
+            # Load the environment variable in case of success.
             if [ $RC -eq 0 ]; then
                 echo "loading..." | log_script "$FILENAME"
                 load_env_var "$FILENAME" "$VAL"
