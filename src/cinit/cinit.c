@@ -22,6 +22,10 @@
 #include "log.h"
 #include "CException.h"
 
+#if ATOMIC_BOOL_LOCK_FREE != 2
+#error "Atomic bool type is not lock free."
+#endif
+
 /**
  * Our defaut program name.
  */
@@ -164,8 +168,12 @@ typedef struct {
 
     pid_t pid;
     unsigned long start_time;
+#ifdef SINGLE_CHILD_STDOUT_STDERR_STREAM
+    int output_fd;
+#else
     int stdout_fd;
     int stderr_fd;
+#endif
     pthread_t logger;
     atomic_bool logger_exit;
     bool logger_started;
@@ -435,7 +443,11 @@ static void *service_logger(void *p)
     snprintf(prefix, sizeof(prefix), "[%-*s] ", g_ctx.log_prefix_length, SRV(service).name);
 
     // Start the logger.
+#ifdef SINGLE_CHILD_STDOUT_STDERR_STREAM
+    log_prefixer(prefix, SRV(service).output_fd, -1, &SRV(service).logger_exit);
+#else
     log_prefixer(prefix, SRV(service).stdout_fd, SRV(service).stderr_fd, &SRV(service).logger_exit);
+#endif
 
     return NULL;
 }
@@ -622,8 +634,12 @@ static int load_service(const char *service)
     Try {
         // Initialize service's structure.
         memset(&SRV(sid), 0, sizeof(SRV(sid)));
+#ifdef SINGLE_CHILD_STDOUT_STDERR_STREAM
+        SRV(sid).output_fd = -1;
+#else
         SRV(sid).stdout_fd = -1;
         SRV(sid).stderr_fd = -1;
+#endif
         SRV(sid).uid = g_ctx.default_srv_uid;
         SRV(sid).gid = g_ctx.default_srv_gid;
         memcpy(SRV(sid).sgid_list, g_ctx.default_srv_sgid_list, sizeof(SRV(sid).sgid_list));
@@ -855,24 +871,52 @@ static int load_service(const char *service)
 static pid_t fork_and_exec(int service)
 {
     pid_t p;
+#ifdef SINGLE_CHILD_STDOUT_STDERR_STREAM
     int pty_master;
-    int stderr_pipe[2];
+#else
+    int pty_stdout[2] = { -1, -1 };
+    int pty_stderr[2] = { -1, -1 };
+#endif
 
     ASSERT_VALID_SERVICE_INDEX(service);
-    
-    // Create pipe for service's stderr.
-    if (pipe(stderr_pipe) < 0) {
-        //ThrowMessageWithErrno("could not create stderr pipe");
+
+#ifndef SINGLE_CHILD_STDOUT_STDERR_STREAM
+    // Create pseudo-terminals for stdout and stderr.  The stdout and stderr
+    // of the child process will be connected to 2 different pseudo-terminals.
+    // Pseudo-terminals are needed to disable buffering on the child side. Also,
+    // 2 differents pseudo-terminals are needed because we want to be able to
+    // differentiate the 2 streams (i.e. we want to tell is a message comes from
+    // stdout or stderr).
+    // https://reviews.llvm.org/D15073
+    // https://github.com/microsoft/node-pty/issues/71
+    // https://stackoverflow.com/questions/4057985
+    if (openpty(&pty_stdout[0], &pty_stdout[1], NULL, NULL, NULL) < 0) {
+        //ThrowMessageWithErrno("could not create pseudo-terminal for stdout";
         return 0;
     }
+    if (openpty(&pty_stderr[0], &pty_stderr[1], NULL, NULL, NULL) < 0) {
+        //ThrowMessageWithErrno("could not create pseudo-terminal for stderr";
+        return 0;
+        REQUEST_SHUTDOWN();
+    }
+#endif
 
-    // Use forkpty() to disable buffering on child side.
+#ifdef SINGLE_CHILD_STDOUT_STDERR_STREAM
+    // Use forkpty() to disable buffering on child side.  forkpty() redirects
+    // stdout and stderr into a single stream.
     switch (p = forkpty(&pty_master, NULL, NULL, NULL)) {
+#else
+    switch (p = fork()) {
+#endif
         case (pid_t)-1:
         {
             // Fork failed.
-            close(stderr_pipe[0]);
-            close(stderr_pipe[1]);
+#ifndef SINGLE_CHILD_STDOUT_STDERR_STREAM
+            close_fd(&pty_stdout[0]);
+            close_fd(&pty_stdout[1]);
+            close_fd(&pty_stderr[0]);
+            close_fd(&pty_stderr[1]);
+#endif
             //ThrowMessageWithErrno("fork failed");
             return 0;
         }
@@ -880,17 +924,16 @@ static pid_t fork_and_exec(int service)
         {
             // Child.
 
-            // forkpty() redirects stdout and stderr into a single stream, so
-            // it is not possible to tell if a message comes from stdout or
-            // stderr.  To avoid that, let's map the stderr of the child to a
-            // pipe.
-            // https://reviews.llvm.org/D15073
-            // https://github.com/microsoft/node-pty/issues/71
-            // https://stackoverflow.com/questions/4057985
-            dup2(stderr_pipe[1], STDERR_FILENO);
+#ifndef SINGLE_CHILD_STDOUT_STDERR_STREAM
+            // Map stdout and stderr of the child to the pseudo-terminals
+            // slave file descriptors.
+            dup2(pty_stdout[1], STDOUT_FILENO);
+            dup2(pty_stderr[1], STDERR_FILENO);
 
-            // Read side of the pipe is not needed.
-            close(stderr_pipe[0]);
+            // Master file descriptors of pseudo-terminals are not used.
+            close_fd(&pty_stdout[0]);
+            close_fd(&pty_stderr[0]);
+#endif
 
 #if 0
             ioctl(0, TIOCNOTTY, 0);
@@ -993,11 +1036,19 @@ static pid_t fork_and_exec(int service)
         default:
         {
             // Parent.
-            SRV(service).stdout_fd = pty_master;
-            SRV(service).stderr_fd = stderr_pipe[0];
+#ifdef SINGLE_CHILD_STDOUT_STDERR_STREAM
+            // Keep the master file descriptor.
+            SRV(service).output_fd = pty_master;
+#else
+            // Keep master file descriptors of pseudo-terminals.
+            SRV(service).stdout_fd = pty_stdout[0];
+            SRV(service).stderr_fd = pty_stderr[0];
 
-            // Write side is not needed.
-            close(stderr_pipe[1]);
+            // Slave file descriptors of pseudo-terminals are not needed.  We
+            // are not sending anything to child process.
+            close_fd(&pty_stdout[1]);
+            close_fd(&pty_stderr[1]);
+#endif
             return p;
         }
     }
@@ -1352,8 +1403,12 @@ static void handle_killed(pid_t killed, int status)
                 SRV(sid).name);
 
         // Close file descriptors.
+#ifdef SINGLE_CHILD_STDOUT_STDERR_STREAM
+        close_fd(&SRV(sid).output_fd);
+#else
         close_fd(&SRV(sid).stdout_fd);
         close_fd(&SRV(sid).stderr_fd);
+#endif
 
         SRV(sid).logger_started = false;
 

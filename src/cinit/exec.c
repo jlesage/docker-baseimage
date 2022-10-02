@@ -327,12 +327,14 @@ int exec_cmd(bool disable_output, const char *output_prefix, const char *cmd, ..
     }
     va_end(arguments);
 
-    // Create the pipe.
+    // Create the pipes.
     if (!disable_output) {
         if (pipe(stdout_link) != 0) {
             return -1;
         }
         else if (pipe(stderr_link) != 0) {
+            close(stdout_link[0]);
+            close(stdout_link[1]);
             return -1;
         }
     }
@@ -358,10 +360,10 @@ int exec_cmd(bool disable_output, const char *output_prefix, const char *cmd, ..
 
             // Read child's output.
             retval = log_prefixer(output_prefix, stdout_link[0], stderr_link[0], NULL);
-        }
 
-        close(stdout_link[0]);
-        close(stderr_link[0]);
+            close(stdout_link[0]);
+            close(stderr_link[0]);
+        }
 
         // Wait for the child to terminate.
         if (waitpid(pid, &status, 0) < 0) {
