@@ -45,6 +45,7 @@ long-lived application.
          * [The $HOME Variable](#the-home-variable)
          * [Referencing Linux User/Group](#referencing-linux-usergroup)
          * [Using rootfs Directory](#using-rootfs-directory)
+         * [Adaptations from the 2.x Version](#adaptations-from-the-2x-version)
 
 ## Images
 
@@ -567,7 +568,7 @@ notification `MYNOTIF` is found under
 
 The following table describe files part of the definition:
 
-| File     | Mandatory? | Description |
+| File     | Mandatory  | Description |
 |----------|------------|-------------|
 | `filter` | Yes        | Program (script or binary with executable permission) used to filter messages from a log file.  It is invoked by the log monitor with a single argument: a line from the log file.  On a match, the program should exit with a value of `0`.  Any other values is interpreted as non-match. |
 | `title`  | Yes        | File containing the title of the notification.  To produce dynamic content, the file can be a program (script or binary with executable permission).  In this case, the program is invoked by the log monitor with the matched message from the log file as the single argument.  Output of the program is used as the notification's title. |
@@ -581,7 +582,7 @@ Definition of a notification backend is stored in a directory under
 found under `/etc/logmonitor/notifications.d/STDOUT/`.  The following table
 describe files part of the definition:
 
-| File         | Mandatory? | Description |
+| File         | Mandatory  | Description |
 |--------------|------------|-------------|
 | `send`       | Yes        | Program (script or binary with executable permission) that sends the notification.  It is invoked by the log monitor with the following notification properties as arguments: title, description/message and the severity level. |
 | `debouncing` | No         | File containing the minimum amount time (in seconds) that must elapse before sending the same notification with this backend.  A value of `0` means infinite (notification is sent once).  If this file is missing, no debouncing is done. |
@@ -695,4 +696,22 @@ can be done with this single line in your `Dockerfile`:
 ```Dockerfile
 COPY rootfs/ /
 ```
+
+#### Adaptations from the 2.x Version
+
+For existing applications using the previous version of the baseimage, few
+adaptations are needed when updating to the new baseimage.  Here are a few
+tips:
+
+  - Verify exposed environment variables: each of them should be categorized as
+    a public or private one.  See the
+    [Environment Variables](#environment-variables) section.
+  - Initialization scripts should be renamed to have the proper naming format.
+    See the [Initialization Scripts](#initialization-scripts) section.
+  - Parameters/definition of services should be adjusted for the new system.
+    See the [Services](#services) section.
+  - Verify that no scripts are using `with-contenv` in their shebang (e.g. from
+    init scripts).
+  - Set the `APP_VERSION` and `DOCKER_IMAGE_VERSION` internal environment
+    variables when/if needed.
 
