@@ -53,17 +53,17 @@ Different docker images are available:
 
 | Base Distribution  | Docker Image Base Tag | Size |
 |--------------------|-----------------------|------|
-| [Alpine 3.13]      | alpine-3.13           | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.13)  |
-| [Alpine 3.14]      | alpine-3.14           | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.14)  |
-| [Alpine 3.15]      | alpine-3.15           | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.15)  |
-| [Alpine 3.16]      | alpine-3.16           | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.16)  |
-| [Debian 8]         | debian-8              | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-8)     |
-| [Debian 9]         | debian-9              | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-9)     |
-| [Debian 10]        | debian-10             | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-10)    |
-| [Debian 11]        | debian-11             | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-11)    |
-| [Ubuntu 16.04 LTS] | ubuntu-16.04          | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-16.04) |
-| [Ubuntu 18.04 LTS] | ubuntu-18.04          | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-18.04) |
-| [Ubuntu 20.04 LTS] | ubuntu-20.04          | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-20.04) |
+| [Alpine 3.13]      | alpine-3.13           | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.13-v3)  |
+| [Alpine 3.14]      | alpine-3.14           | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.14-v3)  |
+| [Alpine 3.15]      | alpine-3.15           | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.15-v3)  |
+| [Alpine 3.16]      | alpine-3.16           | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.16-v3)  |
+| [Debian 8]         | debian-8              | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-8-v3)     |
+| [Debian 9]         | debian-9              | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-9-v3)     |
+| [Debian 10]        | debian-10             | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-10-v3)    |
+| [Debian 11]        | debian-11             | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-11-v3)    |
+| [Ubuntu 16.04 LTS] | ubuntu-16.04          | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-16.04-v3) |
+| [Ubuntu 18.04 LTS] | ubuntu-18.04          | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-18.04-v3) |
+| [Ubuntu 20.04 LTS] | ubuntu-20.04          | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-20.04-v3) |
 
 [Alpine 3.13]: https://alpinelinux.org
 [Alpine 3.14]: https://alpinelinux.org
