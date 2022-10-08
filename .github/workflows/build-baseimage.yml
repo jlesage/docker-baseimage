@@ -14,7 +14,6 @@ on:
 jobs:
   build:
     name: Build image
-    needs: pre-build
     runs-on: ubuntu-20.04
 
     services:
