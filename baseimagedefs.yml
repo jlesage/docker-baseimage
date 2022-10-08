@@ -17,6 +17,11 @@ baseimage:
     long-lived application.
   gui: false
   history:
+    - version: 3.0.1
+      date: 2022-10-07
+      changes:
+        fixed:
+          - 'Any defined parameters were not passed to `startapp.sh`.'
     - version: 3.0.0
       date: 2022-10-05
       changes:
