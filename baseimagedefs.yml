@@ -312,9 +312,9 @@ container:
         description: >-
           Priority at which the application should run.  A niceness value of -20
           is the highest priority and 19 is the lowest priority.
-          [br][b]NOTE:[/b] Setting a negative value requires additional
-          permissions.  Thus, [i][b]--cap-add=SYS_NICE[/b][/i] must be added to
-          [i]Extra Parameters[/i] (shown when [i]Advanced View[/i] is enabled).
+          NOTE: Setting a negative value requires additional permissions.  Thus,
+          "--cap-add=SYS_NICE" must be added to Extra Parameters (shown when
+          Advanced View is enabled).
         display: advanced
         required: false
         mask: false
@@ -347,7 +347,7 @@ container:
         description: >-
           This is where the application stores its configuration, states, log
           and any files needing persistency.
-          [br]Container path: /config
+          Container path: /config
         default: /mnt/user/appdata/{{ app.name }}
         display: advanced-hide
         required: true
@@ -364,7 +364,7 @@ container:
         description: >-
           This location contains files from your host that need to be accessible
           to the application.
-          [br]Container path: /storage
+          Container path: /storage
         default: /mnt/user
         display: always-hide
         required: true
