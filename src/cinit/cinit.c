@@ -1002,10 +1002,8 @@ static pid_t fork_and_exec(int service)
             }
 
             // Set SGIDs.
-            if (SRV(service).sgid_list_size > 0) {
-                if (setgroups(SRV(service).sgid_list_size, SRV(service).sgid_list) < 0) {
-                    err(50, "setgroups");
-                }
+            if (setgroups(SRV(service).sgid_list_size, SRV(service).sgid_list) < 0) {
+                err(50, "setgroups");
             }
 
             // Set GID.
