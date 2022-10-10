@@ -34,9 +34,9 @@ if [ -n "$(ls -A /config)" ]; then
 
         # Take ownership of files and directories under the current directory.
         if [ "$DIR" = "/config" ]; then
-            find $DIR -maxdepth 1 -mindepth 1 -type f -print0 | xargs -0 chown $USER_ID:$GROUP_ID
+            find $DIR -maxdepth 1 -mindepth 1 -type f -print0 | xargs --no-run-if-empty -0 chown $USER_ID:$GROUP_ID
         else
-            find $DIR -maxdepth 1 -mindepth 1 -print0 | xargs -0 chown -R $USER_ID:$GROUP_ID
+            find $DIR -maxdepth 1 -mindepth 1 -print0 | xargs --no-run-if-empty -0 chown -R $USER_ID:$GROUP_ID
         fi
     done
 fi
