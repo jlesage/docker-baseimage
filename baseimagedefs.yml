@@ -17,6 +17,11 @@ baseimage:
     long-lived application.
   gui: false
   history:
+    - version: 3.0.3
+      date: 2022-10-10
+      changes:
+        fixed:
+          - 'Fixed issue where taking ownership of `/config` containing no file would fail.'
     - version: 3.0.2
       date: 2022-10-10
       changes:
