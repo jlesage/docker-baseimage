@@ -17,6 +17,12 @@ baseimage:
     long-lived application.
   gui: false
   history:
+    - version: 3.0.2
+      date: 2022-10-10
+      changes:
+        fixed:
+          - 'Fixed taking ownership of `/config` when on of its subfolder is mapped to a network share.'
+          - 'Make sure to always set supplementary groups of services, even if the list is empty.'
     - version: 3.0.1
       date: 2022-10-07
       changes:
