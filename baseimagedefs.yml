@@ -250,6 +250,13 @@ container:
         not taken during startup of the container.
       type: internal
       default: 1
+    - name: INSTALL_PACKAGES_INTERNAL
+      description: >-
+        Space-separated list of packages to install during the startup of the
+        container.  Packages are installed from the repository of the Linux
+        distribution this container is based on.
+      type: internal
+      default: '""'
     - name: USER_ID
       description: >-
         ID of the user the application runs as.  See

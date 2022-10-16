@@ -23,9 +23,9 @@ is_pkg_installed() {
     fi
 }
 
-if [ -n "${INSTALL_PACKAGES:-}" ]; then
+if [ -n "${INSTALL_PACKAGES:-}" ] || [ -n "${INSTALL_PACKAGES_INTERNAL:-}" ]; then
     echo "installing requested package(s)..."
-    for PKG in $INSTALL_PACKAGES; do
+    for PKG in ${INSTALL_PACKAGES:-} ${INSTALL_PACKAGES_INTERNAL:-}; do
         if is_pkg_installed "$PKG"; then
             echo "package '$PKG' already installed"
         else
