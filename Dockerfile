@@ -119,7 +119,7 @@ ENV \
     USER_ID=1000 \
     GROUP_ID=1000 \
     SUP_GROUP_IDS= \
-    UMASK=022 \
+    UMASK=0022 \
     TZ=Etc/UTC \
     KEEP_APP_RUNNING=0 \
     APP_NICENESS=0 \
