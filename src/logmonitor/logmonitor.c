@@ -1202,7 +1202,7 @@ int main(int argc, char **argv)
     // Validate config.
     if (IS_SUCCESS(retval)) {
         if (ctx->num_monitored_files == 0) {
-            SET_ERROR(retval, "At least of file to monitor must be specified.");
+            SET_ERROR(retval, "At least one file to monitor must be specified.");
         }
         else if (ctx->num_notifications == 0) {
             SET_ERROR(retval, "No notification configured.");
