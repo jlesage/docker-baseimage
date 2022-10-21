@@ -78,6 +78,7 @@ RUN upx /tmp/su-exec/su-exec
 
 # Pull base image.
 FROM ${BASEIMAGE}
+ARG TARGETPLATFORM
 
 # Define working directory.
 WORKDIR /tmp
@@ -115,6 +116,11 @@ RUN \
 
 # Add files.
 COPY rootfs/ /
+
+# Set internal environment variables.
+RUN \
+    set-cont-env DOCKER_IMAGE_PLATFORM "${TARGETPLATFORM:-}" && \
+    true
 
 # Set environment variables.
 ENV \

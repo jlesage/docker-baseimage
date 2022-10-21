@@ -266,6 +266,7 @@ The following internal environment variables are provided by the baseimage:
 |`APP_NAME`| Name of the implemented application. | `DockerApp` |
 |`APP_VERSION`| Version of the implemented application. | (unset) |
 |`DOCKER_IMAGE_VERSION`| Version of the Docker image that implements the application. | (unset) |
+|`DOCKER_IMAGE_PLATFORM`| Platform (OS / CPU architecture) of the Docker image that implements the application. | (unset) |
 |`HOME`| Home directory. | `""` |
 |`XDG_CONFIG_HOME`| Defines the base directory relative to which user specific configuration files should be stored. | `/config/xdg/config` |
 |`XDG_DATA_HOME`| Defines the base directory relative to which user specific data files should be stored. | `/config/xdg/data` |

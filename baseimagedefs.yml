@@ -229,6 +229,10 @@ container:
       description: Version of the Docker image that implements the application.
       type: internal
       default:
+    - name: DOCKER_IMAGE_PLATFORM
+      description: Platform (OS / CPU architecture) of the Docker image that implements the application.
+      type: internal
+      default:
     - name: HOME
       description: Home directory.
       type: internal
