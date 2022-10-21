@@ -49,6 +49,7 @@ RUN upx /tmp/cinit/cinit
 # Build the log monitor.
 FROM --platform=$BUILDPLATFORM alpine:3.15 AS logmonitor
 ARG TARGETPLATFORM
+ARG TARGETARCH
 COPY --from=xx / /
 COPY src/logmonitor /tmp/logmonitor
 RUN apk --no-cache add make clang
@@ -57,7 +58,7 @@ RUN CC=xx-clang \
     make -C /tmp/logmonitor
 RUN xx-verify --static /tmp/logmonitor/logmonitor
 COPY --from=upx /usr/bin/upx /usr/bin/upx
-RUN upx /tmp/logmonitor/logmonitor
+RUN if [ "$TARGETARCH" != "arm64" ]; then upx /tmp/logmonitor/logmonitor; fi
 
 # Build su-exec
 FROM --platform=$BUILDPLATFORM alpine:3.15 AS su-exec
