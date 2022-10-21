@@ -25,13 +25,13 @@ FROM --platform=$BUILDPLATFORM tonistiigi/xx AS xx
 # NOTE: The latest official release of UPX (version 3.96) produces binaries that
 # crash on ARM.  We need to manually compile it with all latest fixes.
 FROM --platform=$BUILDPLATFORM alpine:3.15 AS upx
-RUN apk --no-cache add build-base make cmake git && \
+RUN apk --no-cache add build-base git bash perl ucl-dev zlib-dev zlib-static && \
     git clone https://github.com/upx/upx.git /tmp/upx && \
-    git -C /tmp/upx checkout fff53ef && \
+    git -C /tmp/upx checkout f75ad8b && \
     git -C /tmp/upx submodule init && \
     git -C /tmp/upx submodule update --recursive && \
-    make -C /tmp/upx build/release-gcc -j$(nproc) && \
-    cp -v /tmp/upx/build/release-gcc/upx /usr/bin/upx
+    make LDFLAGS=-static CXXFLAGS_OPTIMIZE= -C /tmp/upx -j$(nproc) all && \
+    cp -v /tmp/upx/src/upx.out /usr/bin/upx
 
 # Build the init system and process supervisor.
 FROM --platform=$BUILDPLATFORM alpine:3.15 AS cinit
