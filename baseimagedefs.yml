@@ -17,6 +17,13 @@ baseimage:
     long-lived application.
   gui: false
   history:
+    - version: 3.1.1
+      date: 2022-10-21
+      changes:
+        changed:
+          - 'Include the Docker image platform in the informational box printed during container startup.'
+        fixed:
+          - 'Logmonitor crash on arm64 platform.'
     - version: 3.1.0
       date: 2022-10-16
       changes:
