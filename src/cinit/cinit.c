@@ -997,9 +997,7 @@ static pid_t fork_and_exec(int service)
             }
 
             // Set umask.
-            if (SRV(service).umask != 0) {
-                umask(SRV(service).umask);
-            }
+            umask(SRV(service).umask);
 
             // Set SGIDs.
             if (setgroups(SRV(service).sgid_list_size, SRV(service).sgid_list) < 0) {
