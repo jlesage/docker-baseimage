@@ -17,6 +17,11 @@ baseimage:
     long-lived application.
   gui: false
   history:
+    - version: 3.1.2
+      date: 2022-10-21
+      changes:
+        fixed:
+          - 'A umask value of `0000` was not properly applied.'
     - version: 3.1.1
       date: 2022-10-21
       changes:
