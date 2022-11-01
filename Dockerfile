@@ -128,6 +128,7 @@ ENV \
     GROUP_ID=1000 \
     SUP_GROUP_IDS= \
     UMASK=0022 \
+    LANG=en_US.UTF-8 \
     TZ=Etc/UTC \
     KEEP_APP_RUNNING=0 \
     APP_NICENESS=0 \

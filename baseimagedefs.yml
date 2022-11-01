@@ -336,6 +336,17 @@ container:
         display: advanced
         required: false
         mask: false
+    - name: LANG
+      description: >-
+        Set the [locale](https://en.wikipedia.org/wiki/Locale_(computer_software)),
+        which defines the application's language, **if supported**.  Format of
+        the locale is `language[_territory][.codeset]`, where language is an
+        [ISO 639 language code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes),
+        territory is an [ISO 3166 country code](https://en.wikipedia.org/wiki/ISO_3166-1#Current_codes)
+        and codeset is a character set, like `UTF-8`.  For example, Australian
+        English using the UTF-8 encoding is `en_AU.UTF-8`.
+      type: public
+      default: en_US.UTF-8
     - name: TZ
       description: >-
         [TimeZone](http://en.wikipedia.org/wiki/List_of_tz_database_time_zones)
