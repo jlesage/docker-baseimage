@@ -129,6 +129,7 @@
 
 #define log(fmt, arg...) log_stdout("[%-*s] " fmt "\n", g_ctx.log_prefix_length, g_ctx.progname, ##arg)
 #define log_err(fmt, arg...) log_stderr("[%-*s] ERROR: " fmt "\n", g_ctx.log_prefix_length, g_ctx.progname, ##arg)
+#define log_fatal(fmt, arg...) log_stderr("[%-*s] FATAL: " fmt "\n", g_ctx.log_prefix_length, g_ctx.progname, ##arg)
 #define log_debug(fmt, arg...) do { \
     if (g_ctx.debug) { \
         log_stdout("[%-*s] " fmt "\n", g_ctx.log_prefix_length, g_ctx.progname, ##arg); \
@@ -338,11 +339,32 @@ static void close_fd(int *fd)
  */
 static unsigned long get_time()
 {
+#if 0 // Getting time with CLOCK_MONOTONIC fails with "Operation not permitted"
+      // on Raspberry Pi running with an old version of libseccomp2 (e.g. with
+      // distros based on Debian 10).
     struct timespec now;
     if (clock_gettime(CLOCK_MONOTONIC, &now) == -1) {
+        log_fatal("Could not get time: %s.",
+                strerror(errno));
         abort();
     }
     return (now.tv_sec * 1000) + (now.tv_nsec / 1000000);
+#else
+    double uptime;
+    FILE *f = fopen("/proc/uptime", "r");
+    if (f == NULL) {
+        log_fatal("Could not get time: %s.", strerror(errno));
+        abort();
+    }
+
+    if (fscanf(f, "%lf", &uptime) != 1) {
+        log_fatal("Could not get time: parse error.");
+        abort();
+    }
+    fclose(f);
+
+    return uptime * 1000;
+#endif
 }   
 
 /**
