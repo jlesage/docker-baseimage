@@ -339,32 +339,38 @@ static void close_fd(int *fd)
  */
 static unsigned long get_time()
 {
-#if 0 // Getting time with CLOCK_MONOTONIC fails with "Operation not permitted"
-      // on Raspberry Pi running with an old version of libseccomp2 (e.g. with
-      // distros based on Debian 10).
     struct timespec now;
-    if (clock_gettime(CLOCK_MONOTONIC, &now) == -1) {
-        log_fatal("Could not get time: %s.",
-                strerror(errno));
-        abort();
+    if (clock_gettime(CLOCK_MONOTONIC, &now) == 0) {
+        return (now.tv_sec * 1000) + (now.tv_nsec / 1000000);
     }
-    return (now.tv_sec * 1000) + (now.tv_nsec / 1000000);
-#else
-    double uptime;
-    FILE *f = fopen("/proc/uptime", "r");
-    if (f == NULL) {
-        log_fatal("Could not get time: %s.", strerror(errno));
-        abort();
+    else {
+        // Check if we failed to get time because operation is not permitted.
+        // This could happen for example on Raspberry Pi running with an old
+        // version of libseccomp2 (e.g. with distros based on Debian 10).
+        if (errno != EPERM) {
+            log_fatal("Could not get time: %s.",
+                    strerror(errno));
+            abort();
+        }
     }
 
-    if (fscanf(f, "%lf", &uptime) != 1) {
-        log_fatal("Could not get time: parse error.");
-        abort();
-    }
-    fclose(f);
+    // Get time via /proc/uptime as a fallback.
+    {
+        double uptime;
+        FILE *f = fopen("/proc/uptime", "r");
+        if (f == NULL) {
+            log_fatal("Could not get time: %s.", strerror(errno));
+            abort();
+        }
 
-    return uptime * 1000;
-#endif
+        if (fscanf(f, "%lf", &uptime) != 1) {
+            log_fatal("Could not get time: parse error.");
+            abort();
+        }
+        fclose(f);
+
+        return uptime * 1000;
+    }
 }   
 
 /**
