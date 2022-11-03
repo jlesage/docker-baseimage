@@ -17,6 +17,11 @@ baseimage:
     long-lived application.
   gui: false
   history:
+    - version: 3.1.5
+      data: 2022-11-02
+      changes:
+        fixed:
+          - 'Crash that occurs when no monotonic clock is available.'
     - version: 3.1.4
       data: 2022-11-01
       changes:
