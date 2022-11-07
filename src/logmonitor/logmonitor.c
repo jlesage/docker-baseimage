@@ -579,7 +579,11 @@ static void handle_line(lm_context_t *ctx, char *buf)
             }
 
             FOR_EACH_TARGET(ctx, target, tidx) {
-                if ((get_time() - target->last_notif_sent[nidx]) < target->debouncing) {
+                if (target->debouncing == 0 && target->last_notif_sent[nidx] > 0) {
+                    DEBUG("Ignoring target '%s': debouncing.", target->name);
+                    continue;
+                }
+                else if ((get_time() - target->last_notif_sent[nidx]) < target->debouncing) {
                     DEBUG("Ignoring target '%s': debouncing.", target->name);
                     continue;
                 }
