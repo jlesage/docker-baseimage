@@ -102,6 +102,7 @@ typedef struct {
     int fd;
     bool is_status;
     time_t last_read;
+    struct stat last_stat;
 
     char *pending_buf;
 } lm_monitored_file_t;
@@ -118,6 +119,42 @@ typedef struct {
     unsigned char num_targets;
     lm_target_t *targets[MAX_NUM_TARGETS];
 } lm_context_t;
+
+static unsigned long get_time()
+{
+    struct timespec now;
+    if (clock_gettime(CLOCK_MONOTONIC, &now) == 0) {
+        return (now.tv_sec) + (now.tv_nsec / 1000000000);
+    }
+    else {
+        // Check if we failed to get time because operation is not permitted.
+        // This could happen for example on Raspberry Pi running with an old
+        // version of libseccomp2 (e.g. with distros based on Debian 10).
+        if (errno != EPERM) {
+            ERROR("FATAL: Could not get time: %s.",
+                    strerror(errno));
+            abort();
+        }
+    }
+
+    // Get time via /proc/uptime as a fallback.
+    {
+        double uptime;
+        FILE *f = fopen("/proc/uptime", "r");
+        if (f == NULL) {
+            ERROR("FATAL: Could not get time: %s.", strerror(errno));
+            abort();
+        }
+
+        if (fscanf(f, "%lf", &uptime) != 1) {
+            ERROR("FATAL: Could not get time: parse error.");
+            abort();
+        }
+        fclose(f);
+
+        return uptime;
+    }
+}
 
 static bool str_ends_with(const char *str, const char c)
 {
@@ -210,7 +247,7 @@ static ssize_t tail_read(int fd, char *buf, size_t count)
 
     r = full_read(fd, buf, count);
     if (r < 0) {
-        ERROR("read error");
+        ERROR("read error: %s", strerror(errno));
     }
 
     return r;
@@ -542,7 +579,7 @@ static void handle_line(lm_context_t *ctx, char *buf)
             }
 
             FOR_EACH_TARGET(ctx, target, tidx) {
-                if ((time(NULL) - target->last_notif_sent[nidx]) < target->debouncing) {
+                if ((get_time() - target->last_notif_sent[nidx]) < target->debouncing) {
                     DEBUG("Ignoring target '%s': debouncing.", target->name);
                     continue;
                 }
@@ -550,7 +587,7 @@ static void handle_line(lm_context_t *ctx, char *buf)
                 // Send the target.
                 DEBUG("Invoking target '%s'...", target->name);
                 invoke_target(target->send, title, desc, level);
-                target->last_notif_sent[nidx] = time(NULL);
+                target->last_notif_sent[nidx] = get_time();
             }
 
             if (notif->is_title_exe && title) {
@@ -1245,28 +1282,29 @@ int main(int argc, char **argv)
 
     // Tail the files.
     while (IS_SUCCESS(retval)) {
-        int i = 0 ;
-        sleep(MAIN_LOOP_SLEEP_PERIOD);
-
-        do {
-            int nread;
+        for (int i = 0; i < ctx->num_monitored_files; i++) {
+            int stat_rc;
+            struct stat sbuf;
             const char *filename = ctx->monitored_files[i].path;
             int fd = ctx->monitored_files[i].fd;
 
             // Skip status file if we read it recently.
             if (ctx->monitored_files[i].is_status) {
-                if (time(NULL) - ctx->monitored_files[i].last_read < STATUS_FILE_READ_INTERVAL) {
+                if (get_time() - ctx->monitored_files[i].last_read < STATUS_FILE_READ_INTERVAL) {
                     continue;
                 }
             }
 
+            // Get file status.
+            stat_rc = stat(filename, &sbuf);
+
             // Re-open the file if needed.
             {
-                struct stat sbuf, fsbuf;
+                struct stat fsbuf;
 
                 if (fd < 0
                  || fstat(fd, &fsbuf) < 0
-                 || stat(filename, &sbuf) < 0
+                 || stat_rc < 0
                  || fsbuf.st_dev != sbuf.st_dev
                  || fsbuf.st_ino != sbuf.st_ino
                 ) {
@@ -1289,14 +1327,41 @@ int main(int argc, char **argv)
                  continue;
             }
 
-            // Make sure status files are read from the beginning.
             if (ctx->monitored_files[i].is_status) {
+                // Check if the file changed.
+                if (stat_rc == 0) {
+                    if (sbuf.st_size != ctx->monitored_files[i].last_stat.st_size) {
+                        // Size of file changed.
+                    }
+                    else if (sbuf.st_mtime != ctx->monitored_files[i].last_stat.st_mtime) {
+                        // Last modification time changed.
+                    }
+                    else if (sbuf.st_dev != ctx->monitored_files[i].last_stat.st_dev) {
+                        // ID of device containing file changed.
+                    }
+                    else if (sbuf.st_ino != ctx->monitored_files[i].last_stat.st_ino) {
+                        // Inode number changed.
+                    }
+                    else {
+                        // Status file is the same.  Skip it.
+                        ctx->monitored_files[i].last_read = get_time();
+                        continue;
+                    }
+
+                    // Update file status.
+                    ctx->monitored_files[i].last_stat = sbuf;
+                }
+
+                // Status files are always read from the beginning.
                 lseek(fd, 0, SEEK_SET);
             }
 
             // Read the file until its end.
             for (;;) {
+                int nread;
                 struct stat sbuf;
+
+                // Check if the file has been truncated.
                 if (fstat(fd, &sbuf) == 0) {
                     off_t current = lseek(fd, 0, SEEK_CUR);
                     if (sbuf.st_size < current) {
@@ -1312,8 +1377,9 @@ int main(int argc, char **argv)
                 handle_read(ctx, i, tailbuf);
             }
 
-            ctx->monitored_files[i].last_read = time(NULL);
-        } while (++i < ctx->num_monitored_files);
+            ctx->monitored_files[i].last_read = get_time();
+        }
+        sleep(MAIN_LOOP_SLEEP_PERIOD);
     }
 
     if (tailbuf) {
