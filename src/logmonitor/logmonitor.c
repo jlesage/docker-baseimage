@@ -120,7 +120,7 @@ typedef struct {
     lm_target_t *targets[MAX_NUM_TARGETS];
 } lm_context_t;
 
-static unsigned long get_time()
+static time_t get_time()
 {
     struct timespec now;
     if (clock_gettime(CLOCK_MONOTONIC, &now) == 0) {
