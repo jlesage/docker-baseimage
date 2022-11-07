@@ -17,6 +17,12 @@ baseimage:
     long-lived application.
   gui: false
   history:
+    - version: 3.1.6
+      data: 2022-11-07
+      changes:
+        fixed:
+          - 'logmonitor: do not re-process status files that didn''t change.'
+          - 'logmonitor: fixed handling of debouncing value `0` (infinite).'
     - version: 3.1.5
       data: 2022-11-03
       changes:
