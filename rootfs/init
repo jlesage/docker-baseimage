@@ -202,6 +202,6 @@ if [ "${CONTAINER_DEBUG:-0}" -eq 1 ]; then
 fi
 
 log "giving control to process supervisor."
-exec /usr/sbin/cinit $CINIT_ARGS
+exec /opt/base/sbin/cinit $CINIT_ARGS
 
 # vim:ft=sh:ts=4:sw=4:et:sts=4

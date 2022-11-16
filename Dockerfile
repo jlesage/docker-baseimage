@@ -83,13 +83,13 @@ WORKDIR /tmp
 COPY helpers/* /usr/bin/
 
 # Install the init system and process supervisor.
-COPY --from=cinit /tmp/cinit/cinit /usr/sbin/
+COPY --from=cinit /tmp/cinit/cinit /opt/base/sbin/
 
 # Install the log monitor.
-COPY --from=logmonitor /tmp/logmonitor/logmonitor /usr/bin/
+COPY --from=logmonitor /tmp/logmonitor/logmonitor /opt/base/bin/
 
 # Install su-exec.
-COPY --from=su-exec /tmp/su-exec/su-exec /usr/sbin/su-exec
+COPY --from=su-exec /tmp/su-exec/su-exec /opt/base/sbin/su-exec
 
 # Install system packages.
 ARG ALPINE_PKGS
