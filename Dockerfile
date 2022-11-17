@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.4
 #
 # baseimage Dockerfile
 #
@@ -79,17 +80,17 @@ ARG TARGETPLATFORM
 # Define working directory.
 WORKDIR /tmp
 
-# Copy helpers.
-COPY helpers/* /usr/bin/
-
 # Install the init system and process supervisor.
-COPY --from=cinit /tmp/cinit/cinit /opt/base/sbin/
+COPY --link --from=cinit /tmp/cinit/cinit /opt/base/sbin/
 
 # Install the log monitor.
-COPY --from=logmonitor /tmp/logmonitor/logmonitor /opt/base/bin/
+COPY --link --from=logmonitor /tmp/logmonitor/logmonitor /opt/base/bin/
 
 # Install su-exec.
-COPY --from=su-exec /tmp/su-exec/su-exec /opt/base/sbin/su-exec
+COPY --link --from=su-exec /tmp/su-exec/su-exec /opt/base/sbin/su-exec
+
+# Copy helpers.
+COPY helpers/* /usr/bin/
 
 # Install system packages.
 ARG ALPINE_PKGS
