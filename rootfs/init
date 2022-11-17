@@ -197,7 +197,7 @@ CINIT_ARGS="--progname supervisor \
     --default-service-gid $GROUP_ID \
 "
 
-if [ "${CONTAINER_DEBUG:-0}" -eq 1 ]; then
+if is-bool-val-true "${CONTAINER_DEBUG:-0}"; then
     CINIT_ARGS="$CINIT_ARGS --debug"
 fi
 
