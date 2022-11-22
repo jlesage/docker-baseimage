@@ -90,16 +90,16 @@ COPY --link --from=logmonitor /tmp/logmonitor/logmonitor /opt/base/bin/
 COPY --link --from=su-exec /tmp/su-exec/su-exec /opt/base/sbin/su-exec
 
 # Copy helpers.
-COPY helpers/* /usr/bin/
+COPY helpers/* /opt/base/bin/
 
 # Install system packages.
 ARG ALPINE_PKGS
 ARG DEBIAN_PKGS
 RUN \
     if [ -n "$(which apk)" ]; then \
-        add-pkg ${ALPINE_PKGS}; \
+        /opt/base/bin/add-pkg ${ALPINE_PKGS}; \
     else \
-        add-pkg ${DEBIAN_PKGS}; \
+        /opt/base/bin/add-pkg ${DEBIAN_PKGS}; \
     fi
 
 # Make sure all required directory exists.
@@ -116,11 +116,12 @@ COPY rootfs/ /
 
 # Set internal environment variables.
 RUN \
-    set-cont-env DOCKER_IMAGE_PLATFORM "${TARGETPLATFORM:-}" && \
+    /opt/base/bin/set-cont-env DOCKER_IMAGE_PLATFORM "${TARGETPLATFORM:-}" && \
     true
 
 # Set environment variables.
 ENV \
+    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/base/sbin:/opt/base/bin \
     USER_ID=1000 \
     GROUP_ID=1000 \
     SUP_GROUP_IDS= \
