@@ -425,7 +425,6 @@ container:
         description: >-
           This is where the application stores its configuration, states, log
           and any files needing persistency.
-          Container path: /config
         default: /mnt/user/appdata/{{ app.name }}
         display: advanced-hide
         required: true
@@ -442,7 +441,6 @@ container:
         description: >-
           This location contains files from your host that need to be accessible
           to the application.
-          Container path: /storage
         default: /mnt/user
         display: always-hide
         required: true
