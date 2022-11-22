@@ -1,0 +1,4 @@
+# Load internal environment variables.
+if [ -f /var/tmp/.cont-env-internal ]; then
+    . /var/tmp/.cont-env-internal
+fi

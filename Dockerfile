@@ -102,6 +102,13 @@ RUN \
         /opt/base/bin/add-pkg ${DEBIAN_PKGS}; \
     fi
 
+# Load our RC file when logging in to the container.
+RUN \
+    if [ -f /root/.profile ]; then \
+        echo "# Include Docker container definitions." >> /root/.profile && \
+        echo ". /root/.docker_rc" >> /root/.profile; \
+    fi
+
 # Make sure all required directory exists.
 RUN \
     mkdir -p \
@@ -122,6 +129,7 @@ RUN \
 # Set environment variables.
 ENV \
     PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/base/sbin:/opt/base/bin \
+    ENV=/root/.docker_rc \
     USER_ID=1000 \
     GROUP_ID=1000 \
     SUP_GROUP_IDS= \

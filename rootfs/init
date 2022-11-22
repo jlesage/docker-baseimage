@@ -58,6 +58,7 @@ load_env_var() {
     VAR_TEST="$(eval echo \$\{$VAR_NAME+x\})"
     if [ -z "$VAR_TEST" ]; then
         export "$VAR_NAME"="$VAR_VAL"
+        echo "export $VAR_NAME=\"$VAR_VAL\"" >> /var/tmp/.cont-env-internal
     fi
 }
 
