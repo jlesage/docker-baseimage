@@ -31,14 +31,18 @@ long-lived application.
          * [Service Readiness](#service-readiness)
       * [Configuration Directory](#configuration-directory)
          * [Application's Data Directories](#applications-data-directories)
-      * [Adding/Removing Packages](#addingremoving-packages)
       * [Container Log](#container-log)
       * [Log Monitor](#log-monitor)
          * [Monitored Files](#monitored-files)
          * [Notification Definition](#notification-definition)
          * [Notification Backend](#notification-backend)
       * [Adding glibc](#adding-glibc)
-      * [Modifying Files With Sed](#modifying-files-with-sed)
+      * [Helpers](#helpers)
+         * [Adding/Removing Packages](#addingremoving-packages)
+         * [Modifying Files With Sed](#modifying-files-with-sed)
+         * [Evaluating Boolean Value](#evaluating-boolean-value)
+         * [Taking Ownership of a Directory](#taking-ownership-of-a-directory)
+         * [Setting Interval Environment Variable](#setting-interval-environment-variable)
       * [Tips and Best Practices](#tips-and-best-practices)
          * [Do Not Modify Baseimage Content](#do-not-modify-baseimage-content)
          * [Default Configuration Files](#default-configuration-files)
@@ -493,35 +497,6 @@ various data.  The baseimage sets these variables so they all fall under
 
 [XDG Base Directory Specification]: https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
 
-### Adding/Removing Packages
-
-To add or remove packages, use the helpers `add-pkg` and `del-pkg` provided by
-this baseimage.  To minimize the size of the container, these tools perform
-proper cleanup and make sure that no useless files are left after addition or
-removal of packages.
-
-Also, these tools can be used to easily install a group packages temporarily.
-Using the `--virtual NAME` parameter, this allows installing packages and remove
-them at a later time using the provided `NAME` (no need to repeat given 
-packages).
-
-Note that if a specified package is already installed, it will be ignored and
-will not be removed automatically.  For example, the following commands could be
-added to `Dockerfile` to compile a project:
-
-```Dockerfile
-RUN \
-    add-pkg --virtual build-dependencies build-base cmake git && \
-    git clone https://myproject.com/myproject.git
-    make -C myproject && \
-    make -C myproject install && \
-    del-pkg build-dependencies
-```
-
-Supposing that, in the example above, the `git` package was already installed
-when the call to `add-pkg` is performed, running `del-pkg build-dependencies`
-doesn't remove it.
-
 ### Container Log
 
 Everything written to the standard output and standard error output of scripts
@@ -611,7 +586,41 @@ adding the following line to your `Dockerfile`:
 RUN install-glibc
 ```
 
-### Modifying Files With Sed
+### Helpers
+
+The baseimage contains a few helpers that can be used when bulding a container
+or during the execution of a container.
+
+#### Adding/Removing Packages
+
+To add or remove packages, use the helpers `add-pkg` and `del-pkg` provided by
+this baseimage.  To minimize the size of the container, these tools perform
+proper cleanup and make sure that no useless files are left after addition or
+removal of packages.
+
+Also, these tools can be used to easily install a group packages temporarily.
+Using the `--virtual NAME` parameter, this allows installing packages and remove
+them at a later time using the provided `NAME` (no need to repeat given
+packages).
+
+Note that if a specified package is already installed, it will be ignored and
+will not be removed automatically.  For example, the following commands could be
+added to `Dockerfile` to compile a project:
+
+```Dockerfile
+RUN \
+    add-pkg --virtual build-dependencies build-base cmake git && \
+    git clone https://myproject.com/myproject.git
+    make -C myproject && \
+    make -C myproject install && \
+    del-pkg build-dependencies
+```
+
+Supposing that, in the example above, the `git` package was already installed
+when the call to `add-pkg` is performed, running `del-pkg build-dependencies`
+doesn't remove it.
+
+#### Modifying Files With Sed
 
 `sed` is a useful tool often used in container builds to modify files.  However,
 one downside of this method is that there is no easy way to determine if `sed`
@@ -637,6 +646,77 @@ RUN sed-patch 's/Replace this/By this/' /etc/myfile
 
 If running this sed expression doesn't bring any change to `/etc/myfiles`, the
 command fails and thus, the Docker build also.
+
+#### Evaluating Boolean Value
+
+Environment variables are often used to store a boolean value.  Using the
+helpers `is-bool-value-true` and `is-bool-value-false` allows to easily
+determine if a value is "true" or "false".
+
+The following values are considered "true":
+  - `1`
+  - `true`
+  - `yes`
+  - `enabled`
+  - `enable`
+  - `on`
+
+The following values are considered "false":
+  - `0`
+  - `false`
+  - `no`
+  - `disabled`
+  - `disable`
+  - `off`
+
+For example, the following shell script snippet checks if the environment
+variable `CONTAINER_DEBUG` contains a "true" value:
+
+```shell
+if is-bool-value-true "${CONTAINER_DEBUG:-0}"; then
+    # Do something...
+fi
+```
+
+#### Taking Ownership of a Directory
+
+The helper `take-ownership` recursively sets the user ID and group ID of a
+directory and all the files and directories under it.
+
+This helper is well suited for scenarios where the directory is mapped to the
+host.  If on the host this directory is a network share, setting/changing the
+ownership via `chown` can fail.  The helper handles this case by ignoring the
+failure if a write test turns out to be positive.
+
+For example, the following command take ownership of `/config`, by automatically
+using the user and group IDs from the `USER_ID` and `GROUP_ID` environment
+variables:
+
+```shell
+take-ownership /config
+```
+
+User and group IDs can also be explicit.  For example, to set ownership to user
+ID `99` and group ID `100`:
+
+```shell
+take-ownership /config 99 100
+```
+
+#### Setting Interval Environment Variable
+
+The helper `set-cont-env` can be used to set internal environment variables
+from the Dockerfile.
+
+For example, the following line can be added to the Dockerfile to set the value
+of the `APP_NAME` internal environment variable:
+
+```Dockerfile
+RUN set-cont-env APP_NAME "http-server"
+```
+
+This automatically creates the environment variable file under
+`/etc/cont-env.d`.
 
 
 ### Tips and Best Practices
