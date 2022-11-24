@@ -57,6 +57,7 @@ Different docker images are available:
 | [Alpine 3.14]      | alpine-3.14           | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.14-v3)  |
 | [Alpine 3.15]      | alpine-3.15           | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.15-v3)  |
 | [Alpine 3.16]      | alpine-3.16           | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.16-v3)  |
+| [Alpine 3.17]      | alpine-3.17           | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.16-v3)  |
 | [Debian 8]         | debian-8              | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-8-v3)     |
 | [Debian 9]         | debian-9              | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-9-v3)     |
 | [Debian 10]        | debian-10             | ![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-10-v3)    |
@@ -69,6 +70,7 @@ Different docker images are available:
 [Alpine 3.14]: https://alpinelinux.org
 [Alpine 3.15]: https://alpinelinux.org
 [Alpine 3.16]: https://alpinelinux.org
+[Alpine 3.17]: https://alpinelinux.org
 [Debian 8]: https://www.debian.org/releases/jessie/
 [Debian 9]: https://www.debian.org/releases/stretch/
 [Debian 10]: https://www.debian.org/releases/buster/
