@@ -6,7 +6,7 @@ set -u # Treat unset variables as an error.
 usage() {
     echo "usage: $(basename "$0") NAME [VALUE]
 
-Save a container enviroment variable.
+Save a container environment variable.
 
 Arguments:
 
