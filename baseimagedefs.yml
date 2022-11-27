@@ -32,7 +32,7 @@ baseimage:
         - 'Internal environment variables are automatically loaded when logging in to the container.'
       changed:
         - 'Baseimage''s binaries have been relocated to `/opt/base/bin`.'
-        - 'Adjusted `PATH` to include `/opt/base/bin`.'
+        - 'Adjusted `PATH` environment variable to include `/opt/base/bin`.'
     - version: 3.1.6
       date: 2022-11-07
       changes:
