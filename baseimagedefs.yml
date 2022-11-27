@@ -17,6 +17,12 @@ baseimage:
     long-lived application.
   gui: false
   history:
+    - version: 3.3.0
+      date: 2022-11-26
+      added:
+        - 'Init script to set permissions on `/tmp`.'
+      removed:
+        - 'Baseimage based on Debian 8 (reached its end of life on June 30 2020).'
     - version: 3.2.0
       date: 2022-11-24
       added:
