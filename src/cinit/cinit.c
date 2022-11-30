@@ -856,6 +856,7 @@ static int load_service(const char *service)
         {
             char *ptr = SRV(sid).working_directory;
             load_value_as_string("workdir", &ptr, sizeof(SRV(sid).working_directory));
+            terminate_at_first_eol(SRV(sid).working_directory)
         }
         load_value_as_bool("respawn", &SRV(sid).respawn);
         load_value_as_bool("sync", &SRV(sid).sync);
