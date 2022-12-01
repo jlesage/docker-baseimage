@@ -17,6 +17,11 @@ baseimage:
     long-lived application.
   gui: false
   history:
+    - version: 3.3.1
+      date: 2022-12-01
+      fixed:
+        - 'Helper that takes ownership of a directory not handling correctly names with spaces.'
+        - 'Handling of a service''s `workdir` ending with an end-of-line character.'
     - version: 3.3.0
       date: 2022-11-26
       added:
