@@ -52,15 +52,18 @@ fi
 
 # Special care is done on the main directory and its children, because these
 # could be mapped to a network share.
-for D in $(find "$DIR" -maxdepth 1 -type d)
+find "$DIR" -maxdepth 1 -type d -print0 | while read -d $'\0' D
 do
-    if ! chown $USER_ID:$GROUP_ID $D 2>/dev/null
+    if ! chown $USER_ID:$GROUP_ID "$D" 2>/dev/null
     then
         # Failed to take ownership of directory.  This could happen when, for
         # example, the folder is mapped to a network share.  Continue if we
         # can write to it, else fail.
-        TMPFILE="$(su-exec $USER_ID mktemp "$D"/.test_XXXXXX 2>/dev/null)"
-        if [ $? -eq 0 ]; then
+        set +e
+        TMPFILE="$(su-exec $USER_ID mktemp "$D"/.test_XXXXXX)"
+        RC=$?
+        set -e
+        if [ $RC -eq 0 ]; then
             # Success, we were able to write a file.
             su-exec $USER_ID rm "$TMPFILE"
         else
@@ -73,11 +76,11 @@ do
     if [ "$D" = "$DIR" ]; then
         # We are handling the main directory.  Take ownership of files (only)
         # under it.
-        find $D -maxdepth 1 -mindepth 1 -type f -print0 | xargs --no-run-if-empty -0 chown $USER_ID:$GROUP_ID
+        find "$D" -maxdepth 1 -mindepth 1 -type f -print0 | xargs --no-run-if-empty -0 chown $USER_ID:$GROUP_ID
     else
         # We are handling a child directory of the main directory.  Take
         # ownership (recursively) of all files and folders under it.
-        find $D -maxdepth 1 -mindepth 1 -print0 | xargs --no-run-if-empty -0 chown -R $USER_ID:$GROUP_ID
+        find "$D" -maxdepth 1 -mindepth 1 -print0 | xargs --no-run-if-empty -0 chown -R $USER_ID:$GROUP_ID
     fi
 done
 
