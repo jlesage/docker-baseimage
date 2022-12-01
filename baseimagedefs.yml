@@ -19,25 +19,28 @@ baseimage:
   history:
     - version: 3.3.1
       date: 2022-12-01
-      fixed:
-        - 'Helper that takes ownership of a directory not handling correctly names with spaces.'
-        - 'Handling of a service''s `workdir` ending with an end-of-line character.'
+      changes:
+        fixed:
+          - 'Helper that takes ownership of a directory not handling correctly names with spaces.'
+          - 'Handling of a service''s `workdir` ending with an end-of-line character.'
     - version: 3.3.0
       date: 2022-11-26
-      added:
-        - 'Init script to set permissions on `/tmp`.'
-      removed:
-        - 'Baseimage based on Debian 8 (reached its end of life on June 30 2020).'
+      changes:
+        added:
+          - 'Init script to set permissions on `/tmp`.'
+        removed:
+          - 'Baseimage based on Debian 8 (reached its end of life on June 30 2020).'
     - version: 3.2.0
       date: 2022-11-24
-      added:
-        - 'Image based on Alpine 3.17.'
-        - 'Helper to take ownership of a directory.'
-        - 'Helper to determine if a boolean value is true or false.'
-        - 'Internal environment variables are automatically loaded when logging in to the container.'
-      changed:
-        - 'Baseimage''s binaries have been relocated to `/opt/base/bin`.'
-        - 'Adjusted `PATH` environment variable to include `/opt/base/bin`.'
+      changes:
+        added:
+          - 'Image based on Alpine 3.17.'
+          - 'Helper to take ownership of a directory.'
+          - 'Helper to determine if a boolean value is true or false.'
+          - 'Internal environment variables are automatically loaded when logging in to the container.'
+        changed:
+          - 'Baseimage''s binaries have been relocated to `/opt/base/bin`.'
+          - 'Adjusted `PATH` environment variable to include `/opt/base/bin`.'
     - version: 3.1.6
       date: 2022-11-07
       changes:
