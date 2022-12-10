@@ -17,6 +17,11 @@ baseimage:
     long-lived application.
   gui: false
   history:
+    - version: 3.3.3
+      date: 2022-12-10
+      changes:
+        fixed:
+          - 'Force the value of the `PATH` environment variable.  Any value configured during creation of the container should not affect operation of the container.'
     - version: 3.3.2
       date: 2022-12-01
       changes:
