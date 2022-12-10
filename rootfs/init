@@ -3,6 +3,10 @@
 set -e # Exit immediately if a command exits with a non-zero status.
 set -u # Treat unset variables as an error.
 
+# Make sure to use our own `PATH` value, ignoring the one that could have been
+# set during creation of the container.
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/base/sbin:/opt/base/bin
+
 STAGE=init
 
 MIN_LOG_PREFIX_LENGTH=12

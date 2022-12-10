@@ -1,3 +1,5 @@
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/base/sbin:/opt/base/bin
+
 # Load internal environment variables.
 if [ -f /var/tmp/.cont-env-internal ]; then
     . /var/tmp/.cont-env-internal
