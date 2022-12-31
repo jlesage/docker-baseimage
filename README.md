@@ -492,6 +492,7 @@ various data.  The baseimage sets these variables so they all fall under
   * XDG_DATA_HOME=/config/xdg/data
   * XDG_CONFIG_HOME=/config/xdg/config
   * XDG_CACHE_HOME=/config/xdg/cache
+  * XDG_STATE_HOME=/config/xdg/state
 
 [XDG Base Directory Specification]: https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
 
