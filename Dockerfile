@@ -73,6 +73,16 @@ RUN xx-verify --static /tmp/su-exec/su-exec
 COPY --from=upx /usr/bin/upx /usr/bin/upx
 RUN upx /tmp/su-exec/su-exec
 
+# Build logrotate.
+FROM --platform=$BUILDPLATFORM alpine:3.15 AS logrotate
+ARG TARGETPLATFORM
+COPY --from=xx / /
+COPY src/logrotate /tmp/build
+RUN /tmp/build/build.sh
+RUN xx-verify --static /tmp/logrotate-install/usr/sbin/logrotate
+COPY --from=upx /usr/bin/upx /usr/bin/upx
+RUN upx /tmp/logrotate-install/usr/sbin/logrotate
+
 # Pull base image.
 FROM ${BASEIMAGE}
 ARG TARGETPLATFORM
@@ -88,6 +98,9 @@ COPY --link --from=logmonitor /tmp/logmonitor/logmonitor /opt/base/bin/
 
 # Install su-exec.
 COPY --link --from=su-exec /tmp/su-exec/su-exec /opt/base/sbin/su-exec
+
+# Install logrotate.
+COPY --link --from=logrotate /tmp/logrotate-install/usr/sbin/logrotate /opt/base/sbin/
 
 # Copy helpers.
 COPY helpers/* /opt/base/bin/
@@ -113,10 +126,13 @@ RUN \
 RUN \
     mkdir -p \
         /defaults \
+        /opt/base/etc/logrotate.d \
+        /etc/services.d \
+        /etc/cont-env.d \
         /etc/cont-init.d \
         /etc/cont-finish.d \
-        /etc/services.d \
-        /etc/cont-env.d
+        /etc/cont-logrotate.d \
+    && true
 
 # Add files.
 COPY rootfs/ /

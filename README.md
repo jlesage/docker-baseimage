@@ -32,6 +32,7 @@ long-lived application.
       * [Configuration Directory](#configuration-directory)
          * [Application's Data Directories](#applications-data-directories)
       * [Container Log](#container-log)
+      * [Logrotate](#logrotate)
       * [Log Monitor](#log-monitor)
          * [Monitored Files](#monitored-files)
          * [Notification Definition](#notification-definition)
@@ -515,9 +516,38 @@ could be:
 exec /usr/bin/my_service > /config/log/my_service_out.log 2> /config/log/my_service_err.log
 ```
 
+### Logrotate
+
+The baseimage integrates `logrotate`, an utility used to rotate and compress
+log files.  This tool runs automatically once a day via a service.  The service
+is automatically disabled when no log files are configured.
+
+To enable the rotation/compression of a log file, a configuration file needs to
+be added to the `/etc/cont-logrotate.d` directory inside the container.  This
+configuration defines how to handle this specific log file.
+
+Here is a simple example of a configuration defined at
+`/etc/cont-logrotate.d/myapp`:
+
+```
+/config/log/myapp.log {
+    minsize 1M
+}
+```
+
+This configuration file can override the default parameters, which are defined
+at `/opt/base/etc/logrotate.conf` inside the container.  In summary, by default:
+  - Log files are rotated weekly.
+  - Four weeks worth of backlogs are kept.
+  - Rotated log files are compressed.
+  - Date is used as a suffix of rotated log files.
+
+For more details about the content of `logrotate` configuration files, see the
+manual at https://linux.die.net/man/8/logrotate.
+
 ### Log Monitor
 
-The baseimage include a simple log monitor.  This monitor allows sending
+The baseimage includes a simple log monitor.  This monitor allows sending
 notification(s) when a particular message is detected in a log or status file.
 
 This system has two main components: notification definitions and notification
