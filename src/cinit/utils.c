@@ -569,9 +569,10 @@ void string_to_interval(const char *str, unsigned int *result)
     else if (strcasecmp(str, "hourly") == 0) {
         *result = 60 * 60;
     }
-
-    // Convert to unsigned int.
-    string_to_uint(str, result);
+    else {
+        // Convert to unsigned int.
+        string_to_uint(str, result);
+    }
 }
 
 void string_to_uid(const char *str, uid_t *result)
