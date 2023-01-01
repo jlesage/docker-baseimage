@@ -17,6 +17,15 @@ baseimage:
     long-lived application.
   gui: false
   history:
+    - version: 3.4.0
+      date: 2023-01-01
+      changes:
+        added:
+          - 'Service for logrotate.'
+        changed:
+          - 'Declaration of files to be monitored by the logmonitor has been moved to the notification''s definitions.'
+        fixed:
+          - 'Conversion of a service''s interval non-numberic value.'
     - version: 3.3.3
       date: 2022-12-10
       changes:
