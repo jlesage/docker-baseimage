@@ -146,6 +146,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           push: true
+          pull: true
           platforms: ${{ fromJSON(matrix.info).platforms }}
           tags: localhost:5000/${{ env.DOCKER_IMAGE_NAME }}:github-ci
           build-args: |
@@ -189,7 +190,6 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           push: true
-          pull: true
           platforms: ${{ fromJSON(matrix.info).platforms }}
           tags: ${{ steps.prep.outputs.tags }}
           build-args: |
@@ -226,6 +226,10 @@ jobs:
           # Export outputs.
           echo "is_release=${IS_RELEASE}" >> $GITHUB_OUTPUT
           echo "release_type=${RELEASE_TYPE}" >> $GITHUB_OUTPUT
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
       - name: Dockerhub description
         if: ${{ steps.prep.outputs.release_type == 'standard' }}
         uses: peter-evans/dockerhub-description@v3
