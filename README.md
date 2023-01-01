@@ -34,7 +34,6 @@ long-lived application.
       * [Container Log](#container-log)
       * [Logrotate](#logrotate)
       * [Log Monitor](#log-monitor)
-         * [Monitored Files](#monitored-files)
          * [Notification Definition](#notification-definition)
          * [Notification Backend](#notification-backend)
       * [Adding glibc](#adding-glibc)
@@ -550,29 +549,25 @@ manual at https://linux.die.net/man/8/logrotate.
 The baseimage includes a simple log monitor.  This monitor allows sending
 notification(s) when a particular message is detected in a log or status file.
 
-This system has two main components: notification definitions and notification
-backends (targets).  Definitions describe properties of a notification (title,
-message, severity, etc) and how it is triggered (filtering function).  Once a
-matching string is found in a file, a notification is triggered and sent to one
-or more backends.  A backend can implement any functionality.  For example, it
-could send the notification to the container's log, a file or an online service.
+This system has two main components:
+  - **Notification definitions**: Describe properties of a notification (title,
+    message, severity, etc),  how it is triggered (filtering function) and the
+    associated monitored file(s).
+  - **Backends (targets)**:  Once a matching string is found in a file, a
+    notification is triggered and sent to one or more backends.  A backend can
+    implement any functionality.  For example, it could send the notification to
+    the container's log, a file or an online service.
 
-#### Monitored Files
-
-File(s) to be monitored can be set in the configuration file located at
-`/etc/logmonitor/logmonitor.conf`.  There are two settings to look at:
-
-  * `LOG_FILES`: Comma-separated list of absolute paths to log files to be
-    monitored.  A log file is a file having new content appended to it.
-  * `STATUS_FILES`: Comma-separated list of absolute paths to status files to be
-    monitored.  A status file doesn't have new content appended.  Instead, its
-    whole content is refreshed/overwritten periodically.
+There are two types of files that can be monitored:
+  - **Log files**: A log file is a file having new content appended to it.
+  - **Status files*: A status file doesn't have new content appended.  Instead,
+    its whole content is refreshed/overwritten periodically.
 
 #### Notification Definition
 
 The definition of a notification consists in multiple files, stored in a
-directory under `/etc/logmonitor/notifications.d`.  For example, definition of
-notification `MYNOTIF` is found under
+directory under `/etc/logmonitor/notifications.d` inside the container.  For
+example, definition of notification `MYNOTIF` is found under
 `/etc/logmonitor/notifications.d/MYNOTIF/`.
 
 The following table describe files part of the definition:
@@ -583,12 +578,13 @@ The following table describe files part of the definition:
 | `title`  | Yes        | File containing the title of the notification.  To produce dynamic content, the file can be a program (script or binary with executable permission).  In this case, the program is invoked by the log monitor with the matched message from the log file as the single argument.  Output of the program is used as the notification's title. |
 | `desc`   | Yes        | File containing the description/message of the notification.  To produce dynamic content, the file can be a program (script or binary with executable permission).  In this case, the program is invoked by the log monitor with the matched message from the log file as the single argument.  Output of the program is used as the notification's description/message. |
 | `level`  | Yes        | File containing severity level of the notification.  Valid severity level values are `ERROR`, `WARNING` or `INFO`.  To produce dynamic content, the file can be a program (script or binary with executable permission).  In this case, the program is invoked by the log monitor with the matched message from the log file as the single argument.  Output of the program is used as the notification's severity level. |
+| `source` | Yes        | File containing the absolute path(s) to file(s) to monitor (one path per line).  Prepend the path with `status:` to indicate that the file is a status file.  A path with prefixed with `log:` or without any prefix is considered as a log file.  |
 
 #### Notification Backend
 
 Definition of a notification backend is stored in a directory under
-`/etc/logmonitor/targets.d`.  For example, definition of `STDOUT` backend is
-found under `/etc/logmonitor/notifications.d/STDOUT/`.  The following table
+`/etc/cont-logmonitor/targets.d`.  For example, definition of `STDOUT` backend is
+found under `/etc/cont-logmonitor/target.d/STDOUT/`.  The following table
 describe files part of the definition:
 
 | File         | Mandatory  | Description |
