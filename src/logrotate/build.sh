@@ -40,6 +40,9 @@ apk --no-cache add \
     build-base \
     clang \
 
+xx-apk --no-cache --no-scripts add \
+    g++ \
+
 #
 # Compile popt.
 # The static library is not provided by Alpine repository, so we need to build
@@ -56,6 +59,7 @@ log "Configuring popt..."
         --build=$(TARGETPLATFORM= xx-clang --print-target-triple) \
         --host=$(xx-clang --print-target-triple) \
         --prefix=/usr \
+        --disable-nls \
         --disable-shared \
         --enable-static \
 )
