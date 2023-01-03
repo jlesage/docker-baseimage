@@ -127,7 +127,11 @@ typedef struct {
     lm_target_t *targets[MAX_NUM_TARGETS];
 } lm_context_t;
 
-void handle_sigchld(int sig) {
+static void handle_sigchld(int sig) {
+    /* Do nothing here.*/
+}
+
+static void reap_children() {
     int saved_errno = errno;
     while (waitpid((pid_t)(-1), 0, WNOHANG) > 0) { }
     errno = saved_errno;
@@ -1516,6 +1520,7 @@ int main(int argc, char **argv)
 
             ctx->monitored_files[i].last_read = get_time();
         }
+        reap_children();
         sleep(MAIN_LOOP_SLEEP_PERIOD);
     }
 
@@ -1525,6 +1530,8 @@ int main(int argc, char **argv)
 
     destroy_context(ctx);
     ctx = NULL;
+
+    reap_children();
 
     return (IS_SUCCESS(retval)) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
