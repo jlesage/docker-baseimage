@@ -127,6 +127,12 @@ typedef struct {
     lm_target_t *targets[MAX_NUM_TARGETS];
 } lm_context_t;
 
+void handle_sigchld(int sig) {
+    int saved_errno = errno;
+    while (waitpid((pid_t)(-1), 0, WNOHANG) > 0) { }
+    errno = saved_errno;
+}
+
 static time_t get_time()
 {
     struct timespec now;
@@ -411,6 +417,39 @@ static int invoke_exec(const char *exec, const char *args[], unsigned int num_ar
     return retval;
 }
 
+static int invoke_exec_no_wait(const char *exec, const char *args[], unsigned int num_args)
+{
+    int retval = LM_SUCCESS;
+    pid_t pid;
+
+    // Fork.
+    if (IS_SUCCESS(retval)) {
+        pid = fork();
+        if (pid == -1) {
+            SET_ERROR(retval, "Fork failed: %s.", strerror(errno));
+        }
+    }
+
+    // Handle child.
+    if (IS_SUCCESS(retval)) {
+        if (pid == 0) {
+            const char *all_args[num_args + 2];
+
+            all_args[0] = exec;
+            for (int i = 1; i <= num_args; i++) {
+                all_args[i] = args[i-1];
+            }
+            all_args[num_args + 1] = NULL;
+
+            if (execv(exec, (char *const *)all_args) == -1) {
+                exit(127);
+            }
+        }
+    }
+
+    return retval;
+}
+
 static int invoke_filter(const char *filter_exe, const char *line)
 {
     int retval = LM_SUCCESS;
@@ -429,12 +468,8 @@ static int invoke_target(const char *send_exe, const char *title, const char *de
 {
     int retval = LM_SUCCESS;
     const char *args[] = { title, desc, level };
-    int exit_code;
 
-    retval = invoke_exec(send_exe, args, DIM(args), &exit_code, NULL, 0);
-    if (IS_SUCCESS(retval)) {
-        return (exit_code == 0) ? LM_SUCCESS : LM_ERROR;
-    }
+    retval = invoke_exec_no_wait(send_exe, args, DIM(args));
 
     return retval;
 }
@@ -1321,7 +1356,18 @@ int main(int argc, char **argv)
         }
     }
 
-    // Create context;
+    // Set SIGCHLD handler.
+    if (IS_SUCCESS(retval)) {
+        struct sigaction sa;
+        sa.sa_handler = &handle_sigchld;
+        sigemptyset(&sa.sa_mask);
+        sa.sa_flags = SA_RESTART | SA_NOCLDSTOP;
+        if (sigaction(SIGCHLD, &sa, 0) == -1) {
+            SET_ERROR(retval, "Failed to set signal handler: %s.", strerror(errno));
+        }
+    }
+
+    // Create context.
     if (IS_SUCCESS(retval)) {
         ctx = create_context(cfgdir);
         if (!ctx) {
