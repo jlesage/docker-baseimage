@@ -17,6 +17,11 @@ baseimage:
     long-lived application.
   gui: false
   history:
+    - version: 3.4.1
+      date: 2023-01-03
+      changes:
+        fixed:
+          - 'Prevent the logmonitor to be blocked by a notification backend by running it asynchronously.'
     - version: 3.4.0
       date: 2023-01-01
       changes:
