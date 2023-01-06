@@ -4,19 +4,30 @@ set -e # Exit immediately if a command exits with a non-zero status.
 set -u # Treat unset variables as an error.
 
 usage() {
-    echo "usage: $(basename "$0") DIR [USER_ID GROUP_ID]
+    echo "usage: $(basename "$0") [--not-recursive] DIR [USER_ID GROUP_ID]
 
 Take ownership of a directory.
 
+Options:
+  --not-recursive  Take ownership of the specified directory only, not its
+                   content.
+
 Arguments:
 
-  DIR        Path to the directory.
-  USER_ID    ID of the user that should own the directory.  If not set, the
-             USER_ID environment variable is used.
-  GROUP_ID   ID of the group that should own the directory.  If not set, the
-             GROUP_ID environment variable is used.
+  DIR              Path to the directory.
+  USER_ID          ID of the user that should own the directory.  If not set,
+                   the USER_ID environment variable is used.
+  GROUP_ID         ID of the group that should own the directory.  If not set,
+                   the GROUP_ID environment variable is used.
 "
 }
+
+RECURSIVE=true
+
+if [ "${1:-}" = "--not-recursive" ]; then
+    RECURSIVE=false
+    shift
+fi
 
 # Handle the directory parameter.
 if [ -z "${1:-}" ]; then
@@ -54,6 +65,10 @@ fi
 # could be mapped to a network share.
 find "$DIR" -maxdepth 1 -type d | while read D
 do
+    if ! $RECURSIVE && [ "$D" != "$DIR" ]; then
+        continue
+    fi
+
     if ! chown $USER_ID:$GROUP_ID "$D" 2>/dev/null
     then
         # Failed to take ownership of directory.  This could happen when, for
@@ -70,6 +85,11 @@ do
             echo "ERROR: Failed to take ownership and no write permission on $D."
             exit 1
         fi
+    fi
+
+    # We are done if recursivity is not wanted.
+    if ! $RECURSIVE; then
+        break
     fi
 
     # Take ownership of files and directories under the current directory.
