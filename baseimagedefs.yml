@@ -22,6 +22,9 @@ baseimage:
       changes:
         changed:
           - 'Recursivity can be disabled when using the helper taking ownership of a directory.'
+          - 'Supplementary group IDs can also be provided by the container itself via `SUP_GROUP_IDS_INTERNAL` environment variable.'
+        fixed:
+          - 'Validation of supplementary group IDs.'
     - version: 3.4.1
       date: 2023-01-03
       changes:
