@@ -108,21 +108,19 @@ add_user --allow-duplicate app "$USER_ID" "$GROUP_ID"
 add_user_to_group app app
 
 # Handle supplementary groups of user 'app'.
-if [ "${SUP_GROUP_IDS:-UNSET}" != "UNSET" ]; then
-    echo "$SUP_GROUP_IDS" | tr ',' '\n' | tr -d ' ' | uniq | while read GID
-    do
-        case "$GID" in
-            [0-9]*) ;;
-            *) echo "ERROR: SUP_GROUP_IDS contains invalid groupd ID(s)."
-               exit 1;
-               ;;
-        esac
-        if ! group_id_exists "$GID"; then
-            add_group "grp$GID" "$GID"
-        fi
-        add_user_to_group app "grp$GID"
-    done
-fi
+echo ${SUP_GROUP_IDS:-},${SUP_GROUP_IDS_INTERNAL:-} | tr ',' '\n' | grep -v '^$' | grep -v '^0$' | sort -nub | while read GID
+do
+    case "$GID" in
+        (*[!0-9]*)
+            echo "ERROR: SUP_GROUP_IDS contains invalid groupd ID '$GID'."
+            exit 1;
+            ;;
+    esac
+    if ! group_id_exists "$GID"; then
+        add_group "grp$GID" "$GID"
+    fi
+    add_user_to_group app "grp$GID"
+done
 
 # Finally, set correct permissions on files.
 chmod 644 /etc/passwd

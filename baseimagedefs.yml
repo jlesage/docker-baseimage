@@ -354,6 +354,13 @@ container:
         distribution this container is based on.
       type: internal
       default: '""'
+    - name: SUP_GROUP_IDS_INTERNAL
+      description: >-
+        Comma-separated list of supplementary group IDs of the application.
+        These are merged with the ones that might be supplied by
+        `SUP_GROUP_IDS`.
+      type: internal
+      default: '""'
     - name: USER_ID
       description: >-
         ID of the user the application runs as.  See
