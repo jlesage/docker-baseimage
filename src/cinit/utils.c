@@ -479,6 +479,7 @@ void string_to_bool(const char *str, bool *result)
         strcasecmp(str, "true") == 0 ||
         strcasecmp(str, "on") == 0 ||
         strcasecmp(str, "yes") == 0 ||
+        strcasecmp(str, "y") == 0 ||
         strcasecmp(str, "enable") == 0 ||
         strcasecmp(str, "enabled") == 0) {
         // True value.
@@ -488,6 +489,7 @@ void string_to_bool(const char *str, bool *result)
         strcasecmp(str, "false") == 0 ||
         strcasecmp(str, "off") == 0 ||
         strcasecmp(str, "no") == 0 ||
+        strcasecmp(str, "n") == 0 ||
         strcasecmp(str, "disable") == 0 ||
         strcasecmp(str, "disabled") == 0) {
         // False value.

@@ -31,7 +31,7 @@ then
 fi
 
 case "$(echo $ENV_VAL | tr '[:upper:]' '[:lower:]')" in
-    1|true|yes|enabled|enable|on) exit 0 ;;
+    1|true|yes|y|enabled|enable|on) exit 0 ;;
     *) exit 1 ;;
 esac
 

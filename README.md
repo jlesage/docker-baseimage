@@ -441,7 +441,7 @@ The following table provides more details about some value types:
 | Type     | Description |
 |----------|-------------|
 | Program  | An executable binary, a script or a symbolic link to the program to run.  The program file must have the execute permission. |
-| Boolean  | A boolean value.  A *true* value can be `1`, `true`, `on`, `yes`, `enable`, `enabled`.  A *false* value can  be `0`, `false`, `off`, `no`, `disable`, `disabled`.  Values are case insensitive.  Also, the presence of an empty file indicates a *true* value (i.e. the file can be "touched"). |
+| Boolean  | A boolean value.  A *true* value can be `1`, `true`, `on`, `yes`, `y`, `enable`, `enabled`.  A *false* value can  be `0`, `false`, `off`, `no`, `n`, `disable`, `disabled`.  Values are case insensitive.  Also, the presence of an empty file indicates a *true* value (i.e. the file can be "touched"). |
 | Interval | An unsigned integer value.  The following values are also accepted (case insensitive): `yearly`, `monthly`, `weekly`, `daily`, `hourly`. |
 
 #### Service Group
