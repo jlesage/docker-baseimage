@@ -4,6 +4,7 @@ set -e # Exit immediately if a command exits with a non-zero status.
 set -u # Treat unset variables as an error.
 
 mkdir -p "$XDG_STATE_HOME"/logrotate
+[ ! -f "$XDG_STATE_HOME"/logrotate/logrotate.status ] || chmod 640 "$XDG_STATE_HOME"/logrotate/logrotate.status
 exec /opt/base/sbin/logrotate "$@"
 
 # vim:ft=sh:ts=4:sw=4:et:sts=4
