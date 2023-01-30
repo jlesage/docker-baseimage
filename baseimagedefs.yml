@@ -17,6 +17,13 @@ baseimage:
     long-lived application.
   gui: false
   history:
+    - version: 3.4.3
+      date: 2023-01-30
+      changes:
+        fixed:
+          - 'Helper that takes ownership of a directory not handling correctly names with end-of-line character.'
+          - 'The logrotate status file permissions was not set automatically during startup.'
+          - 'Strings `y` and `n` were not considered as valid boolean values.'
     - version: 3.4.2
       date: 2023-01-06
       changes:
