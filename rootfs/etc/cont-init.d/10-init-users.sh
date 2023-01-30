@@ -16,7 +16,7 @@ group_id_exists() {
 }
 
 group_name_exists() {
-    [ -f /etc/group ] && cat /etc/group | cut -d':' -f1 |grep -q "^$1\$"
+    [ -f /etc/group ] && cat /etc/group | cut -d':' -f1 | grep -q "^$1\$"
 }
 
 add_group() {
@@ -91,6 +91,7 @@ add_user_to_group() {
 
 # Initialize files.
 rm -f /etc/passwd /etc/group /etc/shadow
+touch /etc/passwd /etc/group /etc/shadow
 
 # Add the 'root' user.
 add_group root 0
