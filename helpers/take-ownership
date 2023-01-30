@@ -23,9 +23,13 @@ Arguments:
 }
 
 RECURSIVE=true
+HANDLING_MAIN_DIR=true
 
 if [ "${1:-}" = "--not-recursive" ]; then
     RECURSIVE=false
+    shift
+elif [ "${1:-}" = "--subdir" ]; then
+    HANDLING_MAIN_DIR=false
     shift
 fi
 
@@ -61,47 +65,49 @@ elif [ -z "${GROUP_ID:-}" ]; then
     exit 1
 fi
 
-# Special care is done on the main directory and its children, because these
-# could be mapped to a network share.
-find "$DIR" -maxdepth 1 -type d | while read D
-do
-    if ! $RECURSIVE && [ "$D" != "$DIR" ]; then
-        continue
-    fi
-
-    if ! chown $USER_ID:$GROUP_ID "$D" 2>/dev/null
+change_owner() {
+    if ! chown "$USER_ID:$GROUP_ID" "$1" 2>/dev/null
     then
         # Failed to take ownership of directory.  This could happen when, for
         # example, the folder is mapped to a network share.  Continue if we
         # can write to it, else fail.
         set +e
-        TMPFILE="$(su-exec $USER_ID mktemp "$D"/.test_XXXXXX)"
+        TMPFILE="$(su-exec "$USER_ID" mktemp "$1"/.test_XXXXXX)"
         RC=$?
         set -e
         if [ $RC -eq 0 ]; then
             # Success, we were able to write a file.
-            su-exec $USER_ID rm "$TMPFILE"
+            su-exec "$USER_ID" rm "$TMPFILE"
         else
-            echo "ERROR: Failed to take ownership and no write permission on $D."
+            echo "ERROR: Failed to take ownership and no write permission on $1."
             exit 1
         fi
     fi
+}
 
-    # We are done if recursivity is not wanted.
+# Special care is done on the main directory and its children, because these
+# could be mapped to a network share.
+if $HANDLING_MAIN_DIR; then
+    # Take care of the main directory.
+
+    # First take ownership of the directory itself.
+    change_owner "$DIR"
+
     if ! $RECURSIVE; then
-        break
+        exit 0
     fi
 
-    # Take ownership of files and directories under the current directory.
-    if [ "$D" = "$DIR" ]; then
-        # We are handling the main directory.  Take ownership of files (only)
-        # under it.
-        find "$D" -maxdepth 1 -mindepth 1 -type f -print0 | xargs --no-run-if-empty -0 chown $USER_ID:$GROUP_ID
-    else
-        # We are handling a child directory of the main directory.  Take
-        # ownership (recursively) of all files and folders under it.
-        find "$D" -maxdepth 1 -mindepth 1 -print0 | xargs --no-run-if-empty -0 chown -R $USER_ID:$GROUP_ID
-    fi
-done
+    # Then, take ownership of files (only) under it.
+    find "$DIR" -maxdepth 1 -mindepth 1 -not -type d -print0 | xargs --no-run-if-empty -0 chown --no-dereference "$USER_ID:$GROUP_ID"
+
+    # Finally, take care of subdirectories under it.
+    find "$DIR" -maxdepth 1 -mindepth 1 -type d -print0 | xargs --no-run-if-empty -0 -n1 "$0" --subdir
+else
+    # We are handling a child directory of the main directory.
+    change_owner "$DIR"
+
+    # Take ownership (recursively) of all files and folders under it.
+    find "$DIR" -maxdepth 1 -mindepth 1 -print0 | xargs --no-run-if-empty -0 chown --no-dereference -R "$USER_ID:$GROUP_ID"
+fi
 
 # vim:ft=sh:ts=4:sw=4:et:sts=4
