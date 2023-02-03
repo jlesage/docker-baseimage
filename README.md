@@ -183,8 +183,7 @@ Integrating glibc binaries often require to add glibc to the image. See the
 [Adding glibc](#adding-glibc) section for more details.
 
 Else, `Debian` and `Ubuntu` images are well known Linux distributions that
-provide great compatibility with existing applications.  `Debian` images are
-smaller than the `Ubuntu` ones.
+provide great compatibility with existing applications.
 
 [musl]: https://www.musl-libc.org
 [BusyBox]: https://busybox.net
