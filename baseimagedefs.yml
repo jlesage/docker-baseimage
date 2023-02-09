@@ -500,7 +500,7 @@ container:
         required: true
         mask: false
     - container_path: /storage
-      host_path_example: $HOME
+      host_path_example: /home/user
       description: >-
         This location contains files from your host that need to be accessible
         to the application.
