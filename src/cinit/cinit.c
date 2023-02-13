@@ -1802,6 +1802,29 @@ int main(int argc, char *argv[])
         sa.sa_handler = sigchild; sigaction(SIGCHLD, &sa, 0);
     }
 
+    // Limit the maximum number of opened files if needed.  The system limit
+    // might be set to "unlimited", meaning it can be 1048576 or 1073741816
+    // depending on the kernel.  At 1073741816, this creates a huge delay with
+    // applications trying to close all possible file descriptors.
+    // See https://github.com/moby/moby/issues/44547
+    {
+        struct rlimit limit;
+        if (getrlimit(RLIMIT_NOFILE, &limit) == 0) {
+            if (limit.rlim_max > 1048576) {
+                limit.rlim_cur = 1024;
+                limit.rlim_max = 1048576;
+                if (setrlimit(RLIMIT_NOFILE, &limit)) {
+                    log_err("Could not set the maximum number of file descriptors: %s.",
+                            strerror(errno));
+                }
+            }
+        }
+        else {
+            log_err("Could not get the maximum number of file descriptors: %s.",
+                    strerror(errno));
+        }
+    }
+
     // Bring up services.
     Try {
         // Load services.
