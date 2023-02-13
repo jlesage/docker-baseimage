@@ -17,6 +17,11 @@ baseimage:
     long-lived application.
   gui: false
   history:
+    - version: 3.4.5
+      date: 2023-02-13
+      changes:
+        fixed:
+          - 'Limit the maximum number of opened files on system having a very large, unlimited value.  This prevents unnecessary waste of CPU resources and time for applications trying to close all possible file descriptors.'
     - version: 3.4.4
       date: 2023-02-09
       changes:
