@@ -337,7 +337,6 @@ container:
     - name: HOME
       description: Home directory.
       type: internal
-      default: '""'
     - name: XDG_CONFIG_HOME
       description: >-
         Defines the base directory relative to which user specific configuration
@@ -368,14 +367,12 @@ container:
         container.  Packages are installed from the repository of the Linux
         distribution this container is based on.
       type: internal
-      default: '""'
     - name: SUP_GROUP_IDS_INTERNAL
       description: >-
         Comma-separated list of supplementary group IDs of the application.
         These are merged with the ones that might be supplied by
         `SUP_GROUP_IDS`.
       type: internal
-      default: '""'
     - name: USER_ID
       description: >-
         ID of the user the application runs as.  See
@@ -408,7 +405,6 @@ container:
       description: >-
         Comma-separated list of supplementary group IDs of the application.
       type: public
-      default: '""'
     - name: UMASK
       description: >-
         Mask that controls how file permissions are set for newly created files.
@@ -479,7 +475,6 @@ container:
         functionality can be affected when installing a package that overrides
         existing container files (e.g. binaries).
       type: public
-      default: '""'
     - name: CONTAINER_DEBUG
       description: >-
         Set to `1` to enable debug logging.
