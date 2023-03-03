@@ -17,6 +17,11 @@ baseimage:
     long-lived application.
   gui: false
   history:
+    - version: 3.4.6
+      date: 2023-03-03
+      changes:
+        fixed:
+          - 'Issue during initialization of Linux users and groups when the `GROUP_ID` is also part of `SUP_GROUP_IDS`.'
     - version: 3.4.5
       date: 2023-02-13
       changes:
