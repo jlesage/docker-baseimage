@@ -115,7 +115,7 @@ add_user --allow-duplicate app "$USER_ID" "$GROUP_ID"
 add_user_to_group app app
 
 # Handle supplementary groups of user 'app'.
-echo ${SUP_GROUP_IDS:-},${SUP_GROUP_IDS_INTERNAL:-} | tr ',' '\n' | grep -v '^$' | grep -v '^0$' | sort -nub | while read GID
+echo ${SUP_GROUP_IDS:-},${SUP_GROUP_IDS_INTERNAL:-} | tr ',' '\n' | grep -v '^$' | grep -v '^0$' | grep -vw "$GROUP_ID" | sort -nub | while read GID
 do
     case "$GID" in
         (*[!0-9]*)
