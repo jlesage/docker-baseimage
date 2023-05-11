@@ -51,7 +51,7 @@ xx-apk --no-cache --no-scripts add \
 
 mkdir /tmp/popt
 log "Downloading popt..."
-curl -# -L ${POPT_URL} | tar -xz --strip 1 -C /tmp/popt
+curl -# -L -f ${POPT_URL} | tar -xz --strip 1 -C /tmp/popt
 
 log "Configuring popt..."
 (
@@ -76,7 +76,7 @@ make DESTDIR=$(xx-info sysroot) -C /tmp/popt install
 
 mkdir /tmp/logrotate
 log "Downloading logrotate..."
-curl -# -L ${LOGROTATE_URL} | tar -xJ --strip 1 -C /tmp/logrotate
+curl -# -L -f ${LOGROTATE_URL} | tar -xJ --strip 1 -C /tmp/logrotate
 
 log "Patching logrotate..."
 patch -p1 -d /tmp/logrotate < "$SCRIPT_DIR"/messages-fix.patch
