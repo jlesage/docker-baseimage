@@ -1,5 +1,7 @@
 # A minimal docker baseimage to ease creation of long-lived application containers
-[![Build Status](https://github.com/jlesage/docker-baseimage/actions/workflows/build-baseimage.yml/badge.svg?branch=master)](https://github.com/jlesage/docker-baseimage/actions/workflows/build-baseimage.yml)
+[![Release](https://img.shields.io/github/release/jlesage/docker-baseimage.svg?logo=github&style=for-the-badge)](https://github.com/jlesage/docker-baseimage/releases/latest)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/jlesage/docker-baseimage/build-baseimage.yml?logo=github&branch=master&style=for-the-badge)](https://github.com/jlesage/docker-baseimage/actions/workflows/build-baseimage.yml)
+[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg?style=for-the-badge)](https://paypal.me/JocelynLeSage)
 
 This is a docker baseimage that can be used to create containers for any
 long-lived application.
