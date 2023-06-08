@@ -1321,6 +1321,12 @@ static void start_services()
                 ExitTry();
             }
 
+            // Skip to next service if an interval is configured.
+            if (SRV(sid).interval > 0) {
+                // Skip to next service.
+                ExitTry();
+            }
+
             // Check that the service ran for a minimum amount of time before
             // considering it as ready/up.
             while (true) {
