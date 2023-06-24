@@ -1345,16 +1345,31 @@ static void start_services()
             // Check that the service ran for a minimum amount of time before
             // considering it as ready/up.
             while (true) {
+                int rc;
+                int status;
+
+                // Exit now if shutdown has been requested.
+                if (SHUTDOWN_REQUESTED()) {
+                    ExitTry();
+                }
+
+                // Check if minimum uptime is met.
                 if (get_time() - SRV(sid).start_time >= SRV(sid).min_running_time) {
                     // Minimum uptime met.
                     break;
                 }
-                else if (kill(SRV(sid).pid, 0) != 0) {
+
+                // Check if service is still up.
+                rc = waitpid(SRV(sid).pid, &status, WNOHANG);
+                if (rc == SRV(sid).pid) {
                     // Service died.
+                    handle_killed(SRV(sid).pid, status);
                     ThrowMessage("minimum uptime not met");
                 }
-                else if (SHUTDOWN_REQUESTED()) {
-                    ExitTry();
+                else if (rc < 0) {
+                    ThrowMessageWithErrno("could not wait for termination of service '%s'",
+                            SRV(sid).name);
+
                 }
                 msleep(500);
             }
