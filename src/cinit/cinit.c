@@ -233,6 +233,16 @@ static struct option long_options[] = {
     { NULL, 0, NULL, 0 }
 };
 
+// Forward declarations of internal functions.
+static void handle_killed(pid_t killed, int status);
+
+/**
+ * Print error message with the latest errno and exit.
+ *
+ * @param[in] eval Exit value.
+ * @param[in] fmt Format of the error message.
+ * @param[in] ... Parameters of the error message.
+ */
 static void err(int eval, const char *fmt, ...)
 {
     va_list args;
@@ -1303,8 +1313,10 @@ static void start_services()
 
             // Check if we need to wait for the service to terminate.
             if (SRV(sid).sync) {
+                int status;
+
                 log_debug("waiting for service '%s' to terminate...", SRV(sid).name);
-                while (waitpid(SRV(sid).pid, NULL, 0) < 0) {
+                while (waitpid(SRV(sid).pid, &status, 0) < 0) {
                     if (errno == EINTR) {
                         if (SHUTDOWN_REQUESTED()) {
                             ExitTry();
@@ -1315,7 +1327,10 @@ static void start_services()
                     ThrowMessageWithErrno("could not wait for termination of service '%s'",
                             SRV(sid).name);
                 }
-                SRV(sid).pid = 0;
+                handle_killed(SRV(sid).pid, status);
+                if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+                    ThrowMessage("termined with error");
+                }
 
                 // Skip to next service.
                 ExitTry();
