@@ -134,6 +134,14 @@ RUN \
         /etc/cont-logrotate.d \
     && true
 
+# Keep a copy of default packages repository.
+RUN \
+    if [ -f /etc/apk/repositories ]; then \
+        cp /etc/apk/repositories /defaults/; \
+    else \
+        cp /etc/apt/sources.list /defaults/; \
+    fi
+
 # Add files.
 COPY rootfs/ /
 
@@ -155,6 +163,7 @@ ENV \
     KEEP_APP_RUNNING=0 \
     APP_NICENESS=0 \
     INSTALL_PACKAGES= \
+    PACKAGES_MIRROR= \
     CONTAINER_DEBUG=0
 
 # Define mountable directories.

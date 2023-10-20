@@ -491,10 +491,19 @@ container:
     - name: INSTALL_PACKAGES
       description: >-
         Space-separated list of packages to install during the startup of the
-        container.  Packages are installed from the repository of the Linux
-        distribution this container is based on.  **ATTENTION**: Container
-        functionality can be affected when installing a package that overrides
-        existing container files (e.g. binaries).
+        container.
+        {%- if app is not defined %}  Packages are installed from the repository of the
+        Linux distribution this container is based on.
+        {%- else %}  List of available packages can be found at {% if app.base_os == 'alpine' %}https://mirrors.alpinelinux.org{% elif app.base_os == 'debian' %}https://www.debian.org/distrib/packages{% elif app.base_os == 'ubuntu' %}https://packages.ubuntu.com{% endif %}.
+        {%- endif %}  **ATTENTION**: Container functionality can be affected when
+        installing a package that overrides existing container files (e.g. binaries).
+      type: public
+    - name: PACKAGES_MIRROR
+      description: >-
+        Mirror of the repository to use when installing packages.
+        {%- if app is defined %}
+        List of mirrors is available at {% if app.base_os == 'alpine' %}https://mirrors.alpinelinux.org{% elif app.base_os == 'debian' %}https://www.debian.org/mirror/list{% elif app.base_os == 'ubuntu' %}https://launchpad.net/ubuntu/+archivemirrors{% endif %}.
+        {%- endif %}
       type: public
     - name: CONTAINER_DEBUG
       description: >-
