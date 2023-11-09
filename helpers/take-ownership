@@ -1,113 +1,181 @@
 #!/bin/sh
+#
+# This script takes ownership of the specified file/directory.  It is friendly
+# with directories mapped (mounted) to a network share.  The strategy adopted
+# is to change/set ownership only for files/directories that don't already have
+# the correct ownership.
+#
+# CIFS: Basically, ownership and permissions of files/folders of the share are
+#       defined when mounting the share on the client side.  The chown/chmod
+#       commands are ignored: ownership and permissions changes are not applied,
+#       even when the command succeed.
+#         - All files/folders have the same permissions and they cannot be
+#           changed.
+#         - All files/folders have the same ownership, no matter which user
+#           creates the file.
+#       The `noperm` mount option disables permission checks on client side.  So
+#       any users can read or modify files, even if they technically could not
+#       according to permissions.
+#       When using an SMB share, the `USER_ID` and `GROUP_ID` environment
+#       variables should match the user/group used to mount of the SMB share.
+#
+# NFS: The NFS mount on client side behaves like a normal folder, i.e. ownership
+#      and permissions are the same between the client and the server.  However,
+#      the `root` user might be handled differently depending on the server
+#      configuration.
+#      When the `no_root_squash` server option is set, the behavior remains the
+#      same: the `root` user on the client side is mapped to the `root` user on
+#      the server side.
+#      Using the `root_squash` server option allows the `root` user on the
+#      client side to be mapped to a different user (called anonymous user) on
+#      server side.  The anonymous user can be explicitly set via `anonuid` and
+#      `anongid` (the default is `nobody`, user ID 65534).  So because the
+#      container applies ownership of files and folders under the `root` user,
+#      we may end up in a situation where the container is not able to perform
+#      this task.
+#      When using an NFS share, the user may have to set ownership/permissions
+#      prior starting the container, adjust `USER_ID` and `GROUP_ID` correctly
+#      or adjust the NFS server options.
+#
 
 set -e # Exit immediately if a command exits with a non-zero status.
 set -u # Treat unset variables as an error.
 
 usage() {
-    echo "usage: $(basename "$0") [--not-recursive] DIR [USER_ID GROUP_ID]
+    echo "usage: $(basename "$0") [OPTION...] TARGET
 
-Take ownership of a directory.
+Take ownership of the specified file/directory.
 
 Options:
   --not-recursive  Take ownership of the specified directory only, not its
                    content.
+  --fail           Exit with non-zero value if ownership fails to be set for at
+                   least one file or folder.
+  --user-id ID     ID of the user that should own the directory.  If not set,
+                   the USER_ID environment variable is used.
+  --group-id ID    ID of the group that should own the directory.  If not set,
+                   the GROUP_ID environment variable is used.
 
 Arguments:
-
-  DIR              Path to the directory.
-  USER_ID          ID of the user that should own the directory.  If not set,
-                   the USER_ID environment variable is used.
-  GROUP_ID         ID of the group that should own the directory.  If not set,
-                   the GROUP_ID environment variable is used.
+  TARGET           Path to the file/directory to take ownership.
 "
 }
 
+IGNORE_ERRORS=true
 RECURSIVE=true
-HANDLING_MAIN_DIR=true
+TARGET=
 
-if [ "${1:-}" = "--not-recursive" ]; then
-    RECURSIVE=false
-    shift
-elif [ "${1:-}" = "--subdir" ]; then
-    HANDLING_MAIN_DIR=false
-    shift
-fi
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --help|-h)
+            usage
+            exit 1
+            ;;
+        --not-recursive)
+            RECURSIVE=false
+            ;;
+        --fail)
+            IGNORE_ERRORS=false
+            ;;
+        --user-id)
+            if [ -n "${2-}" ]; then
+                USER_ID="$2"
+            else
+                echo "ERROR: User ID not set."
+                exit 1
+            fi
+            shift
+            ;;
+        --group-id)
+            if [ -n "${2-}" ]; then
+                GROUP_ID="$2"
+            else
+                echo "ERROR: Group ID not set."
+                exit 1
+            fi
+            shift
+            ;;
+        --*)
+            echo "ERROR: Unknown option '$1'."
+            echo ""
+            usage
+            exit 1
+            ;;
+        *)
+            if [ -z "${TARGET:-}" ]; then
+                TARGET="$1"
+            else
+                echo "ERROR: Unknown argument '$1'."
+                echo ""
+                usage
+                exit 1
+            fi
+            ;;
+    esac
 
-# Handle the directory parameter.
-if [ -z "${1:-}" ]; then
-    echo "ERROR: Directory missing."
+    shift
+done
+
+# Validate the target.
+if [ -z "${TARGET:-}" ]; then
+    echo "ERROR: Target not set."
     echo ""
     usage
     exit 1
-elif [ ! -e "$1" ]; then
-    echo "ERROR: Directory not found: $1."
-    exit 1
-elif [ ! -d "$1" ]; then
-    echo "ERROR: Not a directory: $1."
+elif [ ! -e "$TARGET" ]; then
+    echo "ERROR: Target not found: $TARGET."
     exit 1
 fi
 
-DIR="$(cd "$1" && pwd)"
-
-# Handle the user ID parameter.
-if [ -n "${2:-}" ]; then
-    USER_ID="$2"
-elif [ -z "${USER_ID:-}" ]; then
+# Validate the user ID.
+if [ -z "${USER_ID:-}" ]; then
     echo "ERROR: No user ID defined."
     exit 1
 fi
 
-# Handle the group ID parameter.
-if [ -n "${3:-}" ]; then
-    GROUP_ID="$3"
-elif [ -z "${GROUP_ID:-}" ]; then
+# Validate the group ID.
+if [ -z "${GROUP_ID:-}" ]; then
     echo "ERROR: No group ID defined."
     exit 1
 fi
 
-change_owner() {
-    if ! chown "$USER_ID:$GROUP_ID" "$1" 2>/dev/null
-    then
-        # Failed to take ownership of directory.  This could happen when, for
-        # example, the folder is mapped to a network share.  Continue if we
-        # can write to it, else fail.
-        set +e
-        TMPFILE="$(su-exec "$USER_ID" mktemp "$1"/.test_XXXXXX)"
-        RC=$?
-        set -e
-        if [ $RC -eq 0 ]; then
-            # Success, we were able to write a file.
-            su-exec "$USER_ID" rm "$TMPFILE"
-        else
-            echo "ERROR: Failed to take ownership and no write permission on $1."
-            exit 1
-        fi
-    fi
-}
-
-# Special care is done on the main directory and its children, because these
-# could be mapped to a network share.
-if $HANDLING_MAIN_DIR; then
-    # Take care of the main directory.
-
-    # First take ownership of the directory itself.
-    change_owner "$DIR"
-
-    if ! $RECURSIVE; then
-        exit 0
-    fi
-
-    # Then, take ownership of files (only) under it.
-    find "$DIR" -maxdepth 1 -mindepth 1 -not -type d -print0 | xargs --no-run-if-empty -0 chown --no-dereference "$USER_ID:$GROUP_ID"
-
-    # Finally, take care of subdirectories under it.
-    find "$DIR" -maxdepth 1 -mindepth 1 -type d -print0 | xargs --no-run-if-empty -0 -n1 "$0" --subdir
+# Use absolute path.
+if [ -d "$TARGET" ]; then
+    TARGET="$(cd "$TARGET" && pwd)"
 else
-    # We are handling a child directory of the main directory.
-    change_owner "$DIR"
+    TARGET="$(cd "$(dirname "$TARGET")" && pwd)/$(basename "$TARGET")"
+fi
 
-    # Take ownership (recursively) of all files and folders under it.
-    find "$DIR" -maxdepth 1 -mindepth 1 -print0 | xargs --no-run-if-empty -0 chown --no-dereference -R "$USER_ID:$GROUP_ID"
+# Create temporary file to store any chmod error.
+RES_FILE="$(mktemp)"
+echo "0" > "$RES_FILE"
+
+# Create the chmod wrapper.
+CHOWN_WRAPPER="$(mktemp)"
+echo "#!/bin/sh
+chown \"\$@\"
+RES=\$?
+if [ \$RES -ne 0 ]; then
+    echo \$RES > \"$RES_FILE\"
+fi" > "$CHOWN_WRAPPER"
+chmod a+rx "$CHOWN_WRAPPER"
+
+# Define extra find arguments needed when recursivity is disabled.
+FIND_EXTRA_ARGS=
+if ! $RECURSIVE; then
+    FIND_EXTRA_ARGS="-mindepth 0 -maxdepth 0"
+fi
+
+# Set ownership on files and folders.
+find "$TARGET" $FIND_EXTRA_ARGS '(' -not -user "$USER_ID" -or -not -group "$GROUP_ID" ')' -exec "$CHOWN_WRAPPER" --no-dereference "$USER_ID:$GROUP_ID" {} +
+
+# Handle the result.
+RES="$(cat "$RES_FILE")"
+rm "$RES_FILE" "$CHOWN_WRAPPER"
+if $IGNORE_ERRORS; then
+    exit 0
+else
+    exit "$RES"
 fi
 
 # vim:ft=sh:ts=4:sw=4:et:sts=4
