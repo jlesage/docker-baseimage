@@ -17,6 +17,18 @@ baseimage:
     long-lived application.
   gui: false
   history:
+    - version: 3.5.0
+      date: 2023-11-08
+      changes:
+        added:
+          - 'Mirror for packages installation can be set via the `PACKAGES_MIRROR` environment variable.'
+        changed:
+          - 'Improved the way the `take-ownership` script is working.'
+        removed:
+        fixed:
+          - 'Readiness and minimum running time checks should not be done for a service defined with an interval.'
+          - 'Raise an error when a synched service fails to start.'
+          - 'Minimum running time check of a service was using an incorrect way to verify if process is still alive.'
     - version: 3.4.7
       date: 2023-05-16
       changes:
