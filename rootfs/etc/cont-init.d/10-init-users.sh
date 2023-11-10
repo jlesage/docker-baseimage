@@ -107,6 +107,23 @@ add_user_to_group root root
 # Add the 'shadow' group.
 add_group shadow 42
 
+# Ubuntu and debian require additional user/group for proper packages
+# installation.
+. /etc/os-release
+case "$ID" in
+    ubuntu|debian)
+        # Add the 'staff' group.
+        add_group staff 52
+
+        # Add the 'nogroup' group.
+        add_group nogroup  65534
+
+        # Add the '_apt' user.
+        add_user _apt 105 65534 /nonexistent
+        ;;
+    *) break ;;
+esac
+
 # Add the 'app' user.
 # NOTE: This user requires special handling, since its user/group ID is
 #       configurable and may match an existing one.
