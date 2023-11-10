@@ -17,6 +17,11 @@ baseimage:
     long-lived application.
   gui: false
   history:
+    - version: 3.5.1
+      date: 2023-11-10
+      changes:
+        fixed:
+          - 'Packages installation at runtime could fail on Ubuntu/Debian due to missing user/group.'
     - version: 3.5.0
       date: 2023-11-08
       changes:
@@ -24,7 +29,6 @@ baseimage:
           - 'Mirror for packages installation can be set via the `PACKAGES_MIRROR` environment variable.'
         changed:
           - 'Improved the way the `take-ownership` script is working.'
-        removed:
         fixed:
           - 'Readiness and minimum running time checks should not be done for a service defined with an interval.'
           - 'Raise an error when a synched service fails to start.'
