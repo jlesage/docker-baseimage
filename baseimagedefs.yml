@@ -17,6 +17,11 @@ baseimage:
     long-lived application.
   gui: false
   history:
+    - version: 3.5.2
+      date: 2023-11-17
+      changes:
+        fixed:
+          - 'When using a very high user or group ID, the helper that takes ownership of a directory would fail.'
     - version: 3.5.1
       date: 2023-11-10
       changes:
