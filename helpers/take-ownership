@@ -166,6 +166,19 @@ if ! $RECURSIVE; then
     FIND_EXTRA_ARGS="-mindepth 0 -maxdepth 0"
 fi
 
+# Workaround for bug with the `find` utilities, where a user/group ID bigger
+# than a signed integer produces an error: instead of using the ID, use the
+# associated user/group name if it exists.
+# See https://savannah.gnu.org/bugs/index.php?64900
+USER_NAME="$(getent passwd "$USER_ID" | cut -d: -f1)"
+if [ -n "${USER_NAME:-}" ]; then
+    USER_ID="$USER_NAME"
+fi
+GROUP_NAME="$(getent group "$GROUP_ID" | cut -d: -f1)"
+if [ -n "${GROUP_NAME:-}" ]; then
+    GROUP_ID="$GROUP_NAME"
+fi
+
 # Set ownership on files and folders.
 find "$TARGET" $FIND_EXTRA_ARGS '(' -not -user "$USER_ID" -or -not -group "$GROUP_ID" ')' -exec "$CHOWN_WRAPPER" --no-dereference "$USER_ID:$GROUP_ID" {} +
 
