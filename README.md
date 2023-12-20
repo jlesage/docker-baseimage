@@ -64,6 +64,7 @@ Different docker images are available:
 | [Alpine 3.16]      | alpine-3.16           | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.16-v3?style=for-the-badge)](#)  |
 | [Alpine 3.17]      | alpine-3.17           | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.17-v3?style=for-the-badge)](#)  |
 | [Alpine 3.18]      | alpine-3.18           | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.18-v3?style=for-the-badge)](#)  |
+| [Alpine 3.19]      | alpine-3.19           | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.19-v3?style=for-the-badge)](#)  |
 | [Debian 10]        | debian-10             | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-10-v3?style=for-the-badge)](#)    |
 | [Debian 11]        | debian-11             | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-11-v3?style=for-the-badge)](#)    |
 | [Ubuntu 16.04 LTS] | ubuntu-16.04          | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-16.04-v3?style=for-the-badge)](#) |
@@ -76,6 +77,7 @@ Different docker images are available:
 [Alpine 3.16]: https://alpinelinux.org
 [Alpine 3.17]: https://alpinelinux.org
 [Alpine 3.18]: https://alpinelinux.org
+[Alpine 3.19]: https://alpinelinux.org
 [Debian 10]: https://www.debian.org/releases/buster/
 [Debian 11]: https://www.debian.org/releases/bullseye/
 [Ubuntu 16.04 LTS]: http://releases.ubuntu.com/16.04/
