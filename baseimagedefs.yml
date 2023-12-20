@@ -449,11 +449,11 @@ container:
       type: public
     - name: UMASK
       description: >-
-        Mask that controls how file permissions are set for newly created files.
-        The value of the mask is in octal notation.  By default, the default
-        umask value is `0022`, meaning that newly created files are readable by
-        everyone, but only writable by the owner.  See the online umask
-        calculator at http://wintelguy.com/umask-calc.pl.
+        Mask that controls how permissions are set for newly created files and
+        folders.  The value of the mask is in octal notation.  By default, the
+        default umask value is `0022`, meaning that newly created files and
+        folders are readable by everyone, but only writable by the owner.  See
+        the online umask calculator at http://wintelguy.com/umask-calc.pl.
       type: public
       default: "0022"
       unraid_template:
