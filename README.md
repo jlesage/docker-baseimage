@@ -283,6 +283,7 @@ The following internal environment variables are provided by the baseimage:
 |`TAKE_CONFIG_OWNERSHIP`| When set to `0`, ownership of the content of the `/config` directory is not taken during startup of the container. | `1` |
 |`INSTALL_PACKAGES_INTERNAL`| Space-separated list of packages to install during the startup of the container.  Packages are installed from the repository of the Linux distribution this container is based on. | (no value) |
 |`SUP_GROUP_IDS_INTERNAL`| Comma-separated list of supplementary group IDs of the application. These are merged with the ones that might be supplied by `SUP_GROUP_IDS`. | (no value) |
+|`SERVICES_GRACETIME`| During container shutdown, this defines the amount of time (in milliseconds) allowed to services to gracefully terminate before sending the KILL signal to everyone. | `5000` |
 
 #### Adding/Removing Internal Environment Variables
 

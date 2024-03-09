@@ -422,6 +422,13 @@ container:
         These are merged with the ones that might be supplied by
         `SUP_GROUP_IDS`.
       type: internal
+    - name: SERVICES_GRACETIME
+      description: >-
+        During container shutdown, this defines the amount of time (in
+        milliseconds) allowed to services to gracefully terminate before
+        sending the KILL signal to everyone.
+      type: internal
+      default: 5000
     - name: USER_ID
       description: >-
         ID of the user the application runs as.  See
