@@ -17,17 +17,17 @@ fi
 case "$ID" in
     alpine)
         echo "setting packages mirror to '$PACKAGES_MIRROR'..."
-        cp /defaults/repositories /etc/apk/repositories
+        cp -a /defaults/repositories /etc/apk/repositories
         sed-patch "s|^https://dl-cdn.alpinelinux.org/alpine/|$PACKAGES_MIRROR/|g" /etc/apk/repositories
         ;;
     debian)
         echo "setting packages mirror to '$PACKAGES_MIRROR'..."
-        cp /defaults/sources.list /etc/apt/sources.list
+        cp -a /defaults/sources.list /etc/apt/sources.list
         sed-patch "s|^deb http://deb.debian.org/debian |deb $PACKAGES_MIRROR |g" /etc/apt/sources.list
         ;;
     ubuntu)
         echo "setting packages mirror to '$PACKAGES_MIRROR'..."
-        cp /defaults/sources.list /etc/apt/sources.list
+        cp -a /defaults/sources.list /etc/apt/sources.list
         if grep -q "http://ports.ubuntu.com/ubuntu-ports/" /etc/apt/sources.list
         then
             sed-patch "s|^deb http://ports.ubuntu.com/ubuntu-ports/ |deb $PACKAGES_MIRROR |g" /etc/apt/sources.list
