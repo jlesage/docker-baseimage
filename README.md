@@ -55,7 +55,7 @@ long-lived application.
 
 ## Images
 
-Different docker images are available:
+Multiple docker images, based on different Linux distributions, are available:
 
 | Base Distribution  | Docker Image Base Tag | Size |
 |--------------------|-----------------------|------|
@@ -105,13 +105,18 @@ version format is `MAJOR.MINOR.PATCH`, where an increment of the:
 
 ### Tags
 
-For each distribution-specific image, multiple tags are available:
+The baseimage is available under multiple tags.  A tag is made from the
+corresponding Linux distribution and the release version.
 
 | Tag           | Description                                              |
 |---------------|----------------------------------------------------------|
 | distro-vX.Y.Z | Exact version of the image.                              |
 | distro-vX.Y   | Latest version of a specific minor version of the image. |
 | distro-vX     | Latest version of a specific major version of the image. |
+
+All available tags can be consulted on [Docker Hub].
+
+[Docker Hub]: https://hub.docker.com/r/jlesage/baseimage/tags
 
 ## Getting started
 
@@ -128,7 +133,7 @@ NodeJS server.
 In `Dockerfile`:
 ```Dockerfile
 # Pull base image.
-FROM jlesage/baseimage:alpine-3.15-v3
+FROM jlesage/baseimage:alpine-3.19-v3
 
 # Install http-server.
 RUN add-pkg nodejs-npm && \
@@ -149,6 +154,8 @@ In `startapp.sh`:
 #!/bin/sh
 exec /usr/bin/http-server
 ```
+
+Make sure the file is executable, by running `chmod +x startapp.sh`.
 
 Then, build your docker image:
 
@@ -599,6 +606,7 @@ By default, the baseimage contains the following notification backends:
 | Backend  | Description | Debouncing time |
 |----------|-------------|-----------------|
 | `stdout` | Display a message to the standard output, making it visible in the container's log.  Message of the format is `{LEVEL}: {TITLE} {MESSAGE}`. | 21 600s (6 hours) |
+
 
 ### Adding glibc
 
