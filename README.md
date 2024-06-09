@@ -38,7 +38,6 @@ long-lived application.
       * [Log Monitor](#log-monitor)
          * [Notification Definition](#notification-definition)
          * [Notification Backend](#notification-backend)
-      * [Adding glibc](#adding-glibc)
       * [Helpers](#helpers)
          * [Adding/Removing Packages](#addingremoving-packages)
          * [Modifying Files With Sed](#modifying-files-with-sed)
@@ -186,9 +185,6 @@ Alpine's software repository or without its source code available may be harder.
 This is because Alpine Linux uses [musl] C standard library instead of GNU C
 library ([glibc]) that most applications are built against.  Compatibility
 between these two libraries is very limited.
-
-Integrating glibc binaries often require to add glibc to the image. See the
-[Adding glibc](#adding-glibc) section for more details.
 
 Else, `Debian` and `Ubuntu` images are well known Linux distributions that
 provide great compatibility with existing applications.
@@ -608,15 +604,6 @@ By default, the baseimage contains the following notification backends:
 |----------|-------------|-----------------|
 | `stdout` | Display a message to the standard output, making it visible in the container's log.  Message of the format is `{LEVEL}: {TITLE} {MESSAGE}`. | 21 600s (6 hours) |
 
-
-### Adding glibc
-
-For baseimages based on Alpine Linux, glibc can be installed to the image by
-adding the following line to your `Dockerfile`:
-
-```Dockerfile
-RUN install-glibc
-```
 
 ### Helpers
 
