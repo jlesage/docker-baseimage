@@ -425,6 +425,7 @@ setting.
 | finish                 | Program          | Program invoked when the service terminates. The service's exit code is given to the program as parameter. | N/A |
 | params                 | String           | Parameter for the service's program to run.  One parameter per line. | No parameter |
 | environment            | String           | Environment to use for the service.  One environment variable per line, of the form `key=value`. | Environment untouched |
+| environment_extra      | String           | Extra variables to add to the environment of the service.  One environment variable per line, of the form `key=value`. | No extra variable |
 | respawn                | Boolean          | Whether or not the process must be respawned when it dies. | `FALSE`  |
 | sync                   | Boolean          | Whether or not the process supervisor waits until the service ends.  This is mutually exclusive with `respawn`. | `FALSE` |
 | ready_timeout          | Unsigned integer | Maximum amount of time (in milliseconds) to wait for the service to be ready. | `5000` |

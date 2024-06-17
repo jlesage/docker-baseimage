@@ -152,6 +152,8 @@ typedef struct {
     size_t param_list_size;
     char *environment[MAX_NUM_SERVICE_ENV_VARS];
     size_t environment_size;
+    char *environment_extra[MAX_NUM_SERVICE_ENV_VARS];
+    size_t environment_extra_size;
     uid_t uid;
     gid_t gid;
     gid_t sgid_list[SERVICE_SGID_LIST_SIZE];
@@ -625,6 +627,11 @@ static void unload_service(int service)
     }
     SRV(service).environment_size = 0;
 
+    for (unsigned int i = 0; i < SRV(service).environment_extra_size; i++) {
+        free(SRV(service).environment_extra[i]);
+    }
+    SRV(service).environment_extra_size = 0;
+
     if (SRV(service).run_abs_path) {
         free(SRV(service).run_abs_path);
         SRV(service).run_abs_path = NULL;
@@ -796,7 +803,7 @@ static int load_service(const char *service)
                                 }
                             }
                             SRV(sid).environment[i] = strdup(environment[i]);
-                            if (SRV(sid).param_list[i] == NULL) {
+                            if (SRV(sid).environment[i] == NULL) {
                                 ThrowMessage("out of memory");
                             }
                             SRV(sid).environment_size++;
@@ -810,6 +817,66 @@ static int load_service(const char *service)
                         SRV(sid).environment[0] = NULL;
                         SRV(sid).environment_size = 1;
                     }
+                }
+                Catch (e) {
+                    if (environment) {
+                        free(environment);
+                    }
+                    free(buf);
+                    ThrowMessage("could not load 'params': %s", e.mMessage);
+                }
+            }
+        }
+        {
+            char *buf = NULL;
+
+            load_value_as_string("environment_extra", &buf, 0);
+            if (buf) {
+                size_t environment_size;
+                char **environment = NULL;
+
+                // Before spliting on line-endings, make sure there is no
+                // Windows-style line-endings ('\r\n').
+                remove_all_char(buf, '\r');
+
+                environment = split(trim(buf), '\n', &environment_size, 0, 0);
+
+                Try {
+                    if (!environment) {
+                        ThrowMessage("out of memory");
+                    }
+                    else if (environment_size > DIM(SRV(sid).environment_extra)) {
+                        ThrowMessage("too much environment variables");
+                    }
+                    for (int i = 0; i < environment_size; i++) {
+                        if (strlen(environment[i]) > 0) {
+                            char *p = strchr(environment[i], '=');
+                            if (!p) {
+                                ThrowMessage("invalid environment variable format");
+                            }
+                            else if (isdigit(environment[i][0])) {
+                                ThrowMessage("invalid environment variable name");
+                            }
+                            else {
+                                for (unsigned int j = 0; ; j++) {
+                                    char c = environment[i][j];
+                                    if (c == '=') {
+                                        break;
+                                    }
+                                    else if (!isalnum(c) && c != '_') {
+                                        ThrowMessage("invalid environment variable name");
+                                    }
+                                }
+                            }
+                            SRV(sid).environment_extra[i] = strdup(environment[i]);
+                            if (SRV(sid).environment_extra[i] == NULL) {
+                                ThrowMessage("out of memory");
+                            }
+                            SRV(sid).environment_extra_size++;
+                        }
+                    }
+                    free(environment);
+                    free(buf);
                 }
                 Catch (e) {
                     if (environment) {
@@ -1014,12 +1081,34 @@ static pid_t fork_and_exec(int service)
             }
 
             // Set the environment.
-            size_t environment_size = SRV(service).environment_size + 1;
+            size_t environment_size = 0;
+            if (SRV(service).environment_size > 0) {
+                environment_size = SRV(service).environment_size;
+                environment_size++; // Last entry should be NULL.
+            }
+            else if (SRV(service).environment_extra_size > 0) {
+                environment_size = SRV(service).environment_extra_size;
+                for (unsigned int i = 0; environ[i] != NULL; i++) {
+                    environment_size ++;
+                }
+                environment_size++; // Last entry should be NULL.
+            }
             char *environment[environment_size];
             char **env_p = NULL;
-            if (environment_size > 1) {
-                for (unsigned int i = 0; i < environment_size; i++) {
+            if (SRV(service).environment_size > 0) {
+                for (unsigned int i = 0; i < SRV(service).environment_size; i++) {
                     environment[i] = SRV(service).environment[i];
+                }
+                environment[environment_size - 1] = NULL;
+                env_p = environment;
+            }
+            else if (SRV(service).environment_extra_size > 0) {
+                unsigned int i, j;
+                for (i = 0; environ[i] != NULL; i++) {
+                    environment[i] = environ[i];
+                }
+                for (j = 0; j < SRV(service).environment_extra_size; i++, j++) {
+                    environment[i] = SRV(service).environment_extra[j];
                 }
                 environment[environment_size - 1] = NULL;
                 env_p = environment;
