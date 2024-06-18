@@ -23,7 +23,7 @@ ARG DEBIAN_PKGS="\
 FROM --platform=$BUILDPLATFORM tonistiigi/xx AS xx
 
 # Build UPX.
-FROM --platform=$BUILDPLATFORM alpine:3.18 AS upx
+FROM --platform=$BUILDPLATFORM alpine:3.20 AS upx
 RUN apk --no-cache add build-base curl make cmake git && \
     mkdir /tmp/upx && \
     curl -# -L https://github.com/upx/upx/releases/download/v4.1.0/upx-4.1.0-src.tar.xz | tar xJ --strip 1 -C /tmp/upx && \
@@ -31,7 +31,7 @@ RUN apk --no-cache add build-base curl make cmake git && \
     cp -v /tmp/upx/build/extra/gcc/release/upx /usr/bin/upx
 
 # Build the init system and process supervisor.
-FROM --platform=$BUILDPLATFORM alpine:3.18 AS cinit
+FROM --platform=$BUILDPLATFORM alpine:3.20 AS cinit
 ARG TARGETPLATFORM
 COPY --from=xx / /
 COPY src/cinit /tmp/cinit
@@ -44,7 +44,7 @@ COPY --from=upx /usr/bin/upx /usr/bin/upx
 RUN upx /tmp/cinit/cinit
 
 # Build the log monitor.
-FROM --platform=$BUILDPLATFORM alpine:3.18 AS logmonitor
+FROM --platform=$BUILDPLATFORM alpine:3.20 AS logmonitor
 ARG TARGETPLATFORM
 ARG TARGETARCH
 COPY --from=xx / /
@@ -58,7 +58,7 @@ COPY --from=upx /usr/bin/upx /usr/bin/upx
 RUN upx /tmp/logmonitor/logmonitor
 
 # Build su-exec
-FROM --platform=$BUILDPLATFORM alpine:3.18 AS su-exec
+FROM --platform=$BUILDPLATFORM alpine:3.20 AS su-exec
 ARG TARGETPLATFORM
 COPY --from=xx / /
 RUN apk --no-cache add curl make clang
@@ -74,7 +74,7 @@ COPY --from=upx /usr/bin/upx /usr/bin/upx
 RUN upx /tmp/su-exec/su-exec
 
 # Build logrotate.
-FROM --platform=$BUILDPLATFORM alpine:3.18 AS logrotate
+FROM --platform=$BUILDPLATFORM alpine:3.20 AS logrotate
 ARG TARGETPLATFORM
 COPY --from=xx / /
 COPY src/logrotate /tmp/build
