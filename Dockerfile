@@ -24,9 +24,10 @@ FROM --platform=$BUILDPLATFORM tonistiigi/xx AS xx
 
 # Build UPX.
 FROM --platform=$BUILDPLATFORM alpine:3.20 AS upx
+ARG UPX_VERSION=4.2.4
 RUN apk --no-cache add build-base curl make cmake git && \
     mkdir /tmp/upx && \
-    curl -# -L https://github.com/upx/upx/releases/download/v4.1.0/upx-4.1.0-src.tar.xz | tar xJ --strip 1 -C /tmp/upx && \
+    curl -# -L https://github.com/upx/upx/releases/download/v${UPX_VERSION}/upx-${UPX_VERSION}-src.tar.xz | tar xJ --strip 1 -C /tmp/upx && \
     make -C /tmp/upx build/extra/gcc/release -j$(nproc) && \
     cp -v /tmp/upx/build/extra/gcc/release/upx /usr/bin/upx
 
