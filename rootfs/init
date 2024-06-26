@@ -103,7 +103,7 @@ if [ -d /etc/cont-env.d ]; then
 
             # Execute the program.
             set +e
-            VAL="$($FILE 2>&4 | head -n1)"
+            VAL="$($FILE 2>&4)"
             RC="$?"
             set -e
 
@@ -125,7 +125,7 @@ if [ -d /etc/cont-env.d ]; then
             # Load the environment variable in case of success.
             if [ $RC -eq 0 ]; then
                 echo "loading..." | log_script "$FILENAME"
-                load_env_var "$FILENAME" "$VAL"
+                load_env_var "$FILENAME" "$(echo "$VAL" | head -n1)"
             else
                 echo "not setting variable."
             fi
