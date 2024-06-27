@@ -17,6 +17,11 @@ baseimage:
     long-lived application.
   gui: false
   history:
+    - version: 3.6.1
+      date: 2024-07-26
+      changes:
+        fixed:
+          - 'Return code of environment variable loading script was not handled properly.'
     - version: 3.6.0
       date: 2024-07-22
       changes:
