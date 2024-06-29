@@ -17,6 +17,11 @@ baseimage:
     long-lived application.
   gui: false
   history:
+    - version: 3.6.2
+      date: 2024-07-28
+      changes:
+        fixed:
+          - 'Some logged messages related to environment variable loading were not properly prefixed.'
     - version: 3.6.1
       date: 2024-07-26
       changes:
