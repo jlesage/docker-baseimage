@@ -139,6 +139,10 @@ RUN \
 RUN \
     if [ -f /etc/apk/repositories ]; then \
         cp /etc/apk/repositories /defaults/; \
+    elif [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then \
+        cp /etc/apt/sources.list.d/ubuntu.sources /defaults/; \
+    elif [ -f /etc/apt/sources.list.d/debian.sources ]; then \
+        cp /etc/apt/sources.list.d/debian.sources /defaults/; \
     else \
         cp /etc/apt/sources.list /defaults/; \
     fi

@@ -65,10 +65,12 @@ Multiple docker images, based on different Linux distributions, are available:
 | [Alpine 3.20]      | alpine-3.20           | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.20-v3?style=for-the-badge)](#)  |
 | [Debian 10]        | debian-10             | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-10-v3?style=for-the-badge)](#)    |
 | [Debian 11]        | debian-11             | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-11-v3?style=for-the-badge)](#)    |
+| [Debian 12]        | debian-12             | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-12-v3?style=for-the-badge)](#)    |
 | [Ubuntu 16.04 LTS] | ubuntu-16.04          | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-16.04-v3?style=for-the-badge)](#) |
 | [Ubuntu 18.04 LTS] | ubuntu-18.04          | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-18.04-v3?style=for-the-badge)](#) |
 | [Ubuntu 20.04 LTS] | ubuntu-20.04          | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-20.04-v3?style=for-the-badge)](#) |
 | [Ubuntu 22.04 LTS] | ubuntu-22.04          | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-22.04-v3?style=for-the-badge)](#) |
+| [Ubuntu 24.04 LTS] | ubuntu-24.04          | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-24.04-v3?style=for-the-badge)](#) |
 
 [Alpine 3.16]: https://alpinelinux.org
 [Alpine 3.17]: https://alpinelinux.org
@@ -77,10 +79,12 @@ Multiple docker images, based on different Linux distributions, are available:
 [Alpine 3.20]: https://alpinelinux.org
 [Debian 10]: https://www.debian.org/releases/buster/
 [Debian 11]: https://www.debian.org/releases/bullseye/
+[Debian 12]: https://www.debian.org/releases/bookworm/
 [Ubuntu 16.04 LTS]: http://releases.ubuntu.com/16.04/
 [Ubuntu 18.04 LTS]: http://releases.ubuntu.com/18.04/
 [Ubuntu 20.04 LTS]: http://releases.ubuntu.com/20.04/
 [Ubuntu 22.04 LTS]: http://releases.ubuntu.com/22.04/
+[Ubuntu 24.04 LTS]: http://releases.ubuntu.com/24.04/
 
 ### Content
 
