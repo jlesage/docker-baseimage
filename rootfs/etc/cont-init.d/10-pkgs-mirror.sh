@@ -34,7 +34,7 @@ case "$ID" in
         echo "setting packages mirror to '$PACKAGES_MIRROR'..."
         if [ -f /defaults/ubuntu.sources ]; then
             cp -a /defaults/ubuntu.sources /etc/apt/sources.list.d/ubuntu.sources
-            if grep -q "http://ports.ubuntu.com/ubuntu-ports/" /etc/apt/sources.list
+            if grep -q "http://ports.ubuntu.com/ubuntu-ports/" /etc/apt/sources.list.d/ubuntu.sources
             then
                 # For archs other than i386/i686/x86_64.
                 sed-patch "s|^URIs: http://ports.ubuntu.com/ubuntu-ports/\$|URIs: $PACKAGES_MIRROR|g" /etc/apt/sources.list.d/ubuntu.sources
