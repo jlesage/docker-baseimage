@@ -9,9 +9,8 @@ long-lived application.
 ## Table of Content
 
    * [Images](#images)
-      * [Content](#content)
       * [Versioning](#versioning)
-      * [Tags](#tags)
+      * [Content](#content)
    * [Getting started](#getting-started)
    * [Using the Baseimage](#using-the-baseimage)
       * [Selecting a Baseimage](#selecting-a-baseimage)
@@ -56,21 +55,34 @@ long-lived application.
 
 Multiple docker images, based on different Linux distributions, are available:
 
-| Base Distribution  | Docker Image Base Tag | Size |
+| Linux Distribution | Docker Image Tag      | Size |
 |--------------------|-----------------------|------|
-| [Alpine 3.16]      | alpine-3.16           | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.16-v3?style=for-the-badge)](#)  |
-| [Alpine 3.17]      | alpine-3.17           | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.17-v3?style=for-the-badge)](#)  |
-| [Alpine 3.18]      | alpine-3.18           | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.18-v3?style=for-the-badge)](#)  |
-| [Alpine 3.19]      | alpine-3.19           | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.19-v3?style=for-the-badge)](#)  |
-| [Alpine 3.20]      | alpine-3.20           | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.20-v3?style=for-the-badge)](#)  |
-| [Debian 10]        | debian-10             | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-10-v3?style=for-the-badge)](#)    |
-| [Debian 11]        | debian-11             | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-11-v3?style=for-the-badge)](#)    |
-| [Debian 12]        | debian-12             | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-12-v3?style=for-the-badge)](#)    |
-| [Ubuntu 16.04 LTS] | ubuntu-16.04          | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-16.04-v3?style=for-the-badge)](#) |
-| [Ubuntu 18.04 LTS] | ubuntu-18.04          | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-18.04-v3?style=for-the-badge)](#) |
-| [Ubuntu 20.04 LTS] | ubuntu-20.04          | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-20.04-v3?style=for-the-badge)](#) |
-| [Ubuntu 22.04 LTS] | ubuntu-22.04          | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-22.04-v3?style=for-the-badge)](#) |
-| [Ubuntu 24.04 LTS] | ubuntu-24.04          | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-24.04-v3?style=for-the-badge)](#) |
+| [Alpine 3.16]      | alpine-3.16-vX.Y.Z    | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.16-v3?style=for-the-badge)](#)  |
+| [Alpine 3.17]      | alpine-3.17-vX.Y.Z    | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.17-v3?style=for-the-badge)](#)  |
+| [Alpine 3.18]      | alpine-3.18-vX.Y.Z    | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.18-v3?style=for-the-badge)](#)  |
+| [Alpine 3.19]      | alpine-3.19-vX.Y.Z    | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.19-v3?style=for-the-badge)](#)  |
+| [Alpine 3.20]      | alpine-3.20-vX.Y.Z    | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.20-v3?style=for-the-badge)](#)  |
+| [Debian 10]        | debian-10-vX.Y.Z      | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-10-v3?style=for-the-badge)](#)    |
+| [Debian 11]        | debian-11-vX.Y.Z      | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-11-v3?style=for-the-badge)](#)    |
+| [Debian 12]        | debian-12-vX.Y.Z      | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-12-v3?style=for-the-badge)](#)    |
+| [Ubuntu 16.04 LTS] | ubuntu-16.04-vX.Y.Z   | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-16.04-v3?style=for-the-badge)](#) |
+| [Ubuntu 18.04 LTS] | ubuntu-18.04-vX.Y.Z   | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-18.04-v3?style=for-the-badge)](#) |
+| [Ubuntu 20.04 LTS] | ubuntu-20.04-vX.Y.Z   | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-20.04-v3?style=for-the-badge)](#) |
+| [Ubuntu 22.04 LTS] | ubuntu-22.04-vX.Y.Z   | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-22.04-v3?style=for-the-badge)](#) |
+| [Ubuntu 24.04 LTS] | ubuntu-24.04-vX.Y.Z   | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-24.04-v3?style=for-the-badge)](#) |
+
+Each Docker image is tagged with the Linux distribution and the release version.
+All release versions can be found under the [Releases] page.
+
+Version part of the tag can be decomposed in the following way:
+
+| Tag           | Description                                              |
+|---------------|----------------------------------------------------------|
+| distro-vX.Y.Z | Exact version of the image.                              |
+| distro-vX.Y   | Latest version of a specific minor version of the image. |
+| distro-vX     | Latest version of a specific major version of the image. |
+
+Finally, all available Docker image tags can also be consulted on [Docker Hub].
 
 [Alpine 3.16]: https://alpinelinux.org
 [Alpine 3.17]: https://alpinelinux.org
@@ -85,17 +97,8 @@ Multiple docker images, based on different Linux distributions, are available:
 [Ubuntu 20.04 LTS]: http://releases.ubuntu.com/20.04/
 [Ubuntu 22.04 LTS]: http://releases.ubuntu.com/22.04/
 [Ubuntu 24.04 LTS]: http://releases.ubuntu.com/24.04/
-
-### Content
-
-Here are the main components of the baseimage:
-
-  * An init system.
-  * A process supervisor, with proper PID 1 functionality (proper reaping of
-    processes).
-  * Useful tools to ease container building.
-  * Environment to better support dockerized applications.
-
+[Releases]: https://github.com/jlesage/docker-baseimage/releases
+[Docker Hub]: https://hub.docker.com/r/jlesage/baseimage/tags
 
 ### Versioning
 
@@ -108,20 +111,16 @@ version format is `MAJOR.MINOR.PATCH`, where an increment of the:
 
 [semantic versioning]: https://semver.org
 
-### Tags
+### Content
 
-The baseimage is available under multiple tags. A tag is made from the
-corresponding Linux distribution and the release version.
+Here are the main components of the baseimage:
 
-| Tag           | Description                                              |
-|---------------|----------------------------------------------------------|
-| distro-vX.Y.Z | Exact version of the image.                              |
-| distro-vX.Y   | Latest version of a specific minor version of the image. |
-| distro-vX     | Latest version of a specific major version of the image. |
+  * An init system.
+  * A process supervisor, with proper PID 1 functionality (proper reaping of
+    processes).
+  * Useful tools to ease container building.
+  * Environment to better support dockerized applications.
 
-All available tags can be consulted on [Docker Hub].
-
-[Docker Hub]: https://hub.docker.com/r/jlesage/baseimage/tags
 
 ## Getting started
 
