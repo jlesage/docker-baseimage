@@ -17,6 +17,14 @@ baseimage:
     long-lived application.
   gui: false
   history:
+    - version: 3.6.3
+      date: 2024-08-07
+      changes:
+        added:
+          - 'Image based on Debian 12.'
+          - 'Image based on Ubuntu 24.04.'
+        changed:
+          - 'Rebuild against latest distro images to get security fixes.'
     - version: 3.6.2
       date: 2024-07-28
       changes:
