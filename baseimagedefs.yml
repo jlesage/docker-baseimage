@@ -103,7 +103,7 @@ baseimage:
       date: 2023-02-13
       changes:
         fixed:
-          - 'Limit the maximum number of opened files on system having a very large, unlimited value.  This prevents unnecessary waste of CPU resources and time for applications trying to close all possible file descriptors.'
+          - 'Limit the maximum number of opened files on system having a very large, unlimited value. This prevents unnecessary waste of CPU resources and time for applications trying to close all possible file descriptors.'
     - version: 3.4.4
       date: 2023-02-09
       changes:
@@ -142,7 +142,7 @@ baseimage:
       date: 2022-12-10
       changes:
         fixed:
-          - 'Force the value of the `PATH` environment variable.  Any value configured during creation of the container should not affect operation of the container.'
+          - 'Force the value of the `PATH` environment variable. Any value configured during creation of the container should not affect operation of the container.'
     - version: 3.3.2
       date: 2022-12-01
       changes:
@@ -249,7 +249,7 @@ baseimage:
           - 'Make sure to read the documentation to understand how to adjust applications built with version 2.x of the baseimage.'
         removed:
           - 'Baseimages based on Alpine Linux 3.10, 3.11 and 3.12.'
-          - 'Glibc version of Alpine Linux Docker images.  Glibc can instead be installed manually with the provided install script.'
+          - 'Glibc version of Alpine Linux Docker images. Glibc can instead be installed manually with the provided install script.'
           - 'The `with-contenv` script: its usage is no longer needed.'
     - version: 2.4.6
       date: 2021-12-29
@@ -388,18 +388,18 @@ baseimage:
     - version: 1.1.1
       date: 2017-07-28
       changes:
-        - 'Make sure to remove the container shutdown indication during startup.  This fixes the behavior of `KEEP_APP_RUNNING` variable after a restart of the container.'
+        - 'Make sure to remove the container shutdown indication during startup. This fixes the behavior of `KEEP_APP_RUNNING` variable after a restart of the container.'
     - version: 1.1.0
       date: 2017-07-17
       changes:
-        - 'The following environment variables from the *XDG Base Directory Specification* are now set.  Applications following this specification will have their configuration and data stored under `/config`.'
+        - 'The following environment variables from the *XDG Base Directory Specification* are now set. Applications following this specification will have their configuration and data stored under `/config`.'
         - '2:XDG_DATA_HOME=/config/xdg/data'
         - '2:XDG_CONFIG_HOME=/config/xdg/config'
         - '2:XDG_CACHE_HOME=/config/xdg/cache'
     - version: 1.0.0
       date: 2017-07-14
       changes:
-        - 'Initial release.  This baseimage can be used to build containers running long-lived applications that don''t require an X environment.  It is the result of the split of the baseimage `jlesage/baseimage-gui`, from which all non-GUI related stuff has been moved into this new baseimage.'
+        - 'Initial release. This baseimage can be used to build containers running long-lived applications that don''t require an X environment. It is the result of the split of the baseimage `jlesage/baseimage-gui`, from which all non-GUI related stuff has been moved into this new baseimage.'
 
 container:
 
@@ -451,7 +451,7 @@ container:
     - name: INSTALL_PACKAGES_INTERNAL
       description: >-
         Space-separated list of packages to install during the startup of the
-        container.  Packages are installed from the repository of the Linux
+        container. Packages are installed from the repository of the Linux
         distribution this container is based on.
       type: internal
     - name: SUP_GROUP_IDS_INTERNAL
@@ -469,7 +469,7 @@ container:
       default: 5000
     - name: USER_ID
       description: >-
-        ID of the user the application runs as.  See
+        ID of the user the application runs as. See
         [User/Group IDs](#usergroup-ids) to better understand when this should
         be set.
       type: public
@@ -483,7 +483,7 @@ container:
         mask: false
     - name: GROUP_ID
       description: >-
-        ID of the group the application runs as.  See
+        ID of the group the application runs as. See
         [User/Group IDs](#usergroup-ids) to better understand when this should
         be set.
       type: public
@@ -502,9 +502,9 @@ container:
     - name: UMASK
       description: >-
         Mask that controls how permissions are set for newly created files and
-        folders.  The value of the mask is in octal notation.  By default, the
+        folders. The value of the mask is in octal notation. By default, the
         default umask value is `0022`, meaning that newly created files and
-        folders are readable by everyone, but only writable by the owner.  See
+        folders are readable by everyone, but only writable by the owner. See
         the online umask calculator at http://wintelguy.com/umask-calc.pl.
       type: public
       default: "0022"
@@ -512,7 +512,7 @@ container:
         title: Umask
         description: >-
           Mask that controls how file permissions are set for newly created
-          files.  The value of the mask is in octal notation.
+          files. The value of the mask is in octal notation.
         default: "0000"
         display: advanced
         required: false
@@ -520,18 +520,18 @@ container:
     - name: LANG
       description: >-
         Set the [locale](https://en.wikipedia.org/wiki/Locale_(computer_software)),
-        which defines the application's language, **if supported**.  Format of
+        which defines the application's language, **if supported**. Format of
         the locale is `language[_territory][.codeset]`, where language is an
         [ISO 639 language code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes),
         territory is an [ISO 3166 country code](https://en.wikipedia.org/wiki/ISO_3166-1#Current_codes)
-        and codeset is a character set, like `UTF-8`.  For example, Australian
+        and codeset is a character set, like `UTF-8`. For example, Australian
         English using the UTF-8 encoding is `en_AU.UTF-8`.
       type: public
       default: en_US.UTF-8
     - name: TZ
       description: >-
         [TimeZone](http://en.wikipedia.org/wiki/List_of_tz_database_time_zones)
-        used by the container.  Timezone can also be set by mapping
+        used by the container. Timezone can also be set by mapping
         `/etc/localtime` between the host and the container.
       type: public
       default: Etc/UTC
@@ -543,19 +543,19 @@ container:
       default: 0
     - name: APP_NICENESS
       description: >-
-        Priority at which the application should run.  A niceness value of -20
-        is the highest priority and 19 is the lowest priority.  The default
-        niceness value is 0.  **NOTE**: A negative niceness (priority increase)
-        requires additional permissions.  In this case, the container should be
+        Priority at which the application should run. A niceness value of -20
+        is the highest priority and 19 is the lowest priority. The default
+        niceness value is 0. **NOTE**: A negative niceness (priority increase)
+        requires additional permissions. In this case, the container should be
         run with the docker option `--cap-add=SYS_NICE`.
       type: public
       default: 0
       unraid_template:
         title: Niceness (priority)
         description: >-
-          Priority at which the application should run.  A niceness value of -20
+          Priority at which the application should run. A niceness value of -20
           is the highest priority and 19 is the lowest priority.
-          NOTE: Setting a negative value requires additional permissions.  Thus,
+          NOTE: Setting a negative value requires additional permissions. Thus,
           "--cap-add=SYS_NICE" must be added to Extra Parameters (shown when
           Advanced View is enabled).
         display: advanced
@@ -565,10 +565,10 @@ container:
       description: >-
         Space-separated list of packages to install during the startup of the
         container.
-        {%- if app is not defined %}  Packages are installed from the repository of the
+        {%- if app is not defined %} Packages are installed from the repository of the
         Linux distribution this container is based on.
-        {%- else %}  List of available packages can be found at {% if app.base_os == 'alpine' %}https://pkgs.alpinelinux.org{% elif app.base_os == 'debian' %}https://www.debian.org/distrib/packages{% elif app.base_os == 'ubuntu' %}https://packages.ubuntu.com{% endif %}.
-        {%- endif %}  **ATTENTION**: Container functionality can be affected when
+        {%- else %} List of available packages can be found at {% if app.base_os == 'alpine' %}https://pkgs.alpinelinux.org{% elif app.base_os == 'debian' %}https://www.debian.org/distrib/packages{% elif app.base_os == 'ubuntu' %}https://packages.ubuntu.com{% endif %}.
+        {%- endif %} **ATTENTION**: Container functionality can be affected when
         installing a package that overrides existing container files (e.g. binaries).
       type: public
     - name: PACKAGES_MIRROR
