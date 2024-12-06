@@ -17,6 +17,13 @@ baseimage:
     long-lived application.
   gui: false
   history:
+    - version: 3.6.4
+      date: 2024-12-06
+      changes:
+        added:
+          - 'Image based on Alpine 3.21.'
+        changed:
+          - 'Rebuild against latest distro images to get security fixes.'
     - version: 3.6.3
       date: 2024-08-07
       changes:
