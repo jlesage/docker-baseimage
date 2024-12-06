@@ -560,7 +560,7 @@ container:
         container.
         {%- if app is not defined %}  Packages are installed from the repository of the
         Linux distribution this container is based on.
-        {%- else %}  List of available packages can be found at {% if app.base_os == 'alpine' %}https://mirrors.alpinelinux.org{% elif app.base_os == 'debian' %}https://www.debian.org/distrib/packages{% elif app.base_os == 'ubuntu' %}https://packages.ubuntu.com{% endif %}.
+        {%- else %}  List of available packages can be found at {% if app.base_os == 'alpine' %}https://pkgs.alpinelinux.org{% elif app.base_os == 'debian' %}https://www.debian.org/distrib/packages{% elif app.base_os == 'ubuntu' %}https://packages.ubuntu.com{% endif %}.
         {%- endif %}  **ATTENTION**: Container functionality can be affected when
         installing a package that overrides existing container files (e.g. binaries).
       type: public
