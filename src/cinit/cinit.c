@@ -189,6 +189,7 @@ typedef struct {
     int log_prefix_length;                /**< Length of log prefixes. */
     bool debug;                           /**< Whether or not debug is enabled. */
     unsigned int services_gracetime;      /**< Services gracetimes (msec). */
+    unsigned int default_srv_ready_timeout; /**< Maximum time (in msec) to wait for a service to be ready. */
 
     uid_t default_srv_uid;                /**< Default UID of services. */
     gid_t default_srv_gid;                /**< Default UID of services. */
@@ -212,6 +213,7 @@ static context_t g_ctx = {
     .log_prefix_length = strlen(DEFAULT_PROGRAM_NAME),
     .debug = false,
     .services_gracetime = SERVICES_DEFAULT_GRACETIME,
+    .default_srv_ready_timeout = SERVICE_DEFAULT_READY_TIMEOUT,
     .default_srv_uid = SERVICE_DEFAULT_UID,
     .default_srv_gid = SERVICE_DEFAULT_GID,
     .default_srv_sgid_list = { 0 },
@@ -221,12 +223,13 @@ static context_t g_ctx = {
     .exit_code = 0,
 };
 
-static const char* const short_options = "dhr:g:p:u:i:m:s:";
+static const char* const short_options = "dhr:g:t:p:u:i:m:s:";
 static struct option long_options[] = {
     { "debug", no_argument, NULL, 'd' },
     { "progname", required_argument, NULL, 'p' },
     { "root-directory", required_argument, NULL, 'r' },
     { "services-gracetime", required_argument, NULL, 'g' },
+    { "default-ready-timeout", required_argument, NULL, 't' },
     { "default-service-uid", required_argument, NULL, 'u' },
     { "default-service-gid", required_argument, NULL, 'i' },
     { "default-service-sgid-list", required_argument, NULL, 's' },
@@ -458,7 +461,7 @@ static int exec_service_cmd(int service, const char *cmd, const char *cmd_path, 
 /**
  * Service logger.
  *
- * This function is intented to be run into a thread.  It handles data written
+ * This function is intented to be run into a thread. It handles data written
  * to both stdin and stderr of a service, by prefixing the name of the service
  * to every lines.
  *
@@ -690,7 +693,7 @@ static int load_service(const char *service)
         memcpy(SRV(sid).sgid_list, g_ctx.default_srv_sgid_list, sizeof(SRV(sid).sgid_list));
         SRV(sid).sgid_list_size = g_ctx.default_srv_sgid_list_size;
         SRV(sid).umask = g_ctx.default_srv_umask;
-        SRV(sid).ready_timeout = SERVICE_DEFAULT_READY_TIMEOUT;
+        SRV(sid).ready_timeout = g_ctx.default_srv_ready_timeout;
         SRV(sid).min_running_time = SERVICE_DEFAULT_MIN_RUNNING_TIME;
 
         // Check if this is a service group.
@@ -987,7 +990,7 @@ static pid_t fork_and_exec(int service)
     ASSERT_VALID_SERVICE_INDEX(service);
 
 #ifndef SINGLE_CHILD_STDOUT_STDERR_STREAM
-    // Create pseudo-terminals for stdout and stderr.  The stdout and stderr
+    // Create pseudo-terminals for stdout and stderr. The stdout and stderr
     // of the child process will be connected to 2 different pseudo-terminals.
     // Pseudo-terminals are needed to disable buffering on the child side. Also,
     // 2 differents pseudo-terminals are needed because we want to be able to
@@ -1008,7 +1011,7 @@ static pid_t fork_and_exec(int service)
 #endif
 
 #ifdef SINGLE_CHILD_STDOUT_STDERR_STREAM
-    // Use forkpty() to disable buffering on child side.  forkpty() redirects
+    // Use forkpty() to disable buffering on child side. forkpty() redirects
     // stdout and stderr into a single stream.
     switch (p = forkpty(&pty_master, NULL, NULL, NULL)) {
 #else
@@ -1168,7 +1171,7 @@ static pid_t fork_and_exec(int service)
             SRV(service).stdout_fd = pty_stdout[0];
             SRV(service).stderr_fd = pty_stderr[0];
 
-            // Slave file descriptors of pseudo-terminals are not needed.  We
+            // Slave file descriptors of pseudo-terminals are not needed. We
             // are not sending anything to child process.
             close_fd(&pty_stdout[1]);
             close_fd(&pty_stderr[1]);
@@ -1209,7 +1212,7 @@ static void start_service(int service)
             log_debug("started service '%s'.", SRV(service).name);
             SRV(service).start_time = get_time();
 
-            // Service has been successfully started.  Now create its logger
+            // Service has been successfully started. Now create its logger
             // thread.
 
             ASSERT_LOG(!SRV(service).logger_started,
@@ -1608,7 +1611,7 @@ static void handle_killed(pid_t killed, int status)
  * Reap child processes that have died.
  *
  * @param[in] period The minimum amount of time (in milliseconds) the function
- *                   should perform reaping.  A value of -1 means until all
+ *                   should perform reaping. A value of -1 means until all
  *                   child processes have been reaped.
  * @param[in] service When set, the function will perform reaping until the
  *                    specified service gets reaped.
@@ -1657,7 +1660,7 @@ static bool child_handler(int period, int service)
  *
  * The shutdown sequence consists in the following steps:
  *
- *   1) All services are stopped in reverse order.  We wait for a maximum of
+ *   1) All services are stopped in reverse order. We wait for a maximum of
  *      250msec before proceeding to the next service.
  *   2) If some processes are still alive, a TERM signal is sent to everyone.
  *   3) Processes are reaped for a maximum of 5 seconds.
@@ -1772,6 +1775,15 @@ static void parse_args(int argc, char *argv[])
                             optarg, e.mMessage);
                 }
                 break;
+            case 't':
+                Try {
+                    string_to_uint(optarg, &g_ctx.default_srv_ready_timeout);
+                }
+                Catch (e) {
+                    ThrowMessage("Invalid default service ready timeout value '%s': %s.",
+                            optarg, e.mMessage);
+                }
+                break;
             case 'u':
                 Try {
                     string_to_uid(optarg, &g_ctx.default_srv_uid);
@@ -1851,21 +1863,23 @@ static void usage(const char *progname)
     printf("Usage: %s [OPTIONS...]\n", progname);
     printf("\n");
     printf("Options:\n");
-    printf("  -d, --debug                            Enable debug logging.\n");
-    printf("  -p, --progname <NAME>                  Override the name that will be displayed in log messages to NAME.\n");
-    printf("  -r, --root-directory <DIR>             Set the root directory to DIR.  Default is " SERVICES_DEFAULT_ROOT ".\n");
-    printf("  -g, --services-gracetime <VALUE>       Set the amount of time (in msec) allowed to\n"
-           "                                         services to gracefully terminate before sending\n"
-           "                                         the KILL signal to everyone.  Default is %d msec.\n", SERVICES_DEFAULT_GRACETIME);
-    printf("  -u, --default-service-uid <VALUE>      UID to apply when not set in service's definition directory.\n");
-    printf("                                         Default is %d.\n", SERVICE_DEFAULT_UID);
-    printf("  -i, --default-service-gid <VALUE>      GID to apply when not set in service's definition directory.\n");
-    printf("                                         Default is %d.\n", SERVICE_DEFAULT_GID);
-    printf("  -s, --default-service-sgid-list <LIST> Comma-separated list of supplementary groups to apply when not\n");
-    printf("                                         set in service's definition directory.  No group by default.\n");
-    printf("  -m, --default-service-umask <VALUE>    Umask value (in octal notation) to apply when not set in service's\n");
-    printf("                                         definition directory.  Default is 0022.\n");
-    printf("  -h, --help                             Display this help and exit.\n");
+    printf("  -d, --debug                                 Enable debug logging.\n");
+    printf("  -p, --progname <NAME>                       Override the name that will be displayed in log messages to NAME.\n");
+    printf("  -r, --root-directory <DIR>                  Set the root directory to DIR. Default is " SERVICES_DEFAULT_ROOT ".\n");
+    printf("  -g, --services-gracetime <VALUE>            Set the amount of time (in msec) allowed to\n"
+           "                                              services to gracefully terminate before sending\n"
+           "                                              the KILL signal to everyone. Default is %d msec.\n", SERVICES_DEFAULT_GRACETIME);
+    printf("  -t, --default-service-ready-timeout <VALUE> Maximum amount of time (in msec) to wait for a\n"
+           "                                              service to be ready. Default is %d msec.\n", SERVICE_DEFAULT_READY_TIMEOUT);
+    printf("  -u, --default-service-uid <VALUE>           UID to apply when not set in service's definition directory.\n");
+    printf("                                              Default is %d.\n", SERVICE_DEFAULT_UID);
+    printf("  -i, --default-service-gid <VALUE>           GID to apply when not set in service's definition directory.\n");
+    printf("                                              Default is %d.\n", SERVICE_DEFAULT_GID);
+    printf("  -s, --default-service-sgid-list <LIST>      Comma-separated list of supplementary groups to apply when not\n");
+    printf("                                              set in service's definition directory. No group by default.\n");
+    printf("  -m, --default-service-umask <VALUE>         Umask value (in octal notation) to apply when not set in service's\n");
+    printf("                                              definition directory. Default is 0022.\n");
+    printf("  -h, --help                                  Display this help and exit.\n");
 }
 
 int main(int argc, char *argv[])
@@ -1927,9 +1941,9 @@ int main(int argc, char *argv[])
         sa.sa_handler = sigchild; sigaction(SIGCHLD, &sa, 0);
     }
 
-    // Limit the maximum number of opened files if needed.  The system limit
+    // Limit the maximum number of opened files if needed. The system limit
     // might be set to "unlimited", meaning it can be 1048576 or 1073741816
-    // depending on the kernel.  At 1073741816, this creates a huge delay with
+    // depending on the kernel. At 1073741816, this creates a huge delay with
     // applications trying to close all possible file descriptors.
     // See https://github.com/moby/moby/issues/44547
     {
@@ -1984,14 +1998,14 @@ int main(int argc, char *argv[])
 
     // Start the main loop.
     while (true) {
-        // Check if shutdown has been requested.  We may have received a
+        // Check if shutdown has been requested. We may have received a
         // termination signal.
         BREAK_IF_SHUTDOWN_REQUESTED();
 
         // Process killed services.
         bool all_children_terminated = child_handler(0, -1);
  
-        // Check if shutdown has been requested.  A terminated service may
+        // Check if shutdown has been requested. A terminated service may
         // have triggered a shutdown.
         BREAK_IF_SHUTDOWN_REQUESTED();
 
