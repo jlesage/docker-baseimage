@@ -229,7 +229,7 @@ static struct option long_options[] = {
     { "progname", required_argument, NULL, 'p' },
     { "root-directory", required_argument, NULL, 'r' },
     { "services-gracetime", required_argument, NULL, 'g' },
-    { "default-ready-timeout", required_argument, NULL, 't' },
+    { "default-service-ready-timeout", required_argument, NULL, 't' },
     { "default-service-uid", required_argument, NULL, 'u' },
     { "default-service-gid", required_argument, NULL, 'i' },
     { "default-service-sgid-list", required_argument, NULL, 's' },
