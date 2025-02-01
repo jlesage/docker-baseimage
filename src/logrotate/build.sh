@@ -22,7 +22,7 @@ POPT_URL=https://ftp.osuosl.org/pub/rpm/popt/releases/popt-1.x/popt-${POPT_VERSI
 export CFLAGS="-Os -fomit-frame-pointer"
 export CXXFLAGS="$CFLAGS"
 export CPPFLAGS="$CFLAGS"
-export LDFLAGS="-Wl,--as-needed --static -static -Wl,--strip-all"
+export LDFLAGS="-fuse-ld=lld -Wl,--as-needed --static -static -Wl,--strip-all"
 
 export CC=xx-clang
 export CXX=xx-clang++
@@ -39,6 +39,7 @@ apk --no-cache add \
     curl \
     build-base \
     clang \
+    lld \
 
 xx-apk --no-cache --no-scripts add \
     g++ \

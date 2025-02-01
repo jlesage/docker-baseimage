@@ -35,7 +35,7 @@ FROM --platform=$BUILDPLATFORM alpine:3.20 AS cinit
 ARG TARGETPLATFORM
 COPY --from=xx / /
 COPY src/cinit /tmp/cinit
-RUN apk --no-cache add make clang
+RUN apk --no-cache add make clang lld
 RUN xx-apk --no-cache add gcc musl-dev
 RUN CC=xx-clang \
     make -C /tmp/cinit
@@ -49,7 +49,7 @@ ARG TARGETPLATFORM
 ARG TARGETARCH
 COPY --from=xx / /
 COPY src/logmonitor /tmp/logmonitor
-RUN apk --no-cache add make clang
+RUN apk --no-cache add make clang lld
 RUN xx-apk --no-cache add gcc musl-dev linux-headers
 RUN CC=xx-clang \
     make -C /tmp/logmonitor
@@ -61,13 +61,13 @@ RUN upx /tmp/logmonitor/logmonitor
 FROM --platform=$BUILDPLATFORM alpine:3.20 AS su-exec
 ARG TARGETPLATFORM
 COPY --from=xx / /
-RUN apk --no-cache add curl make clang
+RUN apk --no-cache add curl make clang lld
 RUN xx-apk --no-cache add gcc musl-dev
 RUN mkdir /tmp/su-exec
 RUN curl -# -L https://github.com/ncopa/su-exec/archive/v0.2.tar.gz | tar xz --strip 1 -C /tmp/su-exec
 RUN CC=xx-clang \
     CFLAGS="-Os -fomit-frame-pointer" \
-    LDFLAGS="-static -Wl,--strip-all" \
+    LDFLAGS="-fuse-ld=lld -static -Wl,--strip-all" \
     make -C /tmp/su-exec
 RUN xx-verify --static /tmp/su-exec/su-exec
 COPY --from=upx /usr/bin/upx /usr/bin/upx

@@ -4,8 +4,8 @@ RM = rm -f
 
 CPPFLAGS = -MMD
 CFLAGS = -Wall -Werror -std=gnu11 -Os -fomit-frame-pointer -DCEXCEPTION_USE_CONFIG_FILE
-LDFLAGS = -static -Wl,--strip-all
-LDLIBS = -lpthread
+LDFLAGS = -fuse-ld=lld -static -Wl,--strip-all
+LDLIBS = -lpthread -lmagic
 
 # Logging to stdout or stderr doesn't make dany differnce once in the
 # container's log.
