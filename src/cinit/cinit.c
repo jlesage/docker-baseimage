@@ -82,7 +82,7 @@
 /**
  * Maximum time (in msec) to wait for a service to be ready.
  */
-#define SERVICE_DEFAULT_READY_TIMEOUT 5000
+#define SERVICE_DEFAULT_READY_TIMEOUT 10000
 
 /**
  * Minimum amount of time (in msec) a service must be running before considering
