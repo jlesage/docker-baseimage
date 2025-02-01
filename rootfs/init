@@ -199,6 +199,7 @@ STAGE=init
 
 CINIT_ARGS="--progname supervisor \
     --services-gracetime ${SERVICES_GRACETIME:-5000} \
+    --default-service-ready-timeout ${DEFAULT_SERVICE_READY_TIMEOUT:-5000} \
     --default-service-uid $USER_ID \
     --default-service-gid $GROUP_ID \
 "
