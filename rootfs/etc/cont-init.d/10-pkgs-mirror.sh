@@ -9,7 +9,7 @@ set -u # Treat unset variables as an error.
 
 if [ -z "${PACKAGES_MIRROR:-}" ]; then
     # Nothing to do.
-    return
+    exit 0
 fi
 
 . /etc/os-release
