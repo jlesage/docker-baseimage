@@ -954,6 +954,12 @@ static int load_service(const char *service)
             ThrowMessage("interval cannot be used with respawned service");
         }
 
+        // The per-service ready timeout is configured statically, while the
+        // default value can be adjusted dynamically. If the default value is
+        // raised above what has been configured for the service, the default
+        // value should be taken instead.
+        SRV(sid).ready_timeout = MAX(SRV(sid).ready_timeout, g_ctx.default_srv_ready_timeout);
+
         // PID of 0 means service not running.
         SRV(sid).pid = 0;
 
