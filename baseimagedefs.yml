@@ -17,6 +17,11 @@ baseimage:
     long-lived application.
   gui: false
   history:
+    - version: 3.6.5
+      date: 2025-02-01
+      changes:
+        changed:
+          - 'Increased the default service ready timeout from 5 seconds to 10 seconds and allow runtime adjustment via environment variable.'
     - version: 3.6.4
       date: 2024-12-06
       changes:
