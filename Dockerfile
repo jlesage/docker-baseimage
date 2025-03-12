@@ -83,6 +83,16 @@ RUN xx-verify --static /tmp/logrotate-install/usr/sbin/logrotate
 COPY --from=upx /usr/bin/upx /usr/bin/upx
 RUN upx /tmp/logrotate-install/usr/sbin/logrotate
 
+# Build uuidgen.
+FROM --platform=$BUILDPLATFORM alpine:3.20 AS uuidgen
+ARG TARGETPLATFORM
+COPY --from=xx / /
+COPY src/uuidgen /tmp/build
+RUN /tmp/build/build.sh
+RUN xx-verify --static /tmp/util-linux-install/usr/bin/uuidgen
+COPY --from=upx /usr/bin/upx /usr/bin/upx
+RUN upx /tmp/util-linux-install/usr/bin/uuidgen
+
 # Pull base image.
 FROM ${BASEIMAGE}
 ARG TARGETPLATFORM
@@ -101,6 +111,9 @@ COPY --link --from=su-exec /tmp/su-exec/su-exec /opt/base/sbin/su-exec
 
 # Install logrotate.
 COPY --link --from=logrotate /tmp/logrotate-install/usr/sbin/logrotate /opt/base/sbin/
+
+# Install uuidgen.
+COPY --link --from=uuidgen /tmp/util-linux-install/usr/bin/uuidgen /opt/base/bin/
 
 # Copy helpers.
 COPY helpers/* /opt/base/bin/
