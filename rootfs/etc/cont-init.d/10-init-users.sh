@@ -107,6 +107,9 @@ add_user_to_group root root
 # Add the 'shadow' group.
 add_group shadow 42
 
+# Add the 'cinit' group.
+add_group cinit 72
+
 # Ubuntu and debian require additional user/group for proper packages
 # installation.
 . /etc/os-release

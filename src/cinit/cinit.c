@@ -17,6 +17,7 @@
 #include <stdarg.h>
 #include <ctype.h>
 #include <pty.h>
+#include <fcntl.h>
 
 #include "utils.h"
 #include "log.h"
@@ -39,6 +40,11 @@
 #ifndef SERVICES_DEFAULT_ROOT
 #define SERVICES_DEFAULT_ROOT "/etc/services.d"
 #endif
+
+/*
+ * Path of the named pipe (FIFO) used to received commands.
+ */
+#define CMD_FIFO_PATH "/tmp/.cinit_cmd"
 
 /**
  * The maximum number of supported services.
@@ -180,6 +186,7 @@ typedef struct {
     pthread_t logger;
     atomic_bool logger_exit;
     bool logger_started;
+    bool restart_requested;
 } service_t;
 
 /** Context definition. */
@@ -1588,12 +1595,12 @@ static void handle_killed(pid_t killed, int status)
             }
         }
         Catch (e) {
-            log_err("could execute finish script of service '%s': %s.",
+            log_err("could not execute finish script of service '%s': %s.",
                     SRV(sid).name, e.mMessage);
         }
 
         // Check if termination of this service should trigger a shutdown.
-        if (!SHUTDOWN_REQUESTED() && SRV(sid).shutdown_on_terminate) {
+        if (!SHUTDOWN_REQUESTED() && !SRV(sid).restart_requested && SRV(sid).shutdown_on_terminate) {
             // Termination of the service should cause a shutdown.
             log("service '%s' exited, shutting down...", SRV(sid).name);
             REQUEST_SHUTDOWN();
@@ -1892,7 +1899,9 @@ int main(int argc, char *argv[])
 {
     CEXCEPTION_T e;
 
+    int cmd_fd = -1;
     int exit_status = 0;
+    struct group *grp = NULL;
 
     // Get the program name.
     const char *progname = strrchr(argv[0], '/');
@@ -1921,6 +1930,32 @@ int main(int argc, char *argv[])
         else {
             printf("%s\n", e.mMessage);
         }
+        return EXIT_FAILURE;
+    }
+
+    // Create the named pipe (FIFO).
+    unlink(CMD_FIFO_PATH);
+    if (mkfifo(CMD_FIFO_PATH, 0666) == -1) {
+        printf("Could not create named pipe: %s.\n", strerror(errno));
+        return EXIT_FAILURE;
+    }
+    else if (!(grp = getgrnam("cinit"))) {
+        printf("Could not get cinit group: %s.\n", strerror(errno));
+        return EXIT_FAILURE;
+    }
+    else if (chown(CMD_FIFO_PATH, 0, grp->gr_gid) == -1) {
+        printf("Could not set group of named pipe: %s.\n", strerror(errno));
+        return EXIT_FAILURE;
+    }
+    else if (chmod(CMD_FIFO_PATH, 0660) == -1) {
+        printf("Could not set permissions of named pipe: %s.\n", strerror(errno));
+        return EXIT_FAILURE;
+    }
+
+    // Open the named pipe (FIFO).
+    cmd_fd = open(CMD_FIFO_PATH, O_RDONLY | O_NONBLOCK);
+    if (cmd_fd == -1) {
+        printf("Could not create name pipe: %s.\n", strerror(errno));
         return EXIT_FAILURE;
     }
 
@@ -2021,7 +2056,7 @@ int main(int argc, char *argv[])
             bool services_to_be_restarted = false;
 
             FOR_EACH_SERVICE(sid) {
-                if (SRV(sid).respawn && SRV(sid).pid == 0) {
+                if ((SRV(sid).respawn || SRV(sid).restart_requested) && SRV(sid).pid == 0) {
                     services_to_be_restarted = true;
                     break;
                 }
@@ -2063,15 +2098,46 @@ int main(int argc, char *argv[])
 
         // Process services that needs to be restarted.
         FOR_EACH_SERVICE(sid) {
-            if (SRV(sid).respawn && SRV(sid).pid == 0) {
+            if ((SRV(sid).respawn || SRV(sid).restart_requested) && SRV(sid).pid == 0) {
                 if (get_time() - SRV(sid).start_time > SERVICE_RESTART_DELAY) {
                     log("restarting service '%s'.", SRV(sid).name);
                     Try {
                         start_service(sid);
+                        SRV(sid).restart_requested = false;
                     }
                     Catch (e) {
                         log_err("failed to restart service '%s': %s",
                                 SRV(sid).name, e.mMessage);
+                    }
+                }
+            }
+        }
+
+        // Progress command received from the named pipe.
+        {
+            char buf[256];
+            ssize_t len = read(cmd_fd, buf, sizeof(buf) - 1);
+            if (len > 0) {
+                buf[len] = '\0';
+                terminate_at_first_eol(buf);
+                trim(buf);
+
+                // Restart service command.
+                if (strncmp(buf, "restart:", strlen("restart:")) == 0) {
+                    const char *service = buf + strlen("restart:");
+                    int sid = find_service(service);
+                    if (sid >= 0) {
+                        Try {
+                            log("restart request for service '%s' received.", SRV(sid).name);
+                            stop_service(sid);
+                            SRV(sid).restart_requested = true;
+                        }
+                        Catch (e) {
+                            log_err("failed to stop service '%s': %s", SRV(sid).name, e.mMessage);
+                        }
+                    }
+                    else {
+                        log("service not found: '%s'", service);
                     }
                 }
             }
@@ -2084,6 +2150,12 @@ int main(int argc, char *argv[])
     if (exit_status == 0 && g_ctx.exit_code != 0) {
         exit_status = g_ctx.exit_code;
     }
+
+    // Destroy the named pipe (FIFO).
+    if (cmd_fd != -1) {
+        close(cmd_fd);
+    }
+    unlink(CMD_FIFO_PATH);
 
     // Shutdown all services.
     ASSERT_LOG(SHUTDOWN_REQUESTED(), "Performing shutdown without request.");
