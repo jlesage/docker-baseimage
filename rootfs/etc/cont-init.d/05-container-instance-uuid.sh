@@ -11,7 +11,7 @@ CONTAINER_INSTANCE_ID_FILE=/.docker-instance/uuid
 
 if [ ! -f "$CONTAINER_INSTANCE_ID_FILE" ]; then
     echo "creating container instance uuid..."
-    mkdir -p "$(dirname "$CONTAINER_INSTANCE_ID_FILE")"
+    mkdir --mode=555 "$(dirname "$CONTAINER_INSTANCE_ID_FILE")"
     /opt/base/bin/uuidgen > "$CONTAINER_INSTANCE_ID_FILE"
     chmod 444 "$CONTAINER_INSTANCE_ID_FILE"
 fi
