@@ -158,7 +158,6 @@ RES=\$?
 if [ \$RES -ne 0 ]; then
     echo \$RES > \"$RES_FILE\"
 fi" > "$CHOWN_WRAPPER"
-chmod a+rx "$CHOWN_WRAPPER"
 
 # Define extra find arguments needed when recursivity is disabled.
 FIND_EXTRA_ARGS=
@@ -180,7 +179,7 @@ if [ -n "${GROUP_NAME:-}" ]; then
 fi
 
 # Set ownership on files and folders.
-find "$TARGET" $FIND_EXTRA_ARGS '(' -not -user "$USER_ID" -or -not -group "$GROUP_ID" ')' -exec "$CHOWN_WRAPPER" --no-dereference "$USER_ID:$GROUP_ID" {} +
+find "$TARGET" $FIND_EXTRA_ARGS '(' -not -user "$USER_ID" -or -not -group "$GROUP_ID" ')' -exec /bin/sh "$CHOWN_WRAPPER" --no-dereference "$USER_ID:$GROUP_ID" {} +
 
 # Handle the result.
 RES="$(cat "$RES_FILE")"
