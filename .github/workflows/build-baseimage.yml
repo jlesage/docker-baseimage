@@ -134,6 +134,8 @@ jobs:
 
       - name: Setup BATS
         uses: mig4/setup-bats@v1
+        with:
+          bats-version: 1.11.1
 
       - name: Setup QEMU
         #uses: docker/setup-qemu-action@v3
