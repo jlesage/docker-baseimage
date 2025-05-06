@@ -6,6 +6,7 @@
 #
 
 ARG BASEIMAGE=unknown
+ARG BASEIMAGE_COMMON=unknown
 
 ARG ALPINE_PKGS="\
     # For timezone support
@@ -19,79 +20,8 @@ ARG DEBIAN_PKGS="\
     tzdata \
 "
 
-# Dockerfile cross-compilation helpers.
-FROM --platform=$BUILDPLATFORM tonistiigi/xx AS xx
-
-# Get UPX (statically linked).
-FROM --platform=$BUILDPLATFORM alpine:3.20 AS upx
-ARG UPX_VERSION=4.2.4
-RUN apk --no-cache add curl && \
-    mkdir /tmp/upx && \
-    curl -# -L https://github.com/upx/upx/releases/download/v${UPX_VERSION}/upx-${UPX_VERSION}-amd64_linux.tar.xz | tar xJ --strip 1 -C /tmp/upx && \
-    cp -v /tmp/upx/upx /usr/bin/upx
-
-# Build the init system and process supervisor.
-FROM --platform=$BUILDPLATFORM alpine:3.20 AS cinit
-ARG TARGETPLATFORM
-COPY --from=xx / /
-COPY src/cinit /tmp/cinit
-RUN apk --no-cache add make clang lld
-RUN xx-apk --no-cache add gcc musl-dev
-RUN CC=xx-clang \
-    make -C /tmp/cinit
-RUN xx-verify --static /tmp/cinit/cinit
-COPY --from=upx /usr/bin/upx /usr/bin/upx
-RUN upx /tmp/cinit/cinit
-
-# Build the log monitor.
-FROM --platform=$BUILDPLATFORM alpine:3.20 AS logmonitor
-ARG TARGETPLATFORM
-ARG TARGETARCH
-COPY --from=xx / /
-COPY src/logmonitor /tmp/logmonitor
-RUN apk --no-cache add make clang lld
-RUN xx-apk --no-cache add gcc musl-dev linux-headers
-RUN CC=xx-clang \
-    make -C /tmp/logmonitor
-RUN xx-verify --static /tmp/logmonitor/logmonitor
-COPY --from=upx /usr/bin/upx /usr/bin/upx
-RUN upx /tmp/logmonitor/logmonitor
-
-# Build su-exec
-FROM --platform=$BUILDPLATFORM alpine:3.20 AS su-exec
-ARG TARGETPLATFORM
-COPY --from=xx / /
-RUN apk --no-cache add curl make clang lld
-RUN xx-apk --no-cache add gcc musl-dev
-RUN mkdir /tmp/su-exec
-RUN curl -# -L https://github.com/ncopa/su-exec/archive/v0.2.tar.gz | tar xz --strip 1 -C /tmp/su-exec
-RUN CC=xx-clang \
-    CFLAGS="-Os -fomit-frame-pointer" \
-    LDFLAGS="-fuse-ld=lld -static -Wl,--strip-all" \
-    make -C /tmp/su-exec
-RUN xx-verify --static /tmp/su-exec/su-exec
-COPY --from=upx /usr/bin/upx /usr/bin/upx
-RUN upx /tmp/su-exec/su-exec
-
-# Build logrotate.
-FROM --platform=$BUILDPLATFORM alpine:3.20 AS logrotate
-ARG TARGETPLATFORM
-COPY --from=xx / /
-COPY src/logrotate /tmp/build
-RUN /tmp/build/build.sh
-RUN xx-verify --static /tmp/logrotate-install/usr/sbin/logrotate
-COPY --from=upx /usr/bin/upx /usr/bin/upx
-RUN upx /tmp/logrotate-install/usr/sbin/logrotate
-
-# Build uuidgen.
-FROM --platform=$BUILDPLATFORM alpine:3.20 AS uuidgen
-ARG TARGETPLATFORM
-COPY --from=xx / /
-COPY src/uuidgen /tmp/build
-RUN /tmp/build/build.sh
-RUN xx-verify --static /tmp/util-linux-install/usr/bin/uuidgen
-COPY --from=upx /usr/bin/upx /usr/bin/upx
-RUN upx /tmp/util-linux-install/usr/bin/uuidgen
+# Common stuff of the baseimage.
+FROM ${BASEIMAGE_COMMON} AS baseimage-common
 
 # Pull base image.
 FROM ${BASEIMAGE}
@@ -100,23 +30,8 @@ ARG TARGETPLATFORM
 # Define working directory.
 WORKDIR /tmp
 
-# Install the init system and process supervisor.
-COPY --link --from=cinit /tmp/cinit/cinit /opt/base/sbin/
-
-# Install the log monitor.
-COPY --link --from=logmonitor /tmp/logmonitor/logmonitor /opt/base/bin/
-
-# Install su-exec.
-COPY --link --from=su-exec /tmp/su-exec/su-exec /opt/base/sbin/su-exec
-
-# Install logrotate.
-COPY --link --from=logrotate /tmp/logrotate-install/usr/sbin/logrotate /opt/base/sbin/
-
-# Install uuidgen.
-COPY --link --from=uuidgen /tmp/util-linux-install/usr/bin/uuidgen /opt/base/bin/
-
-# Copy helpers.
-COPY helpers/* /opt/base/bin/
+# Install common software.
+COPY --link --from=baseimage-common / /
 
 # Install system packages.
 ARG ALPINE_PKGS
@@ -158,9 +73,6 @@ RUN \
     else \
         cp /etc/apt/sources.list /defaults/; \
     fi
-
-# Add files.
-COPY rootfs/ /
 
 # Set internal environment variables.
 RUN \
