@@ -1,9 +1,13 @@
 #!/bin/sh
+#
+# This is an OS-agnostic helper to remove installed package(s).
+#
 
 set -e # Exit immediately if a command exits with a non-zero status.
 
 usage() {
-    echo "usage: $(basename "$0") PKG [PKG...]"
+    echo "usage: $(basename "$0") PKG [PKG...]" >&2
+    exit 1
 }
 
 #
@@ -20,26 +24,26 @@ del_pkg_alpine() {
 #
 
 del_pkg_debian() {
-    PKGS=
-    for PKG in "$@"
-    do
+    pkgs=
+    for pkg in "$@"; do
         if ! dpkg --status "$1" 2>&1 | grep -q "^Status: install ok installed"; then
-            if [ -f /var/lib/apt/$PKG.virtual ]; then
-                PKGS="$PKGS $(cat /var/lib/apt/$PKG.virtual)"
-                rm /var/lib/apt/$PKG.virtual
+            if [ -f "/var/lib/apt/${pkg}.virtual" ]; then
+                pkgs="${pkgs} $(cat "/var/lib/apt/${pkg}.virtual")"
+                rm "/var/lib/apt/${pkg}.virtual"
             else
-                PKGS="$PKGS $PKG"
+                pkgs="${pkgs} ${pkg}"
             fi
         else
-            PKGS="$PKGS $PKG"
+            pkgs="${pkgs} ${pkg}"
         fi
     done
 
-    if [ -n "$PKGS" ]; then
-        apt-get -q purge -y $PKGS
+    if [ -n "${pkgs}" ]; then
+        # shellcheck disable=2086
+        apt-get -q purge -y ${pkgs}
         apt-get -q --purge autoremove -y
         rm -rf /var/log/dpkg.log \
-               /var/log/apt/*
+            /var/log/apt/*
     fi
 }
 
@@ -48,7 +52,7 @@ del_pkg_debian() {
 #
 
 del_pkg() {
-    if [ -n "$(which apk)" ]; then
+    if command -v apk > /dev/null; then
         del_pkg_alpine "$@"
     else
         del_pkg_debian "$@"
@@ -61,11 +65,12 @@ del_pkg() {
 
 if [ -z "$1" ]; then
     usage
-    exit 1
 fi
 
-if [ -z "$(which apk)" ]; then
+if command -v apk > /dev/null; then
     export DEBIAN_FRONTEND=noninteractive
 fi
 
 del_pkg "$@"
+
+# vim:ft=sh:ts=4:sw=4:et:sts=4

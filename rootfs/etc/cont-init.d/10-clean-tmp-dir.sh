@@ -1,5 +1,4 @@
 #!/bin/sh
-
 #
 # Clean the /tmp directory.
 #

@@ -4,34 +4,34 @@ set -e # Exit immediately if a command exits with a non-zero status.
 set -u # Treat unset variables as an error.
 
 usage() {
-    >&2 echo "usage: $(basename "$0") VALUE
+    if [ -n "${1:-}" ]; then
+        echo "ERROR: $*" >&2
+        echo "" >&2
+    fi
+
+    echo "usage: $(basename "$0") VALUE
 
 Determine if a boolean value is true.
 
 Arguments:
 
-  VALUE      Boolean value.
-"
+    VALUE      Boolean value.
+" >&2
+    exit 2
 }
 
 ENV_VAL="${1:-}"
 
-if [ "$ENV_VAL" = "-h" ] || [ "$ENV_VAL" = "--help" ]
-then
+if [ "${ENV_VAL}" = "-h" ] || [ "${ENV_VAL}" = "--help" ]; then
     usage
-    exit 2
 fi
 
-if [ -z "$ENV_VAL" ]
-then
-    >&2 echo "ERROR: Boolean value missing."
-    >&2 echo ""
-    usage
-    exit 2
+if [ -z "${ENV_VAL}" ]; then
+    usage "Boolean value missing."
 fi
 
-case "$(echo $ENV_VAL | tr '[:upper:]' '[:lower:]')" in
-    1|true|yes|y|enabled|enable|on) exit 0 ;;
+case "$(echo "${ENV_VAL}" | tr '[:upper:]' '[:lower:]')" in
+    1 | true | yes | y | enabled | enable | on) exit 0 ;;
     *) exit 1 ;;
 esac
 

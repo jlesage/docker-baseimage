@@ -1,5 +1,4 @@
 #!/bin/sh
-
 #
 # Install extra package(s), if requested.
 #
@@ -16,8 +15,10 @@ is_pkg_installed_debian() {
 }
 
 is_pkg_installed() {
-    if [ -n "$(which apk)" ]; then
+    if command -v apk > /dev/null; then
         is_pkg_installed_alpine "$@"
+    elif command -v pacman > /dev/null; then
+        is_pkg_installed_archlinux "$@"
     else
         is_pkg_installed_debian "$@"
     fi
@@ -26,11 +27,11 @@ is_pkg_installed() {
 if [ -n "${INSTALL_PACKAGES:-}" ] || [ -n "${INSTALL_PACKAGES_INTERNAL:-}" ]; then
     echo "installing requested package(s)..."
     for PKG in ${INSTALL_PACKAGES:-} ${INSTALL_PACKAGES_INTERNAL:-}; do
-        if is_pkg_installed "$PKG"; then
-            echo "package '$PKG' already installed"
+        if is_pkg_installed "${PKG}"; then
+            echo "package '${PKG}' already installed"
         else
-            echo "installing '$PKG'..."
-            add-pkg "$PKG"
+            echo "installing '${PKG}'..."
+            add-pkg "${PKG}"
         fi
     done
 fi

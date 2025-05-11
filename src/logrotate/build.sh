@@ -27,7 +27,7 @@ export LDFLAGS="-fuse-ld=lld -Wl,--as-needed --static -static -Wl,--strip-all"
 export CC=xx-clang
 export CXX=xx-clang++
 
-function log {
+log() {
     echo ">>> $*"
 }
 

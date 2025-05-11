@@ -1,5 +1,4 @@
 #!/bin/sh
-
 #
 # Take ownership of files and directories under /config.
 #

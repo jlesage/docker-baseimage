@@ -7,6 +7,6 @@ TITLE="$1"
 MSG="$2"
 LEVEL="$3"
 
-echo "$LEVEL: $TITLE $MSG"
+echo "${LEVEL}: ${TITLE} ${MSG}"
 
 # vim:ft=sh:ts=4:sw=4:et:sts=4

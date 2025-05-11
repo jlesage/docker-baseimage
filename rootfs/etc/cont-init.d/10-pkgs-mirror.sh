@@ -1,5 +1,4 @@
 #!/bin/sh
-
 #
 # Set the configured packages mirror.
 #
@@ -14,46 +13,44 @@ fi
 
 . /etc/os-release
 
-case "$ID" in
+case "${ID}" in
     alpine)
-        echo "setting packages mirror to '$PACKAGES_MIRROR'..."
+        echo "setting packages mirror to '${PACKAGES_MIRROR}'..."
         cp -a /defaults/repositories /etc/apk/repositories
-        sed-patch "s|^https://dl-cdn.alpinelinux.org/alpine/|$PACKAGES_MIRROR/|g" /etc/apk/repositories
+        sed-patch "s|^https://dl-cdn.alpinelinux.org/alpine/|${PACKAGES_MIRROR}/|g" /etc/apk/repositories
         ;;
     debian)
-        echo "setting packages mirror to '$PACKAGES_MIRROR'..."
+        echo "setting packages mirror to '${PACKAGES_MIRROR}'..."
         if [ -f /defaults/debian.sources ]; then
             cp -a /defaults/debian.sources /etc/apt/sources.list.d/debian.sources
-            sed-patch "s|^URIs: http://deb.debian.org/debian\$|URIs: $PACKAGES_MIRROR|g" /etc/apt/sources.list.d/debian.sources
+            sed-patch "s|^URIs: http://deb.debian.org/debian\$|URIs: ${PACKAGES_MIRROR}|g" /etc/apt/sources.list.d/debian.sources
         else
             cp -a /defaults/sources.list /etc/apt/sources.list
-            sed-patch "s|^deb http://deb.debian.org/debian |deb $PACKAGES_MIRROR |g" /etc/apt/sources.list
+            sed-patch "s|^deb http://deb.debian.org/debian |deb ${PACKAGES_MIRROR} |g" /etc/apt/sources.list
         fi
         ;;
     ubuntu)
-        echo "setting packages mirror to '$PACKAGES_MIRROR'..."
+        echo "setting packages mirror to '${PACKAGES_MIRROR}'..."
         if [ -f /defaults/ubuntu.sources ]; then
             cp -a /defaults/ubuntu.sources /etc/apt/sources.list.d/ubuntu.sources
-            if grep -q "http://ports.ubuntu.com/ubuntu-ports/" /etc/apt/sources.list.d/ubuntu.sources
-            then
+            if grep -q "http://ports.ubuntu.com/ubuntu-ports/" /etc/apt/sources.list.d/ubuntu.sources; then
                 # For archs other than i386/i686/x86_64.
-                sed-patch "s|^URIs: http://ports.ubuntu.com/ubuntu-ports/\$|URIs: $PACKAGES_MIRROR|g" /etc/apt/sources.list.d/ubuntu.sources
+                sed-patch "s|^URIs: http://ports.ubuntu.com/ubuntu-ports/\$|URIs: ${PACKAGES_MIRROR}|g" /etc/apt/sources.list.d/ubuntu.sources
             else
-                sed-patch "s|^URIs: http://archive.ubuntu.com/ubuntu/\$|URIs: $PACKAGES_MIRROR|g" /etc/apt/sources.list.d/ubuntu.sources
+                sed-patch "s|^URIs: http://archive.ubuntu.com/ubuntu/\$|URIs: ${PACKAGES_MIRROR}|g" /etc/apt/sources.list.d/ubuntu.sources
             fi
         else
             cp -a /defaults/sources.list /etc/apt/sources.list
-            if grep -q "http://ports.ubuntu.com/ubuntu-ports/" /etc/apt/sources.list
-            then
+            if grep -q "http://ports.ubuntu.com/ubuntu-ports/" /etc/apt/sources.list; then
                 # For archs other than i386/i686/x86_64.
-                sed-patch "s|^deb http://ports.ubuntu.com/ubuntu-ports/ |deb $PACKAGES_MIRROR |g" /etc/apt/sources.list
+                sed-patch "s|^deb http://ports.ubuntu.com/ubuntu-ports/ |deb ${PACKAGES_MIRROR} |g" /etc/apt/sources.list
             else
-                sed-patch "s|^deb http://archive.ubuntu.com/ubuntu/ |deb $PACKAGES_MIRROR |g" /etc/apt/sources.list
+                sed-patch "s|^deb http://archive.ubuntu.com/ubuntu/ |deb ${PACKAGES_MIRROR} |g" /etc/apt/sources.list
             fi
         fi
         ;;
     *)
-        echo "ERROR: unknown OS '$ID'."
+        echo "ERROR: unknown OS '${ID}'."
         exit 1
         ;;
 esac

@@ -7,7 +7,7 @@ if is-bool-val-true "${CONTAINER_DEBUG:-0}"; then
     echo "--verbose"
 fi
 echo "--state"
-echo "$XDG_STATE_HOME"/logrotate/logrotate.status
+echo "${XDG_STATE_HOME}"/logrotate/logrotate.status
 echo "/opt/base/etc/logrotate.conf"
 
 # vim:ft=sh:ts=4:sw=4:et:sts=4

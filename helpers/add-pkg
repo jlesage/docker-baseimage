@@ -1,9 +1,18 @@
 #!/bin/sh
+#
+# This is an OS-agnostic helper to install package(s).
+#
 
 set -e # Exit immediately if a command exits with a non-zero status.
 
 usage() {
-    echo "usage: $(basename "$0") [--virtual NAME ] PKG [PKG...]"
+    echo "usage: $(basename "$0") [--virtual NAME ] PKG [PKG...]" >&2
+    exit 1
+}
+
+die() {
+    echo "ERROR: $*" >&2
+    exit 1
 }
 
 trap : TERM QUIT INT
@@ -21,12 +30,11 @@ install_pkg_alpine() {
     VIRTUAL_PKG="$1"
     shift
 
-    APK_EXTRA_OPTS=
-    if [ "$VIRTUAL_PKG" -eq 1 ]; then
-        APK_EXTRA_OPTS="--virtual"
+    if [ "${VIRTUAL_PKG}" -eq 1 ]; then
+        set -- "--virtual" "$@"
     fi
 
-    apk --no-cache add $APK_EXTRA_OPTS "$@"
+    apk --no-cache add "$@"
 }
 
 cleanup_alpine() {
@@ -45,16 +53,15 @@ install_pkg_debian() {
     VIRTUAL_PKG="$1"
     shift
 
-    if [ "$VIRTUAL_PKG" -eq 1 ]; then
+    if [ "${VIRTUAL_PKG}" -eq 1 ]; then
         VIRTUAL_PKG_NAME=$1
         shift
 
-        if [ -f /var/lib/apt/$VIRTUAL_PKG_NAME.virtual ]; then
-            echo "ERROR: Virtual package '$VIRTUAL_PKG_NAME' already exists."
-            exit 1
+        if [ -f "/var/lib/apt/${VIRTUAL_PKG_NAME}.virtual" ]; then
+            die "Virtual package '${VIRTUAL_PKG_NAME}' already exists."
         fi
 
-        echo "$*" > /var/lib/apt/$VIRTUAL_PKG_NAME.virtual
+        echo "$*" > "/var/lib/apt/${VIRTUAL_PKG_NAME}.virtual"
     fi
 
     if [ -n "$1" ]; then
@@ -66,9 +73,9 @@ install_pkg_debian() {
 cleanup_debian() {
     apt-get -q clean
     rm -rf /var/lib/apt/lists/* \
-           /var/log/dpkg.log \
-           /var/log/alternatives.log \
-           /var/log/apt/*
+        /var/log/dpkg.log \
+        /var/log/alternatives.log \
+        /var/log/apt/*
 }
 
 #
@@ -76,7 +83,7 @@ cleanup_debian() {
 #
 
 is_pkg_installed() {
-    if [ -n "$(which apk)" ]; then
+    if command -v apk > /dev/null; then
         is_pkg_installed_alpine "$@"
     else
         is_pkg_installed_debian "$@"
@@ -84,7 +91,7 @@ is_pkg_installed() {
 }
 
 install_pkg() {
-    if [ -n "$(which apk)" ]; then
+    if command -v apk > /dev/null; then
         install_pkg_alpine "$@"
     else
         install_pkg_debian "$@"
@@ -92,7 +99,7 @@ install_pkg() {
 }
 
 cleanup() {
-    if [ -n "$(which apk)" ]; then
+    if command -v apk > /dev/null; then
         cleanup_alpine
     else
         cleanup_debian
@@ -105,10 +112,9 @@ cleanup() {
 
 if [ -z "$1" ]; then
     usage
-    exit 1
 fi
 
-if [ -z "$(which apk)" ]; then
+if command -v apk > /dev/null; then
     export DEBIAN_FRONTEND=noninteractive
 fi
 
@@ -118,21 +124,22 @@ if [ "$1" = "--virtual" ]; then
     if [ -z "$1" ]; then
         echo "Virtual package name missing."
         usage
-        exit 1
     fi
     VIRTUAL_PKG="$1"
     shift
 fi
 
-if [ -n "$VIRTUAL_PKG" ]; then
-    PKGS="$VIRTUAL_PKG"
-    for PKG in "$@"
-    do
-        if ! is_pkg_installed $PKG; then
-            PKGS="$PKGS $PKG"
+if [ -n "${VIRTUAL_PKG}" ]; then
+    pkgs="${VIRTUAL_PKG}"
+    for pkg in "$@"; do
+        if ! is_pkg_installed "${pkg}"; then
+            pkgs="${pkgs} ${pkg}"
         fi
     done
-    install_pkg 1 $PKGS
+    # shellcheck disable=2086
+    install_pkg 1 ${pkgs}
 else
     install_pkg 0 "$@"
 fi
+
+# vim:ft=sh:ts=4:sw=4:et:sts=4

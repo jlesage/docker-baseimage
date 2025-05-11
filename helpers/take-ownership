@@ -42,6 +42,11 @@ set -e # Exit immediately if a command exits with a non-zero status.
 set -u # Treat unset variables as an error.
 
 usage() {
+    if [ -n "${1:-}" ]; then
+        echo "ERROR: $*" >&2
+        echo "" >&2
+    fi
+
     echo "usage: $(basename "$0") [OPTION...] TARGET
 
 Take ownership of the specified file/directory.
@@ -58,7 +63,13 @@ Options:
 
 Arguments:
   TARGET           Path to the file/directory to take ownership.
-"
+" >&2
+    exit 1
+}
+
+die() {
+    echo "ERROR: $*" >&2
+    exit 1
 }
 
 IGNORE_ERRORS=true
@@ -67,9 +78,8 @@ TARGET=
 
 while [ $# -gt 0 ]; do
     case "$1" in
-        --help|-h)
+        --help | -h)
             usage
-            exit 1
             ;;
         --not-recursive)
             RECURSIVE=false
@@ -81,8 +91,7 @@ while [ $# -gt 0 ]; do
             if [ -n "${2-}" ]; then
                 USER_ID="$2"
             else
-                echo "ERROR: User ID not set."
-                exit 1
+                usage "User ID not set."
             fi
             shift
             ;;
@@ -90,25 +99,18 @@ while [ $# -gt 0 ]; do
             if [ -n "${2-}" ]; then
                 GROUP_ID="$2"
             else
-                echo "ERROR: Group ID not set."
-                exit 1
+                usage "Group ID not set."
             fi
             shift
             ;;
         --*)
-            echo "ERROR: Unknown option '$1'."
-            echo ""
-            usage
-            exit 1
+            usage "Unknown option '$1'."
             ;;
         *)
             if [ -z "${TARGET:-}" ]; then
                 TARGET="$1"
             else
-                echo "ERROR: Unknown argument '$1'."
-                echo ""
-                usage
-                exit 1
+                usage "Unknown argument '$1'."
             fi
             ;;
     esac
@@ -118,50 +120,44 @@ done
 
 # Validate the target.
 if [ -z "${TARGET:-}" ]; then
-    echo "ERROR: Target not set."
-    echo ""
-    usage
-    exit 1
-elif [ ! -e "$TARGET" ]; then
-    echo "ERROR: Target not found: $TARGET."
-    exit 1
+    usage "Target not set."
+elif [ ! -e "${TARGET}" ]; then
+    die "Target not found: ${TARGET}."
 fi
 
 # Validate the user ID.
 if [ -z "${USER_ID:-}" ]; then
-    echo "ERROR: No user ID defined."
-    exit 1
+    die " No user ID defined."
 fi
 
 # Validate the group ID.
 if [ -z "${GROUP_ID:-}" ]; then
-    echo "ERROR: No group ID defined."
-    exit 1
+    die "No group ID defined."
 fi
 
 # Use absolute path.
-if [ -d "$TARGET" ]; then
-    TARGET="$(cd "$TARGET" && pwd)"
+if [ -d "${TARGET}" ]; then
+    TARGET="$(cd "${TARGET}" && pwd)"
 else
-    TARGET="$(cd "$(dirname "$TARGET")" && pwd)/$(basename "$TARGET")"
+    TARGET="$(cd "$(dirname "${TARGET}")" && pwd)/$(basename "${TARGET}")"
 fi
 
 # Create temporary file to store any chmod error.
-RES_FILE="$(mktemp)"
-echo "0" > "$RES_FILE"
+CHMOD_RES_FILE="$(mktemp)"
+echo "0" > "${CHMOD_RES_FILE}"
 
 # Create the chmod wrapper.
 CHOWN_WRAPPER="$(mktemp)"
 echo "#!/bin/sh
 chown \"\$@\"
-RES=\$?
-if [ \$RES -ne 0 ]; then
-    echo \$RES > \"$RES_FILE\"
-fi" > "$CHOWN_WRAPPER"
+rc=\$?
+if [ \$rc -ne 0 ]; then
+    echo \$rc > \"${CHMOD_RES_FILE}\"
+fi" > "${CHOWN_WRAPPER}"
 
 # Define extra find arguments needed when recursivity is disabled.
 FIND_EXTRA_ARGS=
-if ! $RECURSIVE; then
+if ! ${RECURSIVE}; then
     FIND_EXTRA_ARGS="-mindepth 0 -maxdepth 0"
 fi
 
@@ -169,25 +165,26 @@ fi
 # than a signed integer produces an error: instead of using the ID, use the
 # associated user/group name if it exists.
 # See https://savannah.gnu.org/bugs/index.php?64900
-USER_NAME="$(getent passwd "$USER_ID" | cut -d: -f1)"
+USER_NAME="$(getent passwd "${USER_ID}" | cut -d: -f1)"
 if [ -n "${USER_NAME:-}" ]; then
-    USER_ID="$USER_NAME"
+    USER_ID="${USER_NAME}"
 fi
-GROUP_NAME="$(getent group "$GROUP_ID" | cut -d: -f1)"
+GROUP_NAME="$(getent group "${GROUP_ID}" | cut -d: -f1)"
 if [ -n "${GROUP_NAME:-}" ]; then
-    GROUP_ID="$GROUP_NAME"
+    GROUP_ID="${GROUP_NAME}"
 fi
 
 # Set ownership on files and folders.
-find "$TARGET" $FIND_EXTRA_ARGS '(' -not -user "$USER_ID" -or -not -group "$GROUP_ID" ')' -exec /bin/sh "$CHOWN_WRAPPER" --no-dereference "$USER_ID:$GROUP_ID" {} +
+# shellcheck disable=2086
+find "${TARGET}" ${FIND_EXTRA_ARGS} '(' -not -user "${USER_ID}" -or -not -group "${GROUP_ID}" ')' -exec /bin/sh "${CHOWN_WRAPPER}" --no-dereference "${USER_ID}:${GROUP_ID}" {} +
 
 # Handle the result.
-RES="$(cat "$RES_FILE")"
-rm "$RES_FILE" "$CHOWN_WRAPPER"
-if $IGNORE_ERRORS; then
+result="$(cat "${CHMOD_RES_FILE}")"
+rm "${CHMOD_RES_FILE}" "${CHOWN_WRAPPER}"
+if ${IGNORE_ERRORS}; then
     exit 0
 else
-    exit "$RES"
+    exit "${result}"
 fi
 
 # vim:ft=sh:ts=4:sw=4:et:sts=4

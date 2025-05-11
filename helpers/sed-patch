@@ -1,45 +1,72 @@
 #!/bin/sh
+#
+# Wrapper for sed with a patch-like behavior.
+#
+# The wrapper returns:
+#   - A success when running the sed expression results in changes applied to
+#     to file.
+#   - An error when running the sed expression results in no changes applied to
+#     the file.
+#
+# NOTE: sed option '-i' is already supplied by this script.
+#
 
 usage() {
+    if [ -n "${1:-}" ]; then
+        echo "ERROR: $*" >&2
+        echo "" >&2
+    fi
+
     echo "usage: $(basename "$0") [SED_OPT...] SED_EXPRESSION FILE
 
 sed with a patch-like behavior.
 
-This helper returns:
-  - A success when running the sed expression SED_EXPRESSION results in changes
-    applied to file FILE.
-  - An error when running the sed expression SED_EXPRESSION results in no change
-    to file FILE.
-
 NOTE: sed option '-i' is already supplied by this script.
-"
+" >&2
+    exit 1
 }
 
-eval FILE=\${$#}
+die() {
+    echo "ERROR: $*" >&2
+    exit 1
+}
+
+cleanup() {
+    [ ! -f "${fpath}".bak ] || rm -f "${fpath}".bak
+}
+
+trap : TERM QUIT INT
+trap "cleanup" EXIT
+
+fpath=
+eval fpath="\${$#}"
 
 if [ "$#" -lt 2 ]; then
-    echo "ERROR: Not enough arguments."
-    exit 1
+    usage " Not enough arguments."
+else
+    for arg in "$@"; do
+        if [ "${arg}" = "-i" ]; then
+            echo "ERROR: The '-i' option should not be specified." >&2
+            exit 1
+        fi
+    done
 fi
 
 sed -i.bak "$@"
-RC="$?"
-if [ "$RC" -eq 0 ]; then
-    diff "$FILE" "$FILE".bak > /dev/null 2>&1
+rc="$?"
+if [ "${rc}" -eq 0 ]; then
+    diff "${fpath}" "${fpath}".bak > /dev/null 2>&1
     case $? in
         0)
             # Files are the same.
-            echo "ERROR: No modification applied to $FILE."
-            RC=1
+            die "No modification applied to ${fpath}."
             ;;
         1)
-            # Files differ.
-            RC=0
+            # Files differ, OK.
+            exit 0
             ;;
-        *)
-            ;;
+        *) ;;
     esac
 fi
 
-rm -f "$FILE".bak
-exit $RC
+# vim:ft=sh:ts=4:sw=4:et:sts=4

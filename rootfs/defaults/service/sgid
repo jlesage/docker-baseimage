@@ -3,6 +3,11 @@
 set -e # Exit immediately if a command exits with a non-zero status.
 set -u # Treat unset variables as an error.
 
-echo ${SUP_GROUP_IDS:-},${SUP_GROUP_IDS_INTERNAL:-} | tr ',' '\n' | grep -v '^$' | grep -v '^0$' | grep -vw "$GROUP_ID" | sort -nub
+echo "${SUP_GROUP_IDS:-},${SUP_GROUP_IDS_INTERNAL:-}" \
+    | tr ',' '\n' \
+    | grep -v '^$' \
+    | grep -v '^0$' \
+    | grep -vw "${GROUP_ID}" \
+    | sort -nub
 
 # vim:ft=sh:ts=4:sw=4:et:sts=4

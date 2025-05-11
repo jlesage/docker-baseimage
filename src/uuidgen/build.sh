@@ -26,7 +26,7 @@ export CXX=xx-clang++
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-function log {
+log() {
     echo ">>> $*"
 }
 
@@ -59,7 +59,7 @@ curl -# -L -f ${UTIL_LINUX_URL} | tar xJ --strip 1 -C /tmp/util-linux
 
 log "Configuring util-linux..."
 (
-    cd /tmp/util-linux && \
+    cd /tmp/util-linux
     ./configure \
         --build=$(TARGETPLATFORM= xx-clang --print-target-triple) \
         --host=$(xx-clang --print-target-triple) \
