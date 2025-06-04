@@ -2113,7 +2113,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        // Progress command received from the named pipe.
+        // Process command received from the named pipe.
         {
             char buf[256];
             ssize_t len = read(cmd_fd, buf, sizeof(buf) - 1);
