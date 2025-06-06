@@ -17,6 +17,16 @@ baseimage:
     long-lived application.
   gui: false
   history:
+    - version: 3.7.0
+      date: 2025-06-06
+      changes:
+        added:
+          - 'Image based on Alpine 3.22.'
+          - 'Generation of a container instance unique ID.'
+          - 'Simple mechanism to send commands to the process supervisor, enabling restart of services.'
+        changed:
+          - 'Folders are created with explicit permissions.'
+          - 'Ensured that no programs or shell scripts run directly from /tmp, enabling the use of no-exec mounted temporary directory.'
     - version: 3.6.5
       date: 2025-02-01
       changes:
