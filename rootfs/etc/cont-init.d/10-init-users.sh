@@ -157,7 +157,7 @@ echo "${SUP_GROUP_IDS:-},${SUP_GROUP_IDS_INTERNAL:-}" \
                 ;;
         esac
         if ! group_id_exists "${gid}"; then
-            add_group "grp${gid}" "%{gid}"
+            add_group "grp${gid}" "${gid}"
             add_user_to_group app "grp${gid}"
         else
             add_user_to_group app "$(get_group_name_from_group_id "${gid}")"
