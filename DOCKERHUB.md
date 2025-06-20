@@ -3,12 +3,12 @@
 [![Build Status](https://img.shields.io/github/actions/workflow/status/jlesage/docker-baseimage/build-baseimage.yml?logo=github&branch=master&style=for-the-badge)](https://github.com/jlesage/docker-baseimage/actions/workflows/build-baseimage.yml)
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg?style=for-the-badge)](https://paypal.me/JocelynLeSage)
 
-This is a docker baseimage that can be used to create containers for any
-long-lived application.
+This is a Docker baseimage designed to simplify the creation of containers
+for any long-lived application.
 
 ## Images
 
-Multiple docker images, based on different Linux distributions, are available:
+This baseimage is available for multiple Linux distributions:
 
 | Base Distribution  | Docker Image Base Tag | Size |
 |--------------------|-----------------------|------|
@@ -26,6 +26,17 @@ Multiple docker images, based on different Linux distributions, are available:
 | [Ubuntu 20.04 LTS] | ubuntu-20.04          | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-20.04-v3?style=for-the-badge)](#) |
 | [Ubuntu 22.04 LTS] | ubuntu-22.04          | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-22.04-v3?style=for-the-badge)](#) |
 
+Docker image tags follow this structure:
+
+| Tag           | Description                                              |
+|---------------|----------------------------------------------------------|
+| distro-vX.Y.Z | Exact version of the image.                              |
+| distro-vX.Y   | Latest version of a specific minor version of the image. |
+| distro-vX     | Latest version of a specific major version of the image. |
+
+View all available tags on [Docker Hub] or check the [Releases] page for version
+details.
+
 [Alpine 3.16]: https://alpinelinux.org/posts/Alpine-3.16.0-released.html
 [Alpine 3.17]: https://alpinelinux.org/posts/Alpine-3.17.0-released.html
 [Alpine 3.18]: https://alpinelinux.org/posts/Alpine-3.18.0-released.html
@@ -35,60 +46,56 @@ Multiple docker images, based on different Linux distributions, are available:
 [Alpine 3.22]: https://alpinelinux.org/posts/Alpine-3.22.0-released.html
 [Debian 10]: https://www.debian.org/releases/buster/
 [Debian 11]: https://www.debian.org/releases/bullseye/
+[Debian 12]: https://www.debian.org/releases/bookworm/
 [Ubuntu 16.04 LTS]: http://releases.ubuntu.com/16.04/
 [Ubuntu 18.04 LTS]: http://releases.ubuntu.com/18.04/
 [Ubuntu 20.04 LTS]: http://releases.ubuntu.com/20.04/
 [Ubuntu 22.04 LTS]: http://releases.ubuntu.com/22.04/
+[Ubuntu 24.04 LTS]: http://releases.ubuntu.com/24.04/
 
-### Content
-
-Here are the main components of the baseimage:
-
-  * An init system.
-  * A process supervisor, with proper PID 1 functionality (proper reaping of
-    processes).
-  * Useful tools to ease container building.
-  * Environment to better support dockerized applications.
-
+[Releases]: https://github.com/jlesage/docker-baseimage/releases
+[Docker Hub]: https://hub.docker.com/r/jlesage/baseimage/tags
 
 ### Versioning
 
-Images are versioned. Version number follows the [semantic versioning]. The
-version format is `MAJOR.MINOR.PATCH`, where an increment of the:
+Images adhere to [semantic versioning]. The version format is
+`MAJOR.MINOR.PATCH`, where an increment in the:
 
-  - `MAJOR` version indicates that a backwards-incompatible change has been done.
-  - `MINOR` version indicates that functionality has been added in a backwards-compatible manner.
-  - `PATCH` version indicates that a bug fix has been done in a backwards-compatible manner.
+  - `MAJOR` version indicates a backward-incompatible change.
+  - `MINOR` version indicates functionality added in a backward-compatible manner.
+  - `PATCH` version indicates a bug fix in a backward-compatible manner.
 
 [semantic versioning]: https://semver.org
 
-### Tags
+### Content
 
-The baseimage is available under multiple tags. A tag is made from the
-corresponding Linux distribution and the release version.
+The baseimage includes the following key components:
 
-| Tag           | Description                                              |
-|---------------|----------------------------------------------------------|
-| distro-vX.Y.Z | Exact version of the image.                              |
-| distro-vX.Y   | Latest version of a specific minor version of the image. |
-| distro-vX     | Latest version of a specific major version of the image. |
+  - An initialization system for container startup.
+  - A process supervisor with proper PID 1 functionality (e.g., process
+    reaping).
+  - Tools to simplify container creation.
+  - An environment optimized for Dockerized applications.
+
 
 ## Getting started
 
-The `Dockerfile` for your application can be very simple, as only three things
-are required:
+Creating a Docker container for an application using this baseimage is
+straightforward. You need at least three components in your `Dockerfile`:
 
-  * Instructions to install the application.
-  * A script that starts the application (stored at `/startapp.sh` in
-    container).
-  * The name of the application.
+  - Instructions to install the application and its dependencies.
+  - A script to start the application, stored at `/startapp.sh` in the
+    container.
+  - The name of the application.
 
-Here is an example of a docker file that would be used to run a simple web
-NodeJS server.
-In `Dockerfile`:
-```Dockerfile
-# Pull base image.
-FROM jlesage/baseimage:alpine-3.15-v3
+Below is an example of a `Dockerfile` and `startapp.sh` for running a simple
+NodeJS web server:
+
+**Dockerfile**:
+
+```dockerfile
+# Pull the baseimage.
+FROM jlesage/baseimage:alpine-3.19-v3
 
 # Install http-server.
 RUN add-pkg nodejs-npm && \
@@ -97,31 +104,42 @@ RUN add-pkg nodejs-npm && \
 # Copy the start script.
 COPY startapp.sh /startapp.sh
 
-# Set the name of the application.
+# Set the application name.
 RUN set-cont-env APP_NAME "http-server"
 
 # Expose ports.
 EXPOSE 8080
 ```
 
-In `startapp.sh`:
+**startapp.sh**:
+
 ```shell
 #!/bin/sh
 exec /usr/bin/http-server
 ```
 
-Then, build your docker image:
+Make the script executable:
 
-    docker build -t docker-http-server .
+```shell
+chmod +x startapp.sh
+```
 
-And run it:
+Build the Docker image:
 
-    docker run --rm -p 8080:8080 docker-http-server
+```shell
+docker build -t docker-http-server .
+```
 
-You should be able to access the HTTP server by opening in a web browser:
+Run the container, mapping ports for web  access:
+
+```shell
+docker run --rm -p 8080:8080 docker-http-server
+```
+
+Access the HTTP server via a web browser at:
 
 ```
-http://[HOST IP ADDR]:8080
+http://<HOST_IP_ADDR>:8080
 ```
 
 ## Documentation

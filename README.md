@@ -3,15 +3,15 @@
 [![Build Status](https://img.shields.io/github/actions/workflow/status/jlesage/docker-baseimage/build-baseimage.yml?logo=github&branch=master&style=for-the-badge)](https://github.com/jlesage/docker-baseimage/actions/workflows/build-baseimage.yml)
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg?style=for-the-badge)](https://paypal.me/JocelynLeSage)
 
-This is a docker baseimage that can be used to create containers for any
-long-lived application.
+This is a Docker baseimage designed to simplify the creation of containers
+for any long-lived application.
 
-## Table of Content
+## Table of Contents
 
    * [Images](#images)
       * [Versioning](#versioning)
       * [Content](#content)
-   * [Getting started](#getting-started)
+   * [Getting Started](#getting-started)
    * [Using the Baseimage](#using-the-baseimage)
       * [Selecting a Baseimage](#selecting-a-baseimage)
       * [Container Startup Sequence](#container-startup-sequence)
@@ -39,21 +39,21 @@ long-lived application.
          * [Notification Backend](#notification-backend)
       * [Helpers](#helpers)
          * [Adding/Removing Packages](#addingremoving-packages)
-         * [Modifying Files With Sed](#modifying-files-with-sed)
-         * [Evaluating Boolean Value](#evaluating-boolean-value)
+         * [Modifying Files with Sed](#modifying-files-with-sed)
+         * [Evaluating Boolean Values](#evaluating-boolean-values)
          * [Taking Ownership of a Directory](#taking-ownership-of-a-directory)
-         * [Setting Interval Environment Variable](#setting-interval-environment-variable)
+         * [Setting Internal Environment Variables](#setting-internal-environment-variables)
       * [Tips and Best Practices](#tips-and-best-practices)
          * [Do Not Modify Baseimage Content](#do-not-modify-baseimage-content)
          * [Default Configuration Files](#default-configuration-files)
          * [The $HOME Variable](#the-home-variable)
          * [Referencing Linux User/Group](#referencing-linux-usergroup)
          * [Using rootfs Directory](#using-rootfs-directory)
-         * [Adaptations from the 2.x Version](#adaptations-from-the-2x-version)
+         * [Adaptations from Version 2.x](#adaptations-from-version-2x)
 
 ## Images
 
-Multiple docker images, based on different Linux distributions, are available:
+This baseimage is available for multiple Linux distributions:
 
 | Linux Distribution | Docker Image Tag      | Size |
 |--------------------|-----------------------|------|
@@ -73,10 +73,7 @@ Multiple docker images, based on different Linux distributions, are available:
 | [Ubuntu 22.04 LTS] | ubuntu-22.04-vX.Y.Z   | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-22.04-v3?style=for-the-badge)](#) |
 | [Ubuntu 24.04 LTS] | ubuntu-24.04-vX.Y.Z   | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-24.04-v3?style=for-the-badge)](#) |
 
-Each Docker image is tagged with the Linux distribution and the release version.
-All release versions can be found under the [Releases] page.
-
-Version part of the tag can be decomposed in the following way:
+Docker image tags follow this structure:
 
 | Tag           | Description                                              |
 |---------------|----------------------------------------------------------|
@@ -84,7 +81,8 @@ Version part of the tag can be decomposed in the following way:
 | distro-vX.Y   | Latest version of a specific minor version of the image. |
 | distro-vX     | Latest version of a specific major version of the image. |
 
-Finally, all available Docker image tags can also be consulted on [Docker Hub].
+View all available tags on [Docker Hub] or check the [Releases] page for version
+details.
 
 [Alpine 3.16]: https://alpinelinux.org/posts/Alpine-3.16.0-released.html
 [Alpine 3.17]: https://alpinelinux.org/posts/Alpine-3.17.0-released.html
@@ -101,46 +99,49 @@ Finally, all available Docker image tags can also be consulted on [Docker Hub].
 [Ubuntu 20.04 LTS]: http://releases.ubuntu.com/20.04/
 [Ubuntu 22.04 LTS]: http://releases.ubuntu.com/22.04/
 [Ubuntu 24.04 LTS]: http://releases.ubuntu.com/24.04/
+
 [Releases]: https://github.com/jlesage/docker-baseimage/releases
 [Docker Hub]: https://hub.docker.com/r/jlesage/baseimage/tags
 
 ### Versioning
 
-Images are versioned. Version number follows the [semantic versioning]. The
-version format is `MAJOR.MINOR.PATCH`, where an increment of the:
+Images adhere to [semantic versioning]. The version format is
+`MAJOR.MINOR.PATCH`, where an increment in the:
 
-  - `MAJOR` version indicates that a backwards-incompatible change has been done.
-  - `MINOR` version indicates that functionality has been added in a backwards-compatible manner.
-  - `PATCH` version indicates that a bug fix has been done in a backwards-compatible manner.
+  - `MAJOR` version indicates a backward-incompatible change.
+  - `MINOR` version indicates functionality added in a backward-compatible manner.
+  - `PATCH` version indicates a bug fix in a backward-compatible manner.
 
 [semantic versioning]: https://semver.org
 
 ### Content
 
-Here are the main components of the baseimage:
+The baseimage includes the following key components:
 
-  * An init system.
-  * A process supervisor, with proper PID 1 functionality (proper reaping of
-    processes).
-  * Useful tools to ease container building.
-  * Environment to better support dockerized applications.
+  - An initialization system for container startup.
+  - A process supervisor with proper PID 1 functionality (e.g., process
+    reaping).
+  - Tools to simplify container creation.
+  - An environment optimized for Dockerized applications.
 
 
-## Getting started
+## Getting Started
 
-The `Dockerfile` for your application can be very simple, as only three things
-are required:
+Creating a Docker container for an application using this baseimage is
+straightforward. You need at least three components in your `Dockerfile`:
 
-  * Instructions to install the application.
-  * A script that starts the application (stored at `/startapp.sh` in
-    container).
-  * The name of the application.
+  - Instructions to install the application and its dependencies.
+  - A script to start the application, stored at `/startapp.sh` in the
+    container.
+  - The name of the application.
 
-Here is an example of a docker file that would be used to run a simple web
-NodeJS server.
-In `Dockerfile`:
-```Dockerfile
-# Pull base image.
+Below is an example of a `Dockerfile` and `startapp.sh` for running a simple
+NodeJS web server:
+
+**Dockerfile**:
+
+```dockerfile
+# Pull the baseimage.
 FROM jlesage/baseimage:alpine-3.19-v3
 
 # Install http-server.
@@ -150,52 +151,59 @@ RUN add-pkg nodejs-npm && \
 # Copy the start script.
 COPY startapp.sh /startapp.sh
 
-# Set the name of the application.
+# Set the application name.
 RUN set-cont-env APP_NAME "http-server"
 
 # Expose ports.
 EXPOSE 8080
 ```
 
-In `startapp.sh`:
+**startapp.sh**:
+
 ```shell
 #!/bin/sh
 exec /usr/bin/http-server
 ```
 
-Make sure the file is executable, by running `chmod +x startapp.sh`.
+Make the script executable:
 
-Then, build your docker image:
+```shell
+chmod +x startapp.sh
+```
 
-    docker build -t docker-http-server .
+Build the Docker image:
 
-And run it:
+```shell
+docker build -t docker-http-server .
+```
 
-    docker run --rm -p 8080:8080 docker-http-server
+Run the container, mapping ports for web  access:
 
-You should be able to access the HTTP server by opening in a web browser:
+```shell
+docker run --rm -p 8080:8080 docker-http-server
+```
+
+Access the HTTP server via a web browser at:
 
 ```
-http://[HOST IP ADDR]:8080
+http://<HOST_IP_ADDR>:8080
 ```
 
 ## Using the Baseimage
 
 ### Selecting a Baseimage
 
-Using a baseimage based on Alpine Linux is the recommended choice. Not only
-because of its small size, but also because Alpine Linux is a distribution based
-on [musl] and [BusyBox] that is designed for security, simplicity and resource
-efficiency.
+Using a baseimage based on Alpine Linux is recommended, not only for its compact
+size, but also because Alpine Linux, built with [musl] and [BusyBox], is
+designed for security, simplicity, and resource efficiency.
 
-However, using this baseimage to integrate an application not part of the
-Alpine's software repository or without its source code available may be harder.
-This is because Alpine Linux uses [musl] C standard library instead of GNU C
-library ([glibc]) that most applications are built against. Compatibility
-between these two libraries is very limited.
+However, integrating applications not available in Alpine's software repository
+or those lacking source code can be challenging. Alpine Linux uses the [musl] C
+standard library instead of the GNU C library ([glibc]), which most applications
+are built against. Compatibility between these libraries is limited.
 
-Else, `Debian` and `Ubuntu` images are well known Linux distributions that
-provide great compatibility with existing applications.
+Alternatively, Debian and Ubuntu images are well-known Linux distributions
+offering excellent compatibility with existing applications.
 
 [musl]: https://www.musl-libc.org
 [BusyBox]: https://busybox.net
@@ -203,7 +211,7 @@ provide great compatibility with existing applications.
 
 ### Container Startup Sequence
 
-When the container is starting, the following steps are performed:
+When the container starts, it executes the following steps:
 
   - The init process (`/init`) is invoked.
   - Internal environment variables are loaded from `/etc/cont-env.d`.
@@ -212,166 +220,156 @@ When the container is starting, the following steps are performed:
   - Control is given to the process supervisor.
   - The service group `/etc/services.d/default` is loaded, along with its
     dependencies.
-  - Services are started, in proper order.
-  - Container is now fully started.
+  - Services are started in the correct order.
+  - The container is now fully started.
 
 ### Container Shutdown Sequence
 
-There are two ways a container can shutdown:
+The container can shut down in two scenarios:
 
   1. When the implemented application terminates.
-  2. When Docker performs a shutdown of the container (e.g via the `docker stop`
-     command).
+  2. When Docker initiates a shutdown (e.g., via the `docker stop` command).
 
-In both cases, the shutdown sequence is:
+In both cases, the shutdown sequence is as follows:
 
-  - All services are terminated, in reverse order.
-  - If some processes are still alive, a SIGTERM is sent to everyone.
-  - After 5 seconds, all remaining processes are forcefully terminated via the
-    SIGKILL signal.
-  - The process supervisor execute the exit script (`/etc/services.d/exit`).
-  - The exit script executes, in alphabetical order, finalization scripts
-    defined under `/etc/cont-finish.d/`.
-  - Container is full stopped.
+  - All services are terminated in reverse order.
+  - If processes are still running, a `SIGTERM` signal is sent to all.
+  - After 5 seconds, remaining processes are forcefully terminated via the
+    `SIGKILL` signal.
+  - The process supervisor executes the exit script (`/etc/services.d/exit`).
+  - The exit script runs finalization scripts in `/etc/cont-finish.d/` in
+    alphabetical order.
+  - The container is fully stopped.
 
 ### Environment Variables
 
-Environment variables are very useful to customize the behavior of the container
-and its application.
+Environment variables enable customization of the container and application
+behavior. They are categorized into two types:
 
-There are two types of environment variables:
+  - **Public**: These variables are intended for users of the container. They
+    provide a way to configure it and are declared in the `Dockerfile` using the
+    `ENV` instruction. Their values can be set during container creation with
+    the `-e "<VAR>=<VALUE>"` argument of the `docker run` command. Many Docker
+    container management systems use these variables to provide configuration
+    options to users.
 
-  - **Public**: These variables are targeted to people using the container.
-    They provide a way to configure it. They are declared in the `Dockerfile`,
-    via the `ENV` instruction. Their value can be set by users during the
-    creation of the container, via the `-e "<VAR>=<VALUE>"` argument of the
-    `docker run` command. Also, many Docker container management systems use
-    these variables to automatically provide configuration parameters to the
-    user.
+  - **Internal**: These variables are not meant to be modified by users. They
+    are useful for the application but not intended for external configuration.
 
-  - **Internal**: These variables are the ones that don't need to be exposed to
-    users. They are useful for the application itself, but are not intended to
-    be changed by users.
-
-**NOTE**: If a variable is defined as both an internal and public one, the value
-of the public variable takes precedence.
+> [!NOTE]
+> If a variable is defined as both internal and public, the public value takes
+> precedence.
 
 #### Public Environment Variables
 
-The following public environment variables are provided by the baseimage:
+The baseimage provides the following public environment variables:
 
 | Variable       | Description                                  | Default |
 |----------------|----------------------------------------------|---------|
-|`USER_ID`| ID of the user the application runs as. See [User/Group IDs](#usergroup-ids) to better understand when this should be set. | `1000` |
-|`GROUP_ID`| ID of the group the application runs as. See [User/Group IDs](#usergroup-ids) to better understand when this should be set. | `1000` |
-|`SUP_GROUP_IDS`| Comma-separated list of supplementary group IDs of the application. | (no value) |
-|`UMASK`| Mask that controls how permissions are set for newly created files and folders. The value of the mask is in octal notation. By default, the default umask value is `0022`, meaning that newly created files and folders are readable by everyone, but only writable by the owner. See the online umask calculator at http://wintelguy.com/umask-calc.pl. | `0022` |
-|`LANG`| Set the [locale](https://en.wikipedia.org/wiki/Locale_(computer_software)), which defines the application's language, **if supported**. Format of the locale is `language[_territory][.codeset]`, where language is an [ISO 639 language code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes), territory is an [ISO 3166 country code](https://en.wikipedia.org/wiki/ISO_3166-1#Current_codes) and codeset is a character set, like `UTF-8`. For example, Australian English using the UTF-8 encoding is `en_AU.UTF-8`. | `en_US.UTF-8` |
-|`TZ`| [TimeZone](http://en.wikipedia.org/wiki/List_of_tz_database_time_zones) used by the container. Timezone can also be set by mapping `/etc/localtime` between the host and the container. | `Etc/UTC` |
-|`KEEP_APP_RUNNING`| When set to `1`, the application will be automatically restarted when it crashes or terminates. | `0` |
-|`APP_NICENESS`| Priority at which the application should run. A niceness value of -20 is the highest priority and 19 is the lowest priority. The default niceness value is 0. **NOTE**: A negative niceness (priority increase) requires additional permissions. In this case, the container should be run with the docker option `--cap-add=SYS_NICE`. | `0` |
-|`INSTALL_PACKAGES`| Space-separated list of packages to install during the startup of the container. Packages are installed from the repository of the Linux distribution this container is based on. **ATTENTION**: Container functionality can be affected when installing a package that overrides existing container files (e.g. binaries). | (no value) |
+|`USER_ID`| ID of the user the application runs as. See [User/Group IDs](#usergroup-ids) for details. | `1000` |
+|`GROUP_ID`| ID of the group the application runs as. See [User/Group IDs](#usergroup-ids) for details. | `1000` |
+|`SUP_GROUP_IDS`| Comma-separated list of supplementary group IDs for the application. | (no value) |
+|`UMASK`| Mask controlling permissions for newly created files and folders, specified in octal notation. By default, `0022` ensures files and folders are readable by all but writable only by the owner. See the umask calculator at http://wintelguy.com/umask-calc.pl. | `0022` |
+|`LANG`| Sets the [locale](https://en.wikipedia.org/wiki/Locale_(computer_software)), defining the application's language, if supported. Format is `language[_territory][.codeset]`, where language is an [ISO 639 language code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes), territory is an [ISO 3166 country code](https://en.wikipedia.org/wiki/ISO_3166-1#Current_codes), and codeset is a character set, like `UTF-8`. For example, Australian English using UTF-8 is `en_AU.UTF-8`. | `en_US.UTF-8` |
+|`TZ`| [TimeZone](http://en.wikipedia.org/wiki/List_of_tz_database_time_zones) used by the container. The timezone can also be set by mapping `/etc/localtime` between the host and the container. | `Etc/UTC` |
+|`KEEP_APP_RUNNING`| When set to `1`, the application is automatically restarted if it crashes or terminates. | `0` |
+|`APP_NICENESS`| Priority at which the application runs. A niceness value of -20 is the highest, 19 is the lowest and 0 the default. **NOTE**: A negative niceness (priority increase) requires additional permissions. The container must be run with the Docker option `--cap-add=SYS_NICE`. | `0` |
+|`INSTALL_PACKAGES`| Space-separated list of packages to install during container startup. Packages are installed from the repository of the Linux distribution the container is based on. | (no value) |
 |`PACKAGES_MIRROR`| Mirror of the repository to use when installing packages. | (no value) |
-|`CONTAINER_DEBUG`| Set to `1` to enable debug logging. | `0` |
+|`CONTAINER_DEBUG`| When set to `1`, enables debug logging. | `0` |
 
 #### Internal Environment Variables
 
-The following internal environment variables are provided by the baseimage:
+The baseimage provides the following internal environment variables:
 
 | Variable       | Description                                  | Default |
 |----------------|----------------------------------------------|---------|
 |`APP_NAME`| Name of the implemented application. | `DockerApp` |
 |`APP_VERSION`| Version of the implemented application. | (no value) |
 |`DOCKER_IMAGE_VERSION`| Version of the Docker image that implements the application. | (no value) |
-|`DOCKER_IMAGE_PLATFORM`| Platform (OS / CPU architecture) of the Docker image that implements the application. | (no value) |
+|`DOCKER_IMAGE_PLATFORM`| Platform (OS/CPU architecture) of the Docker image that implements the application. | (no value) |
 |`HOME`| Home directory. | (no value) |
-|`XDG_CONFIG_HOME`| Defines the base directory relative to which user specific configuration files should be stored. | `/config/xdg/config` |
-|`XDG_DATA_HOME`| Defines the base directory relative to which user specific data files should be stored. | `/config/xdg/data` |
-|`XDG_CACHE_HOME`| Defines the base directory relative to which user specific non-essential data files should be stored. | `/config/xdg/cache` |
-|`TAKE_CONFIG_OWNERSHIP`| When set to `0`, ownership of the content of the `/config` directory is not taken during startup of the container. | `1` |
-|`INSTALL_PACKAGES_INTERNAL`| Space-separated list of packages to install during the startup of the container. Packages are installed from the repository of the Linux distribution this container is based on. | (no value) |
-|`SUP_GROUP_IDS_INTERNAL`| Comma-separated list of supplementary group IDs of the application. These are merged with the ones that might be supplied by `SUP_GROUP_IDS`. | (no value) |
-|`SERVICES_GRACETIME`| During container shutdown, this defines the amount of time (in milliseconds) allowed to services to gracefully terminate before sending the KILL signal to everyone. | `5000` |
+|`XDG_CONFIG_HOME`| Defines the base directory for user-specific configuration files. | `/config/xdg/config` |
+|`XDG_DATA_HOME`| Defines the base directory for user-specific data files. | `/config/xdg/data` |
+|`XDG_CACHE_HOME`| Defines the base directory for user-specific non-essential data files. | `/config/xdg/cache` |
+|`TAKE_CONFIG_OWNERSHIP`| When set to `0`, ownership of the `/config` directory's contents is not taken during container startup. | `1` |
+|`INSTALL_PACKAGES_INTERNAL`| Space-separated list of packages to install during container startup. Packages are installed from the repository of the Linux distribution the container is based on. | (no value) |
+|`SUP_GROUP_IDS_INTERNAL`| Comma-separated list of supplementary group IDs for the application, merged with those supplied by `SUP_GROUP_IDS`. | (no value) |
+|`SERVICES_GRACETIME`| During container shutdown, defines the time (in milliseconds) allowed for services to gracefully terminate before sending the SIGKILL signal to all. | `5000` |
 
 #### Adding/Removing Internal Environment Variables
 
-Internal environment variables are defined by adding a file to
-`/etc/cont-env.d/` inside the container, where the name of the file is the name
-of the variable and its value is defined by the content of the file.
+Internal environment variables are defined by creating a file in
+`/etc/cont-env.d/` inside the container, where the file's name is the variable
+name and its content is the value.
 
-If the file has execute permission, the init process will execute the program
-and the value of the environment variable is expected to be printed to its
-standard output.
+If the file is executable, the init process executes it, and the environment
+variable's value is taken from its standard output.
 
-**NOTE**: If the program exits with the return code `100`, the environment
-          variable is not set (this is different than being set with an empty
-          value).
+> [!NOTE]
+> If the program exits with return code `100`, the environment variable is not
+> set (distinct from being set with an empty value).
 
-**NOTE**: Any output to stderr performed by the program is redirected to the
-          container's log.
+> [!NOTE]
+> Any stderr output from the program is redirected to the container's log.
 
-**NOTE**: The helper `set-cont-env` can be used to set internal environment
-          variables from the Dockerfile.
+> [!NOTE]
+> The `set-cont-env` helper can be used to set internal environment variables
+> from the Dockerfile.
 
 #### Availability
 
-Since public environment variables are defined during the creation of the
-container, they are always available to all your scripts and services, as soon
-as the container starts.
+Public environment variables are defined during container creation and are
+available to scripts and services as soon as the container starts.
 
-For internal environment variables, they first need to be loaded during the
-startup of the container before they can be used. Since this is done before
-running init scripts and services, availability should not be an issue.
+Internal environment variables are loaded during container startup, before
+initialization scripts and services run, ensuring their availability.
 
 #### Docker Secrets
 
 [Docker secrets](https://docs.docker.com/engine/swarm/secrets/) is a
 functionality available to swarm services that offers a secure way to store
-sensitive information such as username, passwords, etc.
+sensitive information such as usernames, passwords, etc.
 
-This baseimage automatically exports, as environment variables, Docker secrets
-that follow this naming convention:
+This baseimage automatically exports Docker secrets as environment variables if
+they follow the naming convention `CONT_ENV_<environment variable name>`.
 
-```
-CONT_ENV_<environment variable name>
-```
-
-For example, for a secret named `CONT_ENV_MY_PASSWORD`, the environment variable
-`MY_PASSWORD` is created, with its content matching the one of the secret.
+For example, a secret named `CONT_ENV_MY_PASSWORD` creates the environment
+variable `MY_PASSWORD` with the secret's content.
 
 ### User/Group IDs
 
-When mapping data volumes (via the `-v` flag of the `docker run` command),
-permissions issues can occur between the host and the container. Files and
-folders of a data volume are owned by a user, which is probably not the same as
-the default user under which the implemented application is running. Depending
-on permissions, this situation could prevent the container from accessing files
-and folders on the shared volume.
+When mapping data volumes (using the `-v` flag of the `docker run` command),
+permission issues may arise between the host and the container. Files and
+folders in a data volume are owned by a user, which may differ from the user
+running the application. Depending on permissions, this could prevent the
+container from accessing the shared volume.
 
-To avoid this problem, you can specify the user the application should run as.
-
-This is done by passing the user ID and group ID to the container via the
+To avoid this, specify the user the application should run as using the
 `USER_ID` and `GROUP_ID` environment variables.
 
-To find the right IDs to use, issue the following command on the host, with the
-user owning the data volume on the host:
+To find the appropriate IDs, run the following command on the host for the user
+owning the data volume:
 
-    id <username>
+```shell
+id <username>
+```
 
-Which gives an output like this one:
+This produces output like:
+
 ```
 uid=1000(myuser) gid=1000(myuser) groups=1000(myuser),4(adm),24(cdrom),27(sudo),46(plugdev),113(lpadmin)
 ```
 
-The value of `uid` (user ID) and `gid` (group ID) are the ones that you should
-be given the container.
+Use the `uid` (user ID) and `gid` (group ID) values to configure the container.
 
 ### Locales
 
-The default locale of the container is set to `POSIX`. If this cause issues
-with your application, the proper locale can be installed. For example, adding
-the following instructions to your `Dockerfile` set the locale to `en_US.UTF-8`.
-```Dockerfile
+The default locale of the container is `POSIX`. If this causes issues with your
+application, install the appropriate locale. For example, to set the locale to
+`en_US.UTF-8`, add these instructions to your `Dockerfile`:
+
+```dockerfile
 RUN \
     add-pkg locales && \
     sed-patch 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
@@ -379,151 +377,140 @@ RUN \
 ENV LANG=en_US.UTF-8
 ```
 
-**NOTE**: Locales are not supported by `musl` C standard library on `Alpine`.
-See:
-  * http://wiki.musl-libc.org/wiki/Open_Issues#C_locale_conformance
-  * https://github.com/gliderlabs/docker-alpine/issues/144
+> [!NOTE]
+> Locales are not supported by the musl C standard library on Alpine Linux. See:
+>   - http://wiki.musl-libc.org/wiki/Open_Issues#C_locale_conformance
+>   - https://github.com/gliderlabs/docker-alpine/issues/144
 
 ### Initialization Scripts
 
-During the container startup, initialization scripts are executed in
-alphabetical order. They are executed before starting services.
+During container startup, initialization scripts in `/etc/cont-init.d/` are
+executed in alphabetical order. They are executed before starting services.
 
-Initialization scripts are located at `/etc/cont-init.d/` inside the container.
+To ensure predictable execution, name scripts using the format `XX-name.sh`,
+where `XX` is a sequence number.
 
-To have a better predictability of the execution order, name of the scripts
-follows the `XX-name.sh` format, where `XX` is a sequence number.
-
-The following ranges are used by the baseimage:
+The baseimage uses the ranges:
 
   - 10-29
   - 70-89
 
-Unless specific needs are required, containers built against this baseimage
+Unless specific needs require otherwise, containers built with this baseimage
 should use the range 50-59.
 
 ### Finalization Scripts
 
-Finalization scripts are executed, in alphabetical order, during the shutdown
-process of the container. They are executed after all services have been
-stopped.
-
-Finalization scripts are located under `/etc/cont-finish.d/` inside the
-container.
+Finalization scripts in `/etc/cont-finish.d/` are executed in alphabetical order
+during container shutdown, after all services have stopped.
 
 ### Services
 
-Services are programs handled by the process supervisor that run in background.
-When a service dies, it can be configured to be automatically restarted.
+Services are background programs managed by the process supervisor, which can be
+configured to restart automatically if they terminate.
 
-Services are defined under `/etc/services.d/` in the container. Each service
-has its own directory, in which different files are used to store the behavior
-of the service.
+Services are defined under `/etc/services.d/` in the container. Each service has
+its own directory containing files that define its behavior.
 
-The content of files provides the value for the associated configuration
-setting. If the file has execution permission, it will be executed by the
-process supervisor and its output is taked as the value of the configuration
-setting.
+The content of these files provides the configuration settings. If a file is
+executable, the process supervisor runs it, using its output as the setting's
+value.
 
 | File                   | Type             | Description | Default |
 |------------------------|------------------|-------------|---------|
 | run                    | Program          | The program to run. | N/A |
-| is_ready               | Program          | Program invoked by the process supervisor to verify if the service is ready. The program should exit with an exit code of `0` when service is ready. PID of the service if given to the program as parameter. | N/A |
-| kill                   | Program          | Program to run when service needs to be killed. The PID of the service if given to the program as parameter. Note that the `TERM` signal is still sent to the service after executing the program. | N/A |
-| finish                 | Program          | Program invoked when the service terminates. The service's exit code is given to the program as parameter. | N/A |
-| params                 | String           | Parameter for the service's program to run. One parameter per line. | No parameter |
-| environment            | String           | Environment to use for the service. One environment variable per line, of the form `key=value`. | Environment untouched |
-| environment_extra      | String           | Extra variables to add to the environment of the service. One environment variable per line, of the form `key=value`. | No extra variable |
-| respawn                | Boolean          | Whether or not the process must be respawned when it dies. | `FALSE`  |
-| sync                   | Boolean          | Whether or not the process supervisor waits until the service ends. This is mutually exclusive with `respawn`. | `FALSE` |
-| ready_timeout          | Unsigned integer | Maximum amount of time (in milliseconds) to wait for the service to be ready. | `10000` |
-| interval               | Interval         | Interval, in seconds, at which the service should be executed. This is mutually exclusive with `respawn`. | No interval |
-| uid                    | Unsigned integer | The user ID under which the service will run. | `$USER_ID` |
-| gid                    | Unsigned integer | The group ID under which the service will run. | `$GROUP_ID` |
-| sgid                   | Unsigned integer | List of supplementary group IDs of the service. One group ID per line. | Empty list |
-| umask                  | Octal integer    | The umask value (in octal notation) of the service. | `0022` |
-| priority               | Signed integer   | Priority at which the service should run. A niceness value of -20 is the highest priority and 19 is the lowest priority. | `0` |
-| workdir                | String           | The working directory of the service. | Service's directory path  |
-| ignore_failure         | Boolean          | When set, the inability to start the service won't prevent the container to start. | `FALSE` |
-| shutdown_on_terminate  | Boolean          | Indicates that the container should be shut down when the service terminates. | `FALSE` |
-| min_running_time       | Unsigned integer | The minimum amount of time (in milliseconds) the service should be running before considering it as ready. | `500` |
-| disabled               | Boolean          | Indicates that the service is disabled, meaning that it won't be loaded nor started. | `FALSE` |
-| <service>.dep          | Boolean          | Indicates that the service depends on another one. For example, having `srvB.dep` means that `srvB` should be started before this service. | N/A |
+| is_ready               | Program          | Program to verify if the service is ready. It should exit with code `0` when ready. The service's PID is passed as a parameter. | N/A |
+| kill                   | Program          | Program to run when the service needs to be killed. The service's PID is passed as a parameter. The `SIGTERM` signal is sent to the service after execution. | N/A |
+| finish                 | Program          | Program invoked when the service terminates. The service's exit code is passed as a parameter. | N/A |
+| params                 | String           | Parameters for the service's program, one per line. | No parameter |
+| environment            | String           | Environment for the service, with variables in the form `var=value`, one per line. | Environment untouched |
+| environment_extra      | String           | Additional variables to add to the environment of the service, one per line, in the form `key=value`. | No extra variable |
+| respawn                | Boolean          | Whether the process should be respawned when it terminates. | `FALSE`  |
+| sync                   | Boolean          | Whether the process supervisor waits until the service ends. Mutually exclusive with `respawn`. | `FALSE` |
+| ready_timeout          | Unsigned integer | Maximum time (in milliseconds) to wait for the service to be ready. | `10000` |
+| interval               | Interval         | Interval, in seconds, at which the service should be executed. Mutually exclusive with `respawn`. | No interval |
+| uid                    | Unsigned integer | User ID under which the service runs. | `$USER_ID` |
+| gid                    | Unsigned integer | Group ID under which the service runs. | `$GROUP_ID` |
+| sgid                   | Unsigned integer | List of supplementary group IDs for the service, one per line. | Empty list |
+| umask                  | Octal integer    | Umask value (in octal notation) for the service. | `0022` |
+| priority               | Signed integer   | Priority at which the service runs. A niceness value of -20 is the highest, and 19 is the lowest. | `0` |
+| workdir                | String           | Working directory of the service. | Service's directory path  |
+| ignore_failure         | Boolean          | If set, failure to start the service does not prevent the container from starting. | `FALSE` |
+| shutdown_on_terminate  | Boolean          | Indicates the container should shut down when the service terminates. | `FALSE` |
+| min_running_time       | Unsigned integer | Minimum time (in milliseconds) the service must run before being considered ready. | `500` |
+| disabled               | Boolean          | Indicates the service is disabled and will not be loaded or started. | `FALSE` |
+| \<service\>.dep        | Boolean          | Indicates the service depends on another service. For example, `srvB.dep` means `srvB` must start first. | N/A |
 
-The following table provides more details about some value types:
+The following table provides details about some value types:
 
 | Type     | Description |
 |----------|-------------|
-| Program  | An executable binary, a script or a symbolic link to the program to run. The program file must have the execute permission. |
-| Boolean  | A boolean value. A *true* value can be `1`, `true`, `on`, `yes`, `y`, `enable`, `enabled`. A *false* value can be `0`, `false`, `off`, `no`, `n`, `disable`, `disabled`. Values are case insensitive. Also, the presence of an empty file indicates a *true* value (i.e. the file can be "touched"). |
-| Interval | An unsigned integer value. The following values are also accepted (case insensitive): `yearly`, `monthly`, `weekly`, `daily`, `hourly`. |
+| Program  | An executable binary, script, or symbolic link to the program to run. The file must have execute permission. |
+| Boolean  | A boolean value. A *true* value can be `1`, `true`, `on`, `yes`, `y`, `enable`, or `enabled`. A *false* value can be `0`, `false`, `off`, `no`, `n`, `disable`, or `disabled`. Values are case -insensitive. An empty file indicates a *true* value (i.e., the file can be "touched"). |
+| Interval | An unsigned integer value. Also accepted (case-insensitive): `yearly`, `monthly`, `weekly`, `daily`, `hourly`. |
 
 #### Service Group
 
-A service group is a service for which there is no `run` program. The process
-supervisor will only load its dependencies.
+A service group is a service definition without a `run` program. The process
+supervisor loads only its dependencies.
 
 #### Default Service
 
-During startup, the process supervisor first load the service group `default`.
-This service group contains dependencies to services that should be started
-and that are not a dependency of the `app` service.
+During startup, the process supervisor first loads the `default` service group,
+which includes dependencies for services that should be started and are not
+dependencies of the `app` service.
 
 #### Service Readiness
 
-By default, a service is considered ready once it has been successfully launched
-and ran for a minimum amount of time (500ms by default).
+By default, a service is considered ready once it has launched successfully and
+ran for at least 500ms.
 
-This behavior can be adjusted with the following methods:
-  - By adjusting the minimum amount of time the service should run before 
-    considering it as ready. This can be done by adding the
-    `min_running_time` file to the service's directory.
-  - By informing the process supervisor when the service is ready. This is done
-    by adding the `is_ready` program to the service's directory, along with
-    `ready_timeout` file to indicate the maximum amount of time to wait for the
-    service to be ready.
+This behavior can be adjusted by one of these methods:
+  - Setting the minimum running time using the `min_running_time` file in the
+    service's directory.
+  - Adding an `is_ready` program to the service's directory, along with a
+    `ready_timeout` file to specify the maximum wait time for readiness.
 
 ### Configuration Directory
 
-Applications often need to write configuration, data, states, logs, etc.
-Inside the container, this data should be stored under the `/config` directory.
+Applications often need to write configuration, data, states, logs, etc. Inside
+the container, such data should be stored under the `/config` directory.
 
-This directory is intended to be mapped to a folder on the host. The goal is to
-write stuff outside the container to keep this data persistent.
+This directory is intended to be mapped to a folder on the host to ensure data
+persistence.
 
-**NOTE**: During the container startup, ownership of this folder and all its
-          content is taken. This is to make sure that `/config` can be accessed
-          by the user configured through `USER_ID`/`GROUP_ID`. This behavior
-          can be adjusted via the `TAKE_CONFIG_OWNERSHIP` internal environment
-          variable.
+> [!NOTE]
+> During container startup, ownership of this folder and its contents is set to
+> ensure accessibility by the user specified via `USER_ID` and `GROUP_ID`. This
+> behavior can be modified using the `TAKE_CONFIG_OWNERSHIP` internal
+> environment variable.
 
 #### Application's Data Directories
 
-A lot of applications use the environment variables defined by the
-[XDG Base Directory Specification] to determine where to store
-various data. The baseimage sets these variables so they all fall under
-`/config/`:
+Many applications use environment variables defined by the
+[XDG Base Directory Specification] to determine where to store various data. The
+baseimage sets these variables to reside under `/config/`:
 
-  * XDG_DATA_HOME=/config/xdg/data
-  * XDG_CONFIG_HOME=/config/xdg/config
-  * XDG_CACHE_HOME=/config/xdg/cache
-  * XDG_STATE_HOME=/config/xdg/state
+  - XDG_DATA_HOME=/config/xdg/data
+  - XDG_CONFIG_HOME=/config/xdg/config
+  - XDG_CACHE_HOME=/config/xdg/cache
+  - XDG_STATE_HOME=/config/xdg/state
 
 [XDG Base Directory Specification]: https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
 
 ### Container Log
 
-Everything written to the standard output and standard error output of scripts
-executed by the init process and services is saved into the container's log.
-The container log can be viewed with the command
+Outputs (both standard output and standard error) of scripts and programs
+executed during the init process and by the process supervisor are available in
+the container's log. The container log can be viewed with the command
 `docker logs <name of the container>`.
 
-To ease consultation of the log, all messages are prefixed with the name of the
-service or script. Also, it is a good idea to limit the number of information
-written to this log. If a program's output is too verbose, it is preferable
-to redirect it to a file. For example, the `run` command of a service that
-redirects the standard output and standard error output to different files
-could be:
+To facilitate log consultationg, all messages are prefixed with the name of the
+service or script.
+
+It is advisable to limit the amount of information written to this log. If a
+program's output is too verbose, redirect it to a file. For example, the
+following `run` file of a service redirects standard output and standard error
+to different files:
 
 ```shell
 #!/bin/sh
@@ -532,16 +519,15 @@ exec /usr/bin/my_service > /config/log/my_service_out.log 2> /config/log/my_serv
 
 ### Logrotate
 
-The baseimage integrates `logrotate`, an utility used to rotate and compress
-log files. This tool runs automatically once a day via a service. The service
-is automatically disabled when no log files are configured.
+The baseimage includes `logrotate`, a utility for rotating and compressing log
+files, which runs daily via a service. The service is disabled if no log files
+are configured.
 
-To enable the rotation/compression of a log file, a configuration file needs to
-be added to the `/etc/cont-logrotate.d` directory inside the container. This
-configuration defines how to handle this specific log file.
+To enable rotation for a log file, add a configuration file to
+`/etc/cont-logrotate.d` within the container. This configuration defines how to
+handle the log file.
 
-Here is a simple example of a configuration defined at
-`/etc/cont-logrotate.d/myapp`:
+Example configuration at `/etc/cont-logrotate.d/myapp`:
 
 ```
 /config/log/myapp.log {
@@ -549,141 +535,129 @@ Here is a simple example of a configuration defined at
 }
 ```
 
-This configuration file can override the default parameters, which are defined
-at `/opt/base/etc/logrotate.conf` inside the container. In summary, by default:
+This file can override default parameters defined at
+`/opt/base/etc/logrotate.conf` in the container. By default:
   - Log files are rotated weekly.
-  - Four weeks worth of backlogs are kept.
-  - Rotated log files are compressed.
-  - Date is used as a suffix of rotated log files.
+  - Four weeks of backlogs are kept.
+  - Rotated logs are compressed with gzip.
+  - Dates are used as suffixes for rotated logs.
 
-For more details about the content of `logrotate` configuration files, see the
-manual at https://linux.die.net/man/8/logrotate.
+For details on `logrotate` configuration files, see
+https://linux.die.net/man/8/logrotate.
 
 ### Log Monitor
 
-The baseimage includes a simple log monitor. This monitor allows sending
-notification(s) when a particular message is detected in a log or status file.
+The baseimage includes a log monitor that sends notifications when specific
+messages are detected in log or status files.
 
-This system has two main components:
-  - **Notification definitions**: Describe properties of a notification (title,
-    message, severity, etc),  how it is triggered (filtering function) and the
-    associated monitored file(s).
-  - **Backends (targets)**:  Once a matching string is found in a file, a
-    notification is triggered and sent to one or more backends. A backend can
-    implement any functionality. For example, it could send the notification to
-    the container's log, a file or an online service.
+The system has two main components:
+  - **Notification definitions**: Describe notification properties (title,
+    message, severity, etc.), the triggering condition (filtering function), and
+    the monitored file(s).
+  - **Backends (targets)**: When a matching string is found, a notification is
+    sent to one or more backends, which can log to the container, a file, or an
+    external service.
 
-There are two types of files that can be monitored:
-  - **Log files**: A log file is a file having new content appended to it.
-  - **Status files*: A status file doesn't have new content appended. Instead,
-    its whole content is refreshed/overwritten periodically.
+Two types of files can be monitored:
+  - **Log files**: Files with new content appended.
+  - **Status files**: Files whose entire content is periodically
+    refreshed/overwritten.
 
 #### Notification Definition
 
-The definition of a notification consists in multiple files, stored in a
-directory under `/etc/logmonitor/notifications.d` inside the container. For
-example, definition of notification `MYNOTIF` is found under
+A notification definition consists of multiple files in a directory under
+`/etc/logmonitor/notifications.d` within the container. For example, the
+definition for `MYNOTIF` is stored in
 `/etc/logmonitor/notifications.d/MYNOTIF/`.
 
-The following table describe files part of the definition:
+The following table describes files part of the definition:
 
 | File     | Mandatory  | Description |
 |----------|------------|-------------|
-| `filter` | Yes        | Program (script or binary with executable permission) used to filter messages from a log file. It is invoked by the log monitor with a single argument: a line from the log file. On a match, the program should exit with a value of `0`. Any other values is interpreted as non-match. |
-| `title`  | Yes        | File containing the title of the notification. To produce dynamic content, the file can be a program (script or binary with executable permission). In this case, the program is invoked by the log monitor with the matched message from the log file as the single argument. Output of the program is used as the notification's title. |
-| `desc`   | Yes        | File containing the description/message of the notification. To produce dynamic content, the file can be a program (script or binary with executable permission). In this case, the program is invoked by the log monitor with the matched message from the log file as the single argument. Output of the program is used as the notification's description/message. |
-| `level`  | Yes        | File containing severity level of the notification. Valid severity level values are `ERROR`, `WARNING` or `INFO`. To produce dynamic content, the file can be a program (script or binary with executable permission). In this case, the program is invoked by the log monitor with the matched message from the log file as the single argument. Output of the program is used as the notification's severity level. |
-| `source` | Yes        | File containing the absolute path(s) to file(s) to monitor (one path per line). Prepend the path with `status:` to indicate that the file is a status file. A path with prefixed with `log:` or without any prefix is considered as a log file. |
+| `filter` | Yes        | Program (script or binary with executable permission) to filter log file messages. It is invoked with a log line as an argument and should exit with `0` on a match. Other values indicate no match. |
+| `title`  | Yes        | File containing the notification title. For dynamic content, it can be a program (script or binary with executable permission) invoked with the matched line, using its output as the title. |
+| `desc`   | Yes        | File containing the notification description or message. For dynamic content, it can be a program (script or binary with executable permission) invoked with the matched log line, using its output as the description. |
+| `level`  | Yes        | File containing the notification's severity level (`ERROR`, `WARNING`, or `INFO`). For dynamic content, it can be a program (script or binary with executable permission) invoked with the matched log line, using its output as the severity. |
+| `source` | Yes        | File containing the absolute path(s) to monitored file(s), one per line. Prepend `status:` for status file; `log:` or no prefix indicates a log file. |
 
 #### Notification Backend
 
-Definition of a notification backend is stored in a directory under
-`/etc/cont-logmonitor/targets.d`. For example, definition of `STDOUT` backend is
-found under `/etc/cont-logmonitor/target.d/STDOUT/`. The following table
-describe files part of the definition:
+A notification backend is defined in a directory under
+`/etc/cont-logmonitor/targets.d`. For example, the `stdout` backend is in
+`/etc/cont-logmonitor/target.d/stdout/`.
+
+The following table describes the files:
 
 | File         | Mandatory  | Description |
 |--------------|------------|-------------|
-| `send`       | Yes        | Program (script or binary with executable permission) that sends the notification. It is invoked by the log monitor with the following notification properties as arguments: title, description/message and the severity level. |
-| `debouncing` | No         | File containing the minimum amount time (in seconds) that must elapse before sending the same notification with this backend. A value of `0` means infinite (notification is sent once). If this file is missing, no debouncing is done. |
+| `send`       | Yes        | Program (script or binary with executable permission) that sends the notification, invoked with the notification's title, description, and severity level as arguments. |
+| `debouncing` | No         | File containing the minimum time (in seconds) before sending the same notification again. A value of `0` means the notification is sent once. If missing, no debouncing occurs. |
 
-By default, the baseimage contains the following notification backends:
+The baseimage includes these notification backends:
 
 | Backend  | Description | Debouncing time |
 |----------|-------------|-----------------|
-| `stdout` | Display a message to the standard output, making it visible in the container's log. Message of the format is `{LEVEL}: {TITLE} {MESSAGE}`. | 21 600s (6 hours) |
-
+| `stdout` | Displays a message to standard output, visible in the container's log, in the format `{LEVEL}: {TITLE} {MESSAGE}`. | 21 600s (6 hours) |
 
 ### Helpers
 
-The baseimage contains a few helpers that can be used when bulding a container
-or during the execution of a container.
+The baseimage includes helpers that can be used when building a container or
+during its execution.
 
 #### Adding/Removing Packages
 
-To add or remove packages, use the helpers `add-pkg` and `del-pkg` provided by
-this baseimage. To minimize the size of the container, these tools perform
-proper cleanup and make sure that no useless files are left after addition or
-removal of packages.
+Use the `add-pkg` and `del-pkg` helpers to add or remove packages, ensuring
+proper cleanup to minimize container size.
 
-Also, these tools can be used to easily install a group packages temporarily.
-Using the `--virtual NAME` parameter, this allows installing packages and remove
-them at a later time using the provided `NAME` (no need to repeat given
-packages).
+These tools allow temporary installation of a group of packages (virtual
+package)  using the `--virtual NAME` parameter, enabling later removal with
+`del-pkg NAME`. Pre-installed packages are ignored and not removed.
 
-Note that if a specified package is already installed, it will be ignored and
-will not be removed automatically. For example, the following commands could be
-added to `Dockerfile` to compile a project:
+Example in a `Dockerfile` for compiling a project:
 
-```Dockerfile
+```dockerfile
 RUN \
     add-pkg --virtual build-dependencies build-base cmake git && \
-    git clone https://myproject.com/myproject.git
+    git clone https://myproject.com/myproject.git && \
     make -C myproject && \
     make -C myproject install && \
     del-pkg build-dependencies
 ```
 
-Supposing that, in the example above, the `git` package was already installed
-when the call to `add-pkg` is performed, running `del-pkg build-dependencies`
-doesn't remove it.
+If `git` was already installed before adding the virtual package,
+`del-pkg build-dependencies` will not remove it.
 
-#### Modifying Files With Sed
+#### Modifying Files with Sed
 
-`sed` is a useful tool often used in container builds to modify files. However,
-one downside of this method is that there is no easy way to determine if `sed`
-actually modified the file or not.
-
-It's for this reason that the baseimage includes a helper that gives `sed` a
-"patch-like" behavior:  if applying a sed expression results in no change on the
-target file, then an error is reported. This helper is named `sed-patch` and
-has the following usage:
+The `sed` tool is useful for modifying files during container builds, but it
+does not indicate whether changes were made. The `sed-patch` helper provides
+patch-like behavior, failing if the `sed` expression does not modify the file:
 
 ```shell
-sed-patch [SED_OPT]... SED_EXPRESSION FILE
+sed-patch [SED_OPTIONS]... SED_EXPRESSION FILE
 ```
 
 Note that the sed option `-i` (edit files in place) is already supplied by the
 helper.
 
-It can be used in `Dockerfile`, for example, like this:
+Example in a `Dockerfile`:
 
-```shell
+```dockerfile
 RUN sed-patch 's/Replace this/By this/' /etc/myfile
 ```
 
-If running this sed expression doesn't bring any change to `/etc/myfiles`, the
-command fails and thus, the Docker build also.
+If the expression does not change `/etc/myfile`, the command fails, halting the
+Docker build.
 
-#### Evaluating Boolean Value
+#### Evaluating Boolean Values
 
-Environment variables are often used to store a boolean value. Using the
-helpers `is-bool-value-true` and `is-bool-value-false` allows to easily
-determine if a value is "true" or "false".
+Environment variables are often used to store boolean values. Use
+`is-bool-value-true` and `is-bool-value-false` helpers to check these values.
 
 The following values are considered "true":
   - `1`
   - `true`
+  - `y`
   - `yes`
   - `enabled`
   - `enable`
@@ -692,31 +666,31 @@ The following values are considered "true":
 The following values are considered "false":
   - `0`
   - `false`
+  - `n`
   - `no`
   - `disabled`
   - `disable`
   - `off`
 
-For example, the following shell script snippet checks if the environment
-variable `CONTAINER_DEBUG` contains a "true" value:
+Example to check if `CONTAINER_DEBUG` is true:
 
 ```shell
 if is-bool-value-true "${CONTAINER_DEBUG:-0}"; then
-    # Do something...
+    # Debug enabled, do something...
 fi
 ```
 
 #### Taking Ownership of a Directory
 
-The helper `take-ownership` recursively sets the user ID and group ID of a
-directory and all the files and directories under it.
+The `take-ownership` helper recursively sets the user ID and group ID of a
+directory and all its files and subdirectories.
 
-This helper is well suited for scenarios where the directory is mapped to the
-host. If on the host this directory is a network share, setting/changing the
-ownership via `chown` can fail. The helper handles this case by ignoring the
-failure if a write test turns out to be positive.
+This helper is well-suited for scenarios where the directory is mapped to the
+host. If the directory is a network share on the host, setting/changing
+ownership via `chown` can fail. The helper handles this by ignoring the failure
+if a write test is positive.
 
-For example, the following command take ownership of `/config`, by automatically
+For example, the following command takes ownership of `/config`, automatically
 using the user and group IDs from the `USER_ID` and `GROUP_ID` environment
 variables:
 
@@ -724,107 +698,94 @@ variables:
 take-ownership /config
 ```
 
-User and group IDs can also be explicit. For example, to set ownership to user
-ID `99` and group ID `100`:
+User and group IDs can also be specified explicitly. The command below sets
+the ownership to user ID `99` and group ID `100`:
 
 ```shell
 take-ownership /config 99 100
 ```
 
-#### Setting Interval Environment Variable
+#### Setting Internal Environment Variables
 
-The helper `set-cont-env` can be used to set internal environment variables
-from the Dockerfile.
+The `set-cont-env` helper sets internal environment variables from the
+`Dockerfile`.
 
-For example, the following line can be added to the Dockerfile to set the value
-of the `APP_NAME` internal environment variable:
+Example to set the `APP_NAME` variable:
 
-```Dockerfile
+```dockerfile
 RUN set-cont-env APP_NAME "http-server"
 ```
 
-This automatically creates the environment variable file under
-`/etc/cont-env.d`.
+This creates the environment variable file under `/etc/cont-env.d` within the
+container.
 
 
 ### Tips and Best Practices
 
 #### Do Not Modify Baseimage Content
 
-Try to avoid modifications to files provided by the baseimage. This minimizes
-the risk of breaking your container after using a new version of the baseimage.
+Avoid modifying files provided by the baseimage to minimize issues when
+upgrading to newer versions.
 
 #### Default Configuration Files
 
-It is often useful to keep the original version of a configuration file. For
-example, a copy of the original file could be modified by an initialization
-script before being installed.
+Retaining the original version of application configuration files is often
+helpful. This allows an initialization script to modify a file based on its
+original version.
 
 These original files, also called default files, should be stored under the
 `/defaults` directory inside the container.
 
 #### The $HOME Variable
 
-The application is run under a Linux user having its own ID. This user has no
-login capability, has no password, no valid login shell and no home directory.
-It is effectively a kind of user used by daemons.
+The application runs under a Linux user with a specified ID, without login
+capability, password, valid shell, or home directory, similar to a daemon user.
 
-Thus, by default, the `$HOME` environment variable is not set. While this
-should be fine in most case, some applications may expect the `$HOME`
-environment variable to be set (since normally the application is run by a
-logged user) and may not behave correctly otherwise.
+By default, the `$HOME` environment variable is unset. Some applications expect
+`$HOME` to be set and may not function correctly otherwise.
 
-To make the application happy, the home directory can be set at the beginning
-of the `startapp.sh` script:
+To address this, set the home directory in the `startapp.sh` script:
+
 ```shell
 export HOME=/config
 ```
 
-Adjust the location of the home directory to fit your needs. However, if the
-application uses the home directory to write data, make sure it is done in a
-volume mapped to the host (e.g. `/config`),
+Adjust the location as needed. If the application writes to the home directory,
+use a directory mapped to the host (like `/config`).
 
-Note that the same technique can be used by services, by exporting the home
-directory into their `run` script.
+This technique can also be applied to services by setting the home directory in
+their `run` script.
 
 #### Referencing Linux User/Group
 
-The Linux user/group under which the application is running can be referenced
-via:
-  - Its ID, as indicated by the `USER_ID`/`GROUP_ID` environment variable.
-  - By the user/group `app`. The `app` user/group is setup during the startup
-    to match the configured `USER_ID`/`GROUP_ID`.
+Reference the Linux user/group running the application via:
+  - Their IDs, specified by `USER_ID`/`GROUP_ID` environment variables.
+  - The `app` user/group, set up during startup to match `USER_ID`/`GROUP_ID`.
 
 #### Using `rootfs` Directory
 
-All files that need to be copied into the container should be stored in your
-source tree under the directory `rootfs`. The folder structure into this
-directory should reflect the structure inside the container. For example, the
-file `/etc/cont-init.d/my-init.sh` inside the container should be saved as
+Store files to be copied into the container in the `rootfs` directory in your
+source tree, mirroring the container's structure. For example,
+`/etc/cont-init.d/my-init.sh` in the container should be
 `rootfs/etc/cont-init.d/my-init.sh` in your source tree.
 
-This way, copying all the required files to the correct place into the container
-can be done with this single line in your `Dockerfile`:
+Copy all files with a single `Dockerfile` command:
 
-```Dockerfile
+```dockerfile
 COPY rootfs/ /
 ```
 
-#### Adaptations from the 2.x Version
+#### Adaptations from Version 2.x
+When updating from version 2.x, consider the following:
 
-For existing applications using the previous version of the baseimage, few
-adaptations are needed when updating to the new baseimage. Here are a few
-tips:
-
-  - Verify exposed environment variables: each of them should be categorized as
-    a public or private one. See the
-    [Environment Variables](#environment-variables) section.
-  - Initialization scripts should be renamed to have the proper naming format.
-    See the [Initialization Scripts](#initialization-scripts) section.
-  - Parameters/definition of services should be adjusted for the new system.
-    See the [Services](#services) section.
-  - Verify that no scripts are using `with-contenv` in their shebang (e.g. from
-    init scripts).
-  - Set the `APP_VERSION` and `DOCKER_IMAGE_VERSION` internal environment
-    variables when/if needed.
+  - Review exposed environment variables to categorize them as public or
+    internal. See [Environment Variables](#environment-variables).
+  - Rename initialization scripts to follow the `XX-name.sh` format. See
+    [Initialization Scripts](#initialization-scripts).
+  - Adjust service parameters/definitions for the new system. See
+    [Services](#services).
+  - Ensure no scripts use `with-contenv` in their shebang (e.g., in init
+    scripts).
+  - Set `APP_VERSION` and `DOCKER_IMAGE_VERSION` internal environment variables
+    if needed.
 
