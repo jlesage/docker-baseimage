@@ -13,8 +13,8 @@ baseimage:
     A minimal docker baseimage to ease creation of long-lived application
     containers
   description: |-
-    This is a docker baseimage that can be used to create containers for any
-    long-lived application.
+    This is a Docker baseimage designed to simplify the creation of containers
+    for any long-lived application.
   gui: false
   history:
     - version: 3.7.0
@@ -433,7 +433,7 @@ container:
       type: internal
       default:
     - name: DOCKER_IMAGE_PLATFORM
-      description: Platform (OS / CPU architecture) of the Docker image that implements the application.
+      description: Platform (OS/CPU architecture) of the Docker image that implements the application.
       type: internal
       default:
     - name: HOME
@@ -441,52 +441,47 @@ container:
       type: internal
     - name: XDG_CONFIG_HOME
       description: >-
-        Defines the base directory relative to which user specific configuration
-        files should be stored.
+        Defines the base directory for user-specific configuration files.
       type: internal
       default: /config/xdg/config
     - name: XDG_DATA_HOME
       description: >-
-        Defines the base directory relative to which user specific data files
-        should be stored.
+        Defines the base directory for user-specific data files.
       type: internal
       default: /config/xdg/data
     - name: XDG_CACHE_HOME
       description: >-
-        Defines the base directory relative to which user specific non-essential
-        data files should be stored.
+        Defines the base directory for user-specific non-essential data files.
       type: internal
       default: /config/xdg/cache
     - name: TAKE_CONFIG_OWNERSHIP
       description: >-
-        When set to `0`, ownership of the content of the `/config` directory is
-        not taken during startup of the container.
+        When set to `0`, ownership of the `/config` directory's contents is not
+        taken during container startup.
       type: internal
       default: 1
     - name: INSTALL_PACKAGES_INTERNAL
       description: >-
-        Space-separated list of packages to install during the startup of the
-        container. Packages are installed from the repository of the Linux
-        distribution this container is based on.
+        Space-separated list of packages to install during container startup.
+        Packages are installed from the repository of the Linux distribution the
+        container is based on.
       type: internal
     - name: SUP_GROUP_IDS_INTERNAL
       description: >-
-        Comma-separated list of supplementary group IDs of the application.
-        These are merged with the ones that might be supplied by
-        `SUP_GROUP_IDS`.
+        Comma-separated list of supplementary group IDs for the application,
+        merged with those supplied by `SUP_GROUP_IDS`.
       type: internal
     - name: SERVICES_GRACETIME
       description: >-
-        During container shutdown, this defines the amount of time (in
-        milliseconds) allowed to services to gracefully terminate before
-        sending the KILL signal to everyone.
+        During container shutdown, defines the time (in milliseconds) allowed
+        for services to gracefully terminate before sending the SIGKILL signal
+        to all.
       type: internal
       default: 5000
     - name: USER_ID
       description: >-
         ID of the user the application runs as. See
-        [User/Group IDs](#usergroup-ids) to better understand when this should
-        be set.
+        [User/Group IDs](#usergroup-ids) for details.
       type: public
       default: 1000
       unraid_template:
@@ -499,8 +494,7 @@ container:
     - name: GROUP_ID
       description: >-
         ID of the group the application runs as. See
-        [User/Group IDs](#usergroup-ids) to better understand when this should
-        be set.
+        [User/Group IDs](#usergroup-ids) for details.
       type: public
       default: 1000
       unraid_template:
@@ -512,64 +506,62 @@ container:
         mask: false
     - name: SUP_GROUP_IDS
       description: >-
-        Comma-separated list of supplementary group IDs of the application.
+        Comma-separated list of supplementary group IDs for the application.
       type: public
     - name: UMASK
       description: >-
-        Mask that controls how permissions are set for newly created files and
-        folders. The value of the mask is in octal notation. By default, the
-        default umask value is `0022`, meaning that newly created files and
-        folders are readable by everyone, but only writable by the owner. See
-        the online umask calculator at http://wintelguy.com/umask-calc.pl.
+        Mask controlling permissions for newly created files and folders,
+        specified in octal notation. By default, `0022` ensures files and
+        folders are readable by all but writable only by the owner. See the
+        umask calculator at http://wintelguy.com/umask-calc.pl.
       type: public
       default: "0022"
       unraid_template:
         title: Umask
         description: >-
-          Mask that controls how file permissions are set for newly created
-          files. The value of the mask is in octal notation.
+          Mask controlling permissions for newly created files and folders,
+          specified in octal notation.
         default: "0000"
         display: advanced
         required: false
         mask: false
     - name: LANG
       description: >-
-        Set the [locale](https://en.wikipedia.org/wiki/Locale_(computer_software)),
-        which defines the application's language, **if supported**. Format of
-        the locale is `language[_territory][.codeset]`, where language is an
+        Sets the [locale](https://en.wikipedia.org/wiki/Locale_(computer_software)),
+        defining the application's language, if supported. Format is
+        `language[_territory][.codeset]`, where language is an
         [ISO 639 language code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes),
-        territory is an [ISO 3166 country code](https://en.wikipedia.org/wiki/ISO_3166-1#Current_codes)
+        territory is an [ISO 3166 country code](https://en.wikipedia.org/wiki/ISO_3166-1#Current_codes),
         and codeset is a character set, like `UTF-8`. For example, Australian
-        English using the UTF-8 encoding is `en_AU.UTF-8`.
+        English using UTF-8 is `en_AU.UTF-8`.
       type: public
       default: en_US.UTF-8
     - name: TZ
       description: >-
         [TimeZone](http://en.wikipedia.org/wiki/List_of_tz_database_time_zones)
-        used by the container. Timezone can also be set by mapping
+        used by the container. The timezone can also be set by mapping
         `/etc/localtime` between the host and the container.
       type: public
       default: Etc/UTC
     - name: KEEP_APP_RUNNING
       description: >-
-        When set to `1`, the application will be automatically restarted when it
+        When set to `1`, the application is automatically restarted if it
         crashes or terminates.
       type: public
       default: 0
     - name: APP_NICENESS
       description: >-
-        Priority at which the application should run. A niceness value of -20
-        is the highest priority and 19 is the lowest priority. The default
-        niceness value is 0. **NOTE**: A negative niceness (priority increase)
-        requires additional permissions. In this case, the container should be
-        run with the docker option `--cap-add=SYS_NICE`.
+        Priority at which the application runs. A niceness value of -20 is the
+        highest, 19 is the lowest and 0 the default. **NOTE**: A negative
+        niceness (priority increase) requires additional permissions. The
+        container must be run with the Docker option `--cap-add=SYS_NICE`.
       type: public
       default: 0
       unraid_template:
         title: Niceness (priority)
         description: >-
           Priority at which the application should run. A niceness value of -20
-          is the highest priority and 19 is the lowest priority.
+          is the highest, 19 is the lowest and 0 the default.
           NOTE: Setting a negative value requires additional permissions. Thus,
           "--cap-add=SYS_NICE" must be added to Extra Parameters (shown when
           Advanced View is enabled).
@@ -578,13 +570,11 @@ container:
         mask: false
     - name: INSTALL_PACKAGES
       description: >-
-        Space-separated list of packages to install during the startup of the
-        container.
+        Space-separated list of packages to install during container startup.
         {%- if app is not defined %} Packages are installed from the repository of the
-        Linux distribution this container is based on.
+        Linux distribution the container is based on.
         {%- else %} List of available packages can be found at {% if app.base_os == 'alpine' %}https://pkgs.alpinelinux.org{% elif app.base_os == 'debian' %}https://www.debian.org/distrib/packages{% elif app.base_os == 'ubuntu' %}https://packages.ubuntu.com{% endif %}.
-        {%- endif %} **ATTENTION**: Container functionality can be affected when
-        installing a package that overrides existing container files (e.g. binaries).
+        {%- endif %}
       type: public
     - name: PACKAGES_MIRROR
       description: >-
@@ -595,7 +585,7 @@ container:
       type: public
     - name: CONTAINER_DEBUG
       description: >-
-        Set to `1` to enable debug logging.
+        When set to `1`, enables debug logging.
       type: public
       default: 0
 
