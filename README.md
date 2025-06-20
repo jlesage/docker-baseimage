@@ -23,26 +23,26 @@ for any long-lived application.
          * [Availability](#availability)
          * [Docker Secrets](#docker-secrets)
       * [User/Group IDs](#usergroup-ids)
-      * [Locales](#locales)
       * [Initialization Scripts](#initialization-scripts)
       * [Finalization Scripts](#finalization-scripts)
       * [Services](#services)
          * [Service Group](#service-group)
          * [Default Service](#default-service)
          * [Service Readiness](#service-readiness)
-      * [Configuration Directory](#configuration-directory)
-         * [Application's Data Directories](#applications-data-directories)
-      * [Container Log](#container-log)
-      * [Logrotate](#logrotate)
-      * [Log Monitor](#log-monitor)
-         * [Notification Definition](#notification-definition)
-         * [Notification Backend](#notification-backend)
       * [Helpers](#helpers)
          * [Adding/Removing Packages](#addingremoving-packages)
          * [Modifying Files with Sed](#modifying-files-with-sed)
          * [Evaluating Boolean Values](#evaluating-boolean-values)
          * [Taking Ownership of a Directory](#taking-ownership-of-a-directory)
          * [Setting Internal Environment Variables](#setting-internal-environment-variables)
+      * [Configuration Directory](#configuration-directory)
+         * [Application's Data Directories](#applications-data-directories)
+      * [Locales](#locales)
+      * [Container Log](#container-log)
+      * [Logrotate](#logrotate)
+      * [Log Monitor](#log-monitor)
+         * [Notification Definition](#notification-definition)
+         * [Notification Backend](#notification-backend)
       * [Tips and Best Practices](#tips-and-best-practices)
          * [Do Not Modify Baseimage Content](#do-not-modify-baseimage-content)
          * [Default Configuration Files](#default-configuration-files)
@@ -185,7 +185,7 @@ docker run --rm -p 8080:8080 docker-http-server
 
 Access the HTTP server via a web browser at:
 
-```
+```text
 http://<HOST_IP_ADDR>:8080
 ```
 
@@ -357,30 +357,11 @@ id <username>
 
 This produces output like:
 
-```
+```text
 uid=1000(myuser) gid=1000(myuser) groups=1000(myuser),4(adm),24(cdrom),27(sudo),46(plugdev),113(lpadmin)
 ```
 
 Use the `uid` (user ID) and `gid` (group ID) values to configure the container.
-
-### Locales
-
-The default locale of the container is `POSIX`. If this causes issues with your
-application, install the appropriate locale. For example, to set the locale to
-`en_US.UTF-8`, add these instructions to your `Dockerfile`:
-
-```dockerfile
-RUN \
-    add-pkg locales && \
-    sed-patch 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
-    locale-gen
-ENV LANG=en_US.UTF-8
-```
-
-> [!NOTE]
-> Locales are not supported by the musl C standard library on Alpine Linux. See:
->   - http://wiki.musl-libc.org/wiki/Open_Issues#C_locale_conformance
->   - https://github.com/gliderlabs/docker-alpine/issues/144
 
 ### Initialization Scripts
 
@@ -469,135 +450,6 @@ This behavior can be adjusted by one of these methods:
     service's directory.
   - Adding an `is_ready` program to the service's directory, along with a
     `ready_timeout` file to specify the maximum wait time for readiness.
-
-### Configuration Directory
-
-Applications often need to write configuration, data, states, logs, etc. Inside
-the container, such data should be stored under the `/config` directory.
-
-This directory is intended to be mapped to a folder on the host to ensure data
-persistence.
-
-> [!NOTE]
-> During container startup, ownership of this folder and its contents is set to
-> ensure accessibility by the user specified via `USER_ID` and `GROUP_ID`. This
-> behavior can be modified using the `TAKE_CONFIG_OWNERSHIP` internal
-> environment variable.
-
-#### Application's Data Directories
-
-Many applications use environment variables defined by the
-[XDG Base Directory Specification] to determine where to store various data. The
-baseimage sets these variables to reside under `/config/`:
-
-  - XDG_DATA_HOME=/config/xdg/data
-  - XDG_CONFIG_HOME=/config/xdg/config
-  - XDG_CACHE_HOME=/config/xdg/cache
-  - XDG_STATE_HOME=/config/xdg/state
-
-[XDG Base Directory Specification]: https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
-
-### Container Log
-
-Outputs (both standard output and standard error) of scripts and programs
-executed during the init process and by the process supervisor are available in
-the container's log. The container log can be viewed with the command
-`docker logs <name of the container>`.
-
-To facilitate log consultationg, all messages are prefixed with the name of the
-service or script.
-
-It is advisable to limit the amount of information written to this log. If a
-program's output is too verbose, redirect it to a file. For example, the
-following `run` file of a service redirects standard output and standard error
-to different files:
-
-```shell
-#!/bin/sh
-exec /usr/bin/my_service > /config/log/my_service_out.log 2> /config/log/my_service_err.log
-```
-
-### Logrotate
-
-The baseimage includes `logrotate`, a utility for rotating and compressing log
-files, which runs daily via a service. The service is disabled if no log files
-are configured.
-
-To enable rotation for a log file, add a configuration file to
-`/etc/cont-logrotate.d` within the container. This configuration defines how to
-handle the log file.
-
-Example configuration at `/etc/cont-logrotate.d/myapp`:
-
-```
-/config/log/myapp.log {
-    minsize 1M
-}
-```
-
-This file can override default parameters defined at
-`/opt/base/etc/logrotate.conf` in the container. By default:
-  - Log files are rotated weekly.
-  - Four weeks of backlogs are kept.
-  - Rotated logs are compressed with gzip.
-  - Dates are used as suffixes for rotated logs.
-
-For details on `logrotate` configuration files, see
-https://linux.die.net/man/8/logrotate.
-
-### Log Monitor
-
-The baseimage includes a log monitor that sends notifications when specific
-messages are detected in log or status files.
-
-The system has two main components:
-  - **Notification definitions**: Describe notification properties (title,
-    message, severity, etc.), the triggering condition (filtering function), and
-    the monitored file(s).
-  - **Backends (targets)**: When a matching string is found, a notification is
-    sent to one or more backends, which can log to the container, a file, or an
-    external service.
-
-Two types of files can be monitored:
-  - **Log files**: Files with new content appended.
-  - **Status files**: Files whose entire content is periodically
-    refreshed/overwritten.
-
-#### Notification Definition
-
-A notification definition consists of multiple files in a directory under
-`/etc/logmonitor/notifications.d` within the container. For example, the
-definition for `MYNOTIF` is stored in
-`/etc/logmonitor/notifications.d/MYNOTIF/`.
-
-The following table describes files part of the definition:
-
-| File     | Mandatory  | Description |
-|----------|------------|-------------|
-| `filter` | Yes        | Program (script or binary with executable permission) to filter log file messages. It is invoked with a log line as an argument and should exit with `0` on a match. Other values indicate no match. |
-| `title`  | Yes        | File containing the notification title. For dynamic content, it can be a program (script or binary with executable permission) invoked with the matched line, using its output as the title. |
-| `desc`   | Yes        | File containing the notification description or message. For dynamic content, it can be a program (script or binary with executable permission) invoked with the matched log line, using its output as the description. |
-| `level`  | Yes        | File containing the notification's severity level (`ERROR`, `WARNING`, or `INFO`). For dynamic content, it can be a program (script or binary with executable permission) invoked with the matched log line, using its output as the severity. |
-| `source` | Yes        | File containing the absolute path(s) to monitored file(s), one per line. Prepend `status:` for status file; `log:` or no prefix indicates a log file. |
-
-#### Notification Backend
-
-A notification backend is defined in a directory under
-`/etc/cont-logmonitor/targets.d`. For example, the `stdout` backend is in
-`/etc/cont-logmonitor/target.d/stdout/`.
-
-The following table describes the files:
-
-| File         | Mandatory  | Description |
-|--------------|------------|-------------|
-| `send`       | Yes        | Program (script or binary with executable permission) that sends the notification, invoked with the notification's title, description, and severity level as arguments. |
-| `debouncing` | No         | File containing the minimum time (in seconds) before sending the same notification again. A value of `0` means the notification is sent once. If missing, no debouncing occurs. |
-
-The baseimage includes these notification backends:
-
-| Backend  | Description | Debouncing time |
-|----------|-------------|-----------------|
-| `stdout` | Displays a message to standard output, visible in the container's log, in the format `{LEVEL}: {TITLE} {MESSAGE}`. | 21 600s (6 hours) |
 
 ### Helpers
 
@@ -719,6 +571,152 @@ RUN set-cont-env APP_NAME "http-server"
 This creates the environment variable file under `/etc/cont-env.d` within the
 container.
 
+### Configuration Directory
+
+Applications often need to write configuration, data, states, logs, etc. Inside
+the container, such data should be stored under the `/config` directory.
+
+This directory is intended to be mapped to a folder on the host to ensure data
+persistence.
+
+> [!NOTE]
+> During container startup, ownership of this folder and its contents is set to
+> ensure accessibility by the user specified via `USER_ID` and `GROUP_ID`. This
+> behavior can be modified using the `TAKE_CONFIG_OWNERSHIP` internal
+> environment variable.
+
+#### Application's Data Directories
+
+Many applications use environment variables defined by the
+[XDG Base Directory Specification] to determine where to store various data. The
+baseimage sets these variables to reside under `/config/`:
+
+  - XDG_DATA_HOME=/config/xdg/data
+  - XDG_CONFIG_HOME=/config/xdg/config
+  - XDG_CACHE_HOME=/config/xdg/cache
+  - XDG_STATE_HOME=/config/xdg/state
+
+[XDG Base Directory Specification]: https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+
+### Locales
+
+The default locale of the container is `POSIX`. If this causes issues with your
+application, install the appropriate locale. For example, to set the locale to
+`en_US.UTF-8`, add these instructions to your `Dockerfile`:
+
+```dockerfile
+RUN \
+    add-pkg locales && \
+    sed-patch 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
+    locale-gen
+ENV LANG=en_US.UTF-8
+```
+
+> [!NOTE]
+> Locales are not supported by the musl C standard library on Alpine Linux. See:
+>   - http://wiki.musl-libc.org/wiki/Open_Issues#C_locale_conformance
+>   - https://github.com/gliderlabs/docker-alpine/issues/144
+
+### Container Log
+
+Outputs (both standard output and standard error) of scripts and programs
+executed during the init process and by the process supervisor are available in
+the container's log. The container log can be viewed with the command
+`docker logs <name of the container>`.
+
+To facilitate log consultationg, all messages are prefixed with the name of the
+service or script.
+
+It is advisable to limit the amount of information written to this log. If a
+program's output is too verbose, redirect it to a file. For example, the
+following `run` file of a service redirects standard output and standard error
+to different files:
+
+```shell
+#!/bin/sh
+exec /usr/bin/my_service > /config/log/my_service_out.log 2> /config/log/my_service_err.log
+```
+### Logrotate
+
+The baseimage includes `logrotate`, a utility for rotating and compressing log
+files, which runs daily via a service. The service is disabled if no log files
+are configured.
+
+To enable rotation for a log file, add a configuration file to
+`/etc/cont-logrotate.d` within the container. This configuration defines how to
+handle the log file.
+
+Example configuration at `/etc/cont-logrotate.d/myapp`:
+
+```text
+/config/log/myapp.log {
+    minsize 1M
+}
+```
+
+This file can override default parameters defined at
+`/opt/base/etc/logrotate.conf` in the container. By default:
+  - Log files are rotated weekly.
+  - Four weeks of backlogs are kept.
+  - Rotated logs are compressed with gzip.
+  - Dates are used as suffixes for rotated logs.
+
+For details on `logrotate` configuration files, see
+https://linux.die.net/man/8/logrotate.
+
+### Log Monitor
+
+The baseimage includes a log monitor that sends notifications when specific
+messages are detected in log or status files.
+
+The system has two main components:
+  - **Notification definitions**: Describe notification properties (title,
+    message, severity, etc.), the triggering condition (filtering function), and
+    the monitored file(s).
+  - **Backends (targets)**: When a matching string is found, a notification is
+    sent to one or more backends, which can log to the container, a file, or an
+    external service.
+
+Two types of files can be monitored:
+  - **Log files**: Files with new content appended.
+  - **Status files**: Files whose entire content is periodically
+    refreshed/overwritten.
+
+#### Notification Definition
+
+A notification definition consists of multiple files in a directory under
+`/etc/logmonitor/notifications.d` within the container. For example, the
+definition for `MYNOTIF` is stored in
+`/etc/logmonitor/notifications.d/MYNOTIF/`.
+
+The following table describes files part of the definition:
+
+| File     | Mandatory  | Description |
+|----------|------------|-------------|
+| `filter` | Yes        | Program (script or binary with executable permission) to filter log file messages. It is invoked with a log line as an argument and should exit with `0` on a match. Other values indicate no match. |
+| `title`  | Yes        | File containing the notification title. For dynamic content, it can be a program (script or binary with executable permission) invoked with the matched line, using its output as the title. |
+| `desc`   | Yes        | File containing the notification description or message. For dynamic content, it can be a program (script or binary with executable permission) invoked with the matched log line, using its output as the description. |
+| `level`  | Yes        | File containing the notification's severity level (`ERROR`, `WARNING`, or `INFO`). For dynamic content, it can be a program (script or binary with executable permission) invoked with the matched log line, using its output as the severity. |
+| `source` | Yes        | File containing the absolute path(s) to monitored file(s), one per line. Prepend `status:` for status file; `log:` or no prefix indicates a log file. |
+
+#### Notification Backend
+
+A notification backend is defined in a directory under
+`/etc/cont-logmonitor/targets.d`. For example, the `stdout` backend is in
+`/etc/cont-logmonitor/target.d/stdout/`.
+
+The following table describes the files:
+
+| File         | Mandatory  | Description |
+|--------------|------------|-------------|
+| `send`       | Yes        | Program (script or binary with executable permission) that sends the notification, invoked with the notification's title, description, and severity level as arguments. |
+| `debouncing` | No         | File containing the minimum time (in seconds) before sending the same notification again. A value of `0` means the notification is sent once. If missing, no debouncing occurs. |
+
+The baseimage includes these notification backends:
+
+| Backend  | Description | Debouncing time |
+|----------|-------------|-----------------|
+| `stdout` | Displays a message to standard output, visible in the container's log, in the format `{LEVEL}: {TITLE} {MESSAGE}`. | 21 600s (6 hours) |
 
 ### Tips and Best Practices
 

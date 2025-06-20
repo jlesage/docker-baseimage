@@ -599,15 +599,15 @@ container:
     - container_path: /config
       host_path_example: /docker/appdata/{{ app.name }}
       description: >-
-        This is where the application stores its configuration, states, log and
-        any files needing persistency.
+        Stores the application's configuration, state, logs, and any files
+        requiring persistency.
       permissions: rw
       include_in_quick_start: true
       unraid_template:
         title: Config Directory
         description: >-
-          This is where the application stores its configuration, states, log
-          and any files needing persistency.
+          This location stores the application's configuration, state, logs, and
+          any files requiring persistency.
         default: /mnt/user/appdata/{{ app.name }}
         display: advanced-hide
         required: true
@@ -615,8 +615,8 @@ container:
     - container_path: /storage
       host_path_example: /home/user
       description: >-
-        This location contains files from your host that need to be accessible
-        to the application.
+        Contains files from the host that need to be accessible to the
+        application.
       permissions: "{{ container.storage_permissions }}"
       include_in_quick_start: true
       unraid_template:
