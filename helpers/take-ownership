@@ -52,17 +52,21 @@ usage() {
 Take ownership of the specified file/directory.
 
 Options:
-  --not-recursive  Take ownership of the specified directory only, not its
-                   content.
-  --fail           Exit with non-zero value if ownership fails to be set for at
-                   least one file or folder.
-  --user-id ID     ID of the user that should own the directory.  If not set,
-                   the USER_ID environment variable is used.
-  --group-id ID    ID of the group that should own the directory.  If not set,
-                   the GROUP_ID environment variable is used.
+  --not-recursive     Take ownership of the specified directory only, not its
+                      content.
+  --fail              Exit with non-zero value if ownership fails to be set
+                      for at least one file or folder.
+  --skip-if-writable  Do not take ownership of the directory if it is already
+                      writable by the specified user.
+  --user-id ID        ID of the user that should own the directory. If not set,
+                      the USER_ID environment variable is used.
+  --group-id ID       ID of the group that should own the directory. If not set,
+                      the GROUP_ID environment variable is used.
+  --sup-group-ids IDS Comma-separated list of supplementary group IDs. If not
+                      set, the SUP_GROUP_IDS environment variable is used.
 
 Arguments:
-  TARGET           Path to the file/directory to take ownership.
+  TARGET              Path to the file/directory to take ownership.
 " >&2
     exit 1
 }
@@ -74,6 +78,7 @@ die() {
 
 IGNORE_ERRORS=true
 RECURSIVE=true
+DO_WRITE_TEST=false
 TARGET=
 
 while [ $# -gt 0 ]; do
@@ -86,6 +91,9 @@ while [ $# -gt 0 ]; do
             ;;
         --fail)
             IGNORE_ERRORS=false
+            ;;
+        --skip-if-writable)
+            DO_WRITE_TEST=true
             ;;
         --user-id)
             if [ -n "${2-}" ]; then
@@ -100,6 +108,14 @@ while [ $# -gt 0 ]; do
                 GROUP_ID="$2"
             else
                 usage "Group ID not set."
+            fi
+            shift
+            ;;
+        --sup-group-ids)
+            if [ -n "${2-}" ]; then
+                SUP_GROUP_IDS="$2"
+            else
+                usage "Supplementary group IDs not set."
             fi
             shift
             ;;
@@ -127,7 +143,7 @@ fi
 
 # Validate the user ID.
 if [ -z "${USER_ID:-}" ]; then
-    die " No user ID defined."
+    die "No user ID defined."
 fi
 
 # Validate the group ID.
@@ -140,6 +156,32 @@ if [ -d "${TARGET}" ]; then
     TARGET="$(cd "${TARGET}" && pwd)"
 else
     TARGET="$(cd "$(dirname "${TARGET}")" && pwd)/$(basename "${TARGET}")"
+fi
+
+# Do not take ownership of the directory if user already has write permission.
+if [ -d "${TARGET}" ] && ${DO_WRITE_TEST}; then
+    if [ "$(id -u)" -eq 0 ]; then
+        groups="${GROUP_ID:-},${SUP_GROUP_IDS:-},${SUP_GROUP_IDS_INTERNAL:-}"
+        for grp in $(echo "${groups}" | tr ',' ' '); do
+            set +e
+            tmp="$(su-exec "${USER_ID}:${grp}" mktemp "${TARGET}"/tmp.XXXXXXXXXX 2> /dev/null)"
+            rc="$?"
+            set -e
+            if [ "${rc}" -eq 0 ]; then
+                su-exec "${USER_ID}:${grp}" rm -f "${tmp}"
+                exit 0
+            fi
+        done
+    else
+        set +e
+        tmp="$(mktemp "${TARGET}"/tmp.XXXXXXXXXX 2> /dev/null)"
+        rc="$?"
+        set -e
+        if [ "${rc}" -eq 0 ]; then
+            rm -f "${tmp}"
+            exit 0
+        fi
+    fi
 fi
 
 # Create temporary file to store any chmod error.
