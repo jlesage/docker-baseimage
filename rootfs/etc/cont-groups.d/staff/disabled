@@ -1,0 +1,18 @@
+#!/bin/sh
+
+set -e # Exit immediately if a command exits with a non-zero status.
+set -u # Treat unset variables as an error.
+
+# Ubuntu and debian require additional user/group for proper packages
+# installation.
+. /etc/os-release
+case "${ID}" in
+    ubuntu | debian)
+        echo 0
+        ;;
+    *)
+        echo 1
+        ;;
+esac
+
+# vim:ft=sh:ts=4:sw=4:et:sts=4

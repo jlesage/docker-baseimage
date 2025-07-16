@@ -11,12 +11,68 @@ err() {
     echo "ERROR: $*" >&2
 }
 
+die() {
+    err "$@"
+    exit 1
+}
+
+get_content() {
+    if [ -x "$1" ]; then
+        set +e
+        val="$("$1")"
+        rc="$?"
+        set -e
+        if [ "${rc}" -ne 0 ]; then
+            err "$1 terminated with error ${rc}."
+            exit 1
+        fi
+        printf "%s" "${val}"
+    elif [ -f "$1" ]; then
+        if [ "${2:-string}" = "boolean" ] && [ "$(stat -c "%s" "$1")" -eq 0 ]; then
+            echo "1"
+        else
+            cat "$1"
+        fi
+    fi
+}
+
+user_id_valid() {
+    case "$1" in
+        '' | *[!0-9]*)
+            return 1
+            ;;
+        *)
+            return 0
+            ;;
+    esac
+}
+
+user_name_valid() {
+    case "$1" in
+        # Must start with `[a-z_]` and be followed by `[a-z0-9_-]`.
+        '' | [a-z_][a-z0-9_-]*)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
 user_id_exists() {
     [ -f /etc/passwd ] && cut -d':' -f3 < /etc/passwd | grep -q "^$1\$"
 }
 
 user_name_exists() {
     [ -f /etc/passwd ] && cut -d':' -f1 < /etc/passwd | grep -q "^$1\$"
+}
+
+group_id_valid() {
+    user_id_valid "$@"
+}
+
+group_name_valid() {
+    user_name_valid "$@"
 }
 
 group_id_exists() {
@@ -107,33 +163,56 @@ add_user_to_group() {
 rm -f /etc/passwd /etc/group /etc/shadow
 touch /etc/passwd /etc/group /etc/shadow
 
-# Add the 'root' user.
-add_group root 0
-add_user root 0 0 /root
-add_user_to_group root root
+# Add defined groups.
+if [ -d /etc/cont-groups.d ]; then
+    find /etc/cont-groups.d -type d -mindepth 1 -maxdepth 1 | while read -r entry; do
+        # Get attributes.
+        name="$(basename "${entry}")"
+        disabled="$(get_content "${entry}"/disabled boolean)"
+        id="$(get_content "${entry}"/id)"
 
-# Add the 'shadow' group.
-add_group shadow 42
+        if is-bool-val-true "${disabled:-0}"; then
+            continue
+        fi
 
-# Add the 'cinit' group.
-add_group cinit 72
+        # Validate attributes.
+        group_name_valid "${name}" || die "group name defined at ${entry} is not valid."
+        group_id_valid "${id}" || die "group id defined at ${entry} is not valid."
 
-# Ubuntu and debian require additional user/group for proper packages
-# installation.
-. /etc/os-release
-case "${ID}" in
-    ubuntu | debian)
-        # Add the 'staff' group.
-        add_group staff 52
+        # Add group.
+        add_group "${name}" "${id}"
+    done
+fi
 
-        # Add the 'nogroup' group.
-        add_group nogroup 65534
+# Add defined users.
+if [ -d /etc/cont-users.d ]; then
+    find /etc/cont-users.d -type d -mindepth 1 -maxdepth 1 | while read -r entry; do
+        # Get attributes.
+        name="$(basename "${entry}")"
+        disabled="$(get_content "${entry}"/disabled boolean)"
+        uid="$(get_content "${entry}"/id)"
+        gid="$(get_content "${entry}"/gid)"
+        home="$(get_content "${entry}"/home)"
+        grps="$(get_content "${entry}"/grps)"
 
-        # Add the '_apt' user.
-        add_user _apt 105 65534 /nonexistent
-        ;;
-    *) ;;
-esac
+        if is-bool-val-true "${disabled:-0}"; then
+            continue
+        fi
+
+        # Validate attributes.
+        user_name_valid "${name}" || die "user name defined at ${entry} is not valid."
+        user_id_valid "${uid}" || die "user id defined at ${entry} is not valid."
+        group_id_valid "${gid}" || die "group id defined at ${entry} is not valid."
+
+        # Add user.
+        add_user "${name}" "${uid}" "${gid}" "${home}"
+        printf "%s\n" "${grps}" | while read -r grp; do
+            [ -n "${grp}" ] || continue
+            group_name_valid "${grp}" || err "group name '${grp}' defined at ${entry} is not valid."
+            add_user_to_group "${name}" "${grp}"
+        done
+    done
+fi
 
 # Add the 'app' user.
 # NOTE: This user requires special handling, since its user/group ID is
