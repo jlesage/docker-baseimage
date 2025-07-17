@@ -17,6 +17,13 @@ baseimage:
     for any long-lived application.
   gui: false
   history:
+    - version: 3.8.0
+      date: 2025-07-16
+      changes:
+        added:
+          - 'Ability to define users and groups to be added to Linux system files (`/etc/passwd`, `/etc/group` and `/etc/shadow`).'
+        removed:
+          - 'Image based on Debian 10 (reached end of support on 2024-06-30).'
     - version: 3.7.2
       date: 2025-07-01
       changes:
