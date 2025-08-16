@@ -485,8 +485,9 @@ container:
       type: internal
     - name: SUP_GROUP_IDS_INTERNAL
       description: >-
-        Comma-separated list of supplementary group IDs for the application,
-        merged with those supplied by `SUP_GROUP_IDS`.
+        Comma-separated list of supplementary group IDs. Values are merged with
+        those supplied by `SUP_GROUP_IDS` and any `SUP_GROUP_IDS_INTERNAL_*`
+        variables.
       type: internal
     - name: SERVICES_GRACETIME
       description: >-
