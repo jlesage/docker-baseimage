@@ -77,6 +77,14 @@ static bool debug_enabled = false;
 
 typedef struct {
     char *name;
+    char *send;
+    int debouncing;
+
+    time_t last_notif_sent[MAX_NUM_NOTIFICATIONS];
+} lm_target_t;
+
+typedef struct {
+    char *name;
 
     char *filter;
 
@@ -94,15 +102,10 @@ typedef struct {
         char *path;
         bool is_status;
     } monitored_files[MAX_NUM_MONITORED_FILES_PER_NOTIFICATION];
+
+    unsigned char num_targets;
+    lm_target_t *targets[MAX_NUM_TARGETS];
 } lm_notification_t;
-
-typedef struct {
-    char *name;
-    char *send;
-    int debouncing;
-
-    time_t last_notif_sent[MAX_NUM_NOTIFICATIONS];
-} lm_target_t;
 
 typedef struct {
     char *path;
@@ -636,7 +639,7 @@ static void handle_line(lm_context_t *ctx, unsigned int mfid, char *buf)
                 level = notif->level;
             }
 
-            FOR_EACH_TARGET(ctx, target, tidx) {
+            FOR_EACH_TARGET(notif, target, tidx) {
                 if (target->last_notif_sent[nidx] > 0) {
                     if (target->debouncing == 0) {
                         DEBUG("Ignoring target '%s': debouncing.", target->name);
@@ -754,7 +757,7 @@ static void free_notification(lm_notification_t *notif) {
     }
 }
 
-static lm_notification_t *alloc_notification(const char *notifications_dir, const char *name)
+static lm_notification_t *alloc_notification(lm_context_t *ctx, const char *notifications_dir, const char *name)
 {
     int retval = LM_SUCCESS;
     lm_notification_t *notif = NULL;
@@ -920,6 +923,48 @@ static lm_notification_t *alloc_notification(const char *notifications_dir, cons
                 SET_ERROR(retval, "Failed to read notification monitored file path.");
             }
         }
+        else if (strcmp(de->d_name, "target") == 0) {
+            char *mfp = file2str(filepath);
+            if (mfp) {
+                char *token = strtok(mfp, "\n");
+                while (token != NULL) {
+                    lm_target_t *target_found = NULL;
+
+                    if (strlen(token) == 0) {
+                        continue;
+                    }
+
+                    FOR_EACH_TARGET(ctx, target, tidx) {
+                        if (strcmp(target->name, token) == 0) {
+                            target_found = target;
+                            break;
+                        }
+                    }
+
+                    if (!target_found) {
+                        SET_ERROR(retval, "Invalid notification target value '%s'.", token);
+                        break;
+                    }
+
+                    if (notif->num_targets < DIM(notif->targets)) {
+                        notif->targets[notif->num_targets] = target_found;
+                        notif->num_targets++;
+                    }
+                    else {
+                        SET_ERROR(retval, "Maximum number of notification targets reached.");
+                        break;
+                    }
+
+                    token = strtok(NULL, "\n");
+                }
+
+                free(mfp);
+                mfp = NULL;
+            }
+            else {
+                SET_ERROR(retval, "Failed to read notification target.");
+            }
+        }
 
         if (filepath) {
             free(filepath);
@@ -948,6 +993,15 @@ static lm_notification_t *alloc_notification(const char *notifications_dir, cons
         }
         else if (notif->num_monitored_files == 0) {
             SET_ERROR(retval, "At least one file to monitor must be specified.");
+        }
+    }
+
+    if (IS_SUCCESS(retval)) {
+        if (notif->num_targets == 0) {
+            FOR_EACH_TARGET(ctx, target, tidx) {
+                notif->targets[notif->num_targets] = target;
+                notif->num_targets++;
+            }
         }
     }
 
@@ -986,7 +1040,7 @@ static int load_config_notifications(lm_context_t *ctx, const char *notification
             // Load the current notification config.
             if (ctx->num_notifications < DIM(ctx->notifications)) {
                 ctx->notifications[ctx->num_notifications] = 
-                    alloc_notification(notifications_dir, de->d_name);
+                    alloc_notification(ctx, notifications_dir, de->d_name);
 
                 if (ctx->notifications[ctx->num_notifications]) {
                     ctx->num_notifications++;
@@ -1247,18 +1301,6 @@ static lm_context_t *create_context(const char *cfgdir)
         }
     }
 
-    // Load notifications.
-    if (IS_SUCCESS(retval)) {
-        char *path = join_path(ctx->config_dir, "notifications.d");
-        if (path) {
-            retval = load_config_notifications(ctx, path);
-            free(path);
-        }
-        else {
-            SET_ERROR(retval, "Failed to build notifications directory path.");
-        }
-    }
-
     // Load targets.
     if (IS_SUCCESS(retval)) {
         char *path = join_path(ctx->config_dir, "targets.d");
@@ -1268,6 +1310,18 @@ static lm_context_t *create_context(const char *cfgdir)
         }
         else {
             SET_ERROR(retval, "Failed to build targets directory path.");
+        }
+    }
+
+    // Load notifications.
+    if (IS_SUCCESS(retval)) {
+        char *path = join_path(ctx->config_dir, "notifications.d");
+        if (path) {
+            retval = load_config_notifications(ctx, path);
+            free(path);
+        }
+        else {
+            SET_ERROR(retval, "Failed to build notifications directory path.");
         }
     }
 
