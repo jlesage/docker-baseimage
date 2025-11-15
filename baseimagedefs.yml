@@ -17,6 +17,11 @@ baseimage:
     for any long-lived application.
   gui: false
   history:
+    - version: 3.10.0
+      date: 2025-11-14
+      changes:
+        added:
+          - 'Ability to restrict a logmonitor notification to specific target(s).'
     - version: 3.9.0
       date: 2025-09-14
       changes:
