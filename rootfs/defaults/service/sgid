@@ -6,7 +6,7 @@ set -u # Treat unset variables as an error.
 grps="${SUP_GROUP_IDS:-},${SUP_GROUP_IDS_INTERNAL:-}"
 
 # Check the environment for SUP_GROUP_IDS_INTERNAL_* variables.
-for var in $(env | sed -n 's/\(^SUP_GROUP_IDS_INTERNAL_[A-Z0-9]\+\)\=.*/\1/p'); do
+for var in $(env | sed -n 's/\(^SUP_GROUP_IDS_INTERNAL_[A-Z0-9_]\+\)\=.*/\1/p'); do
     eval "grps=\${grps},\$${var}"
 done
 
