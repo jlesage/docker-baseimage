@@ -17,6 +17,11 @@ baseimage:
     for any long-lived application.
   gui: false
   history:
+    - version: 3.10.1
+      date: 2025-12-05
+      changes:
+        fixed:
+          - 'Support for underscores in `SUP_GROUP_IDS_INTERNAL_*` internal variables.'
     - version: 3.10.0
       date: 2025-11-14
       changes:
