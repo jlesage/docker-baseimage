@@ -65,6 +65,7 @@ This baseimage is available for multiple Linux distributions:
 | [Alpine 3.20]      | alpine-3.20-vX.Y.Z    | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.20-v3?style=for-the-badge)](#)  |
 | [Alpine 3.21]      | alpine-3.21-vX.Y.Z    | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.21-v3?style=for-the-badge)](#)  |
 | [Alpine 3.22]      | alpine-3.22-vX.Y.Z    | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.22-v3?style=for-the-badge)](#)  |
+| [Alpine 3.23]      | alpine-3.23-vX.Y.Z    | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/alpine-3.23-v3?style=for-the-badge)](#)  |
 | [Debian 11]        | debian-11-vX.Y.Z      | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-11-v3?style=for-the-badge)](#)    |
 | [Debian 12]        | debian-12-vX.Y.Z      | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/debian-12-v3?style=for-the-badge)](#)    |
 | [Ubuntu 16.04 LTS] | ubuntu-16.04-vX.Y.Z   | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-16.04-v3?style=for-the-badge)](#) |
@@ -91,6 +92,7 @@ details.
 [Alpine 3.20]: https://alpinelinux.org/posts/Alpine-3.20.0-released.html
 [Alpine 3.21]: https://alpinelinux.org/posts/Alpine-3.21.0-released.html
 [Alpine 3.22]: https://alpinelinux.org/posts/Alpine-3.22.0-released.html
+[Alpine 3.23]: https://alpinelinux.org/posts/Alpine-3.23.0-released.html
 [Debian 11]: https://www.debian.org/releases/bullseye/
 [Debian 12]: https://www.debian.org/releases/bookworm/
 [Ubuntu 16.04 LTS]: http://releases.ubuntu.com/16.04/
