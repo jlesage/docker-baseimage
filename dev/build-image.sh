@@ -7,7 +7,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BASE_DIR="$(realpath "${SCRIPT_DIR}"/../)"
 
 IMAGE=jlesage/baseimage:dev
-BASEIMAGE=alpine:3.21
+BASEIMAGE=alpine:3.23
 PLATFORM=linux/amd64
 RUN_UNIT_TESTS=false
 
