@@ -79,6 +79,7 @@ umask 022
 # Install container environment variables.
 STAGE=cont-env
 log "loading container environment variables..."
+echo > /var/tmp/.cont-env-internal
 if [ -d /etc/cont-env.d ]; then
     flist="$(mktemp)"
     find /etc/cont-env.d -maxdepth 1 -type f | sort > "${flist}"
