@@ -17,6 +17,13 @@ baseimage:
     for any long-lived application.
   gui: false
   history:
+    - version: 3.10.3
+      date: 2026-01-20
+      changes:
+        added:
+          - 'Image based on Debian 13.'
+        fixed:
+          - 'Internal environment variables being appended to the persistent file on each container start instead of overwriting it.'
     - version: 3.10.2
       date: 2025-12-06
       changes:
