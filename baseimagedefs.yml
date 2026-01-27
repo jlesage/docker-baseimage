@@ -596,8 +596,8 @@ container:
       default: 0
     - name: APP_NICENESS
       description: >-
-        Priority at which the application runs. A niceness value of -20 is the
-        highest, 19 is the lowest and 0 the default. **NOTE**: A negative
+        Priority at which the application runs. A niceness value of `-20` is the
+        highest, `19` is the lowest and `0` the default. **NOTE**: A negative
         niceness (priority increase) requires additional permissions. The
         container must be run with the Docker option `--cap-add=SYS_NICE`.
       type: public
@@ -605,10 +605,10 @@ container:
       unraid_template:
         title: Niceness (priority)
         description: >-
-          Priority at which the application should run. A niceness value of -20
-          is the highest, 19 is the lowest and 0 the default.
+          Priority at which the application should run. A niceness value of
+          `-20` is the highest, `19` is the lowest and `0` the default.
           NOTE: Setting a negative value requires additional permissions. Thus,
-          "--cap-add=SYS_NICE" must be added to Extra Parameters (shown when
+          `--cap-add=SYS_NICE` must be added to Extra Parameters (shown when
           Advanced View is enabled).
         display: advanced
         required: false
@@ -645,9 +645,6 @@ container:
       include_in_quick_start: true
       unraid_template:
         title: Config Directory
-        description: >-
-          This location stores the application's configuration, state, logs, and
-          any files requiring persistency.
         default: /mnt/user/appdata/{{ app.name }}
         display: advanced-hide
         required: true
@@ -661,9 +658,6 @@ container:
       include_in_quick_start: true
       unraid_template:
         title: Storage
-        description: >-
-          This location contains files from your host that need to be accessible
-          to the application.
         default: /mnt/user
         display: always-hide
         required: true
