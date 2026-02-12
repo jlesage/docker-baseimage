@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# This is an OS-agnostic helper to install package(s).
+# This is a package managfer agnostic helper to install package(s).
 #
 
 set -e # Exit immediately if a command exits with a non-zero status.
@@ -19,14 +19,14 @@ trap : TERM QUIT INT
 trap "cleanup" EXIT
 
 #
-# Alpine functions
+# APK functions
 #
 
-is_pkg_installed_alpine() {
+is_pkg_installed_apk() {
     apk -e info "$1" > /dev/null
 }
 
-install_pkg_alpine() {
+install_pkg_apk() {
     VIRTUAL_PKG="$1"
     shift
 
@@ -37,19 +37,19 @@ install_pkg_alpine() {
     apk --no-cache add "$@"
 }
 
-cleanup_alpine() {
+cleanup_apk() {
     rm -rf /var/cache/misc/*
 }
 
 #
-# Debian functions
+# APT functions
 #
 
-is_pkg_installed_debian() {
+is_pkg_installed_apt() {
     dpkg --status "$1" 2>&1 | grep -q "^Status: install ok installed"
 }
 
-install_pkg_debian() {
+install_pkg_apt() {
     VIRTUAL_PKG="$1"
     shift
 
@@ -70,7 +70,7 @@ install_pkg_debian() {
     fi
 }
 
-cleanup_debian() {
+cleanup_apt() {
     apt-get -q clean
     rm -rf /var/lib/apt/lists/* \
         /var/log/dpkg.log \
@@ -79,30 +79,30 @@ cleanup_debian() {
 }
 
 #
-# OS agnostic functions
+# Package manager agnostic functions
 #
 
 is_pkg_installed() {
     if command -v apk > /dev/null; then
-        is_pkg_installed_alpine "$@"
+        is_pkg_installed_apk "$@"
     else
-        is_pkg_installed_debian "$@"
+        is_pkg_installed_apt "$@"
     fi
 }
 
 install_pkg() {
     if command -v apk > /dev/null; then
-        install_pkg_alpine "$@"
+        install_pkg_apk "$@"
     else
-        install_pkg_debian "$@"
+        install_pkg_apt "$@"
     fi
 }
 
 cleanup() {
     if command -v apk > /dev/null; then
-        cleanup_alpine
+        cleanup_apk
     else
-        cleanup_debian
+        cleanup_apt
     fi
 }
 
@@ -114,7 +114,7 @@ if [ -z "$1" ]; then
     usage
 fi
 
-if command -v apk > /dev/null; then
+if command -v apt > /dev/null; then
     export DEBIAN_FRONTEND=noninteractive
 fi
 

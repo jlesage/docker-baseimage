@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# This is an OS-agnostic helper to remove installed package(s).
+# This is a package manager agnostic helper to remove installed package(s).
 #
 
 set -e # Exit immediately if a command exits with a non-zero status.
@@ -11,19 +11,19 @@ usage() {
 }
 
 #
-# Alpine functions
+# APK functions
 #
 
-del_pkg_alpine() {
-    apk --no-cache del "$@"
+del_pkg_apk() {
+    apk --no-cache --purge del "$@"
     rm -rf /var/cache/misc/*
 }
 
 #
-# Debian functions
+# APT functions
 #
 
-del_pkg_debian() {
+del_pkg_apt() {
     pkgs=
     for pkg in "$@"; do
         if ! dpkg --status "$1" 2>&1 | grep -q "^Status: install ok installed"; then
@@ -48,14 +48,14 @@ del_pkg_debian() {
 }
 
 #
-# OS agnostic functions
+# Package manager agnostic functions
 #
 
 del_pkg() {
     if command -v apk > /dev/null; then
-        del_pkg_alpine "$@"
+        del_pkg_apk "$@"
     else
-        del_pkg_debian "$@"
+        del_pkg_apt "$@"
     fi
 }
 
@@ -67,7 +67,7 @@ if [ -z "$1" ]; then
     usage
 fi
 
-if command -v apk > /dev/null; then
+if command -v apt > /dev/null; then
     export DEBIAN_FRONTEND=noninteractive
 fi
 
