@@ -6,28 +6,10 @@
 set -e # Exit immediately if a command exits with a non-zero status.
 set -u # Treat unset variables as an error.
 
-is_pkg_installed_alpine() {
-    apk -e info "$1" > /dev/null
-}
-
-is_pkg_installed_debian() {
-    dpkg --status "$1" 2>&1 | grep -q "^Status: install ok installed"
-}
-
-is_pkg_installed() {
-    if command -v apk > /dev/null; then
-        is_pkg_installed_alpine "$@"
-    elif command -v pacman > /dev/null; then
-        is_pkg_installed_archlinux "$@"
-    else
-        is_pkg_installed_debian "$@"
-    fi
-}
-
 if [ -n "${INSTALL_PACKAGES:-}" ] || [ -n "${INSTALL_PACKAGES_INTERNAL:-}" ]; then
     echo "installing requested package(s)..."
     for PKG in ${INSTALL_PACKAGES:-} ${INSTALL_PACKAGES_INTERNAL:-}; do
-        if is_pkg_installed "${PKG}"; then
+        if check-pkg "${PKG}"; then
             echo "package '${PKG}' already installed"
         else
             echo "installing '${PKG}'..."
