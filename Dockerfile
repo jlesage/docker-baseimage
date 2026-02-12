@@ -11,8 +11,6 @@ ARG BASEIMAGE_COMMON=unknown
 ARG ALPINE_PKGS="\
     # For timezone support
     tzdata \
-    # For 'groupmod' command
-    shadow \
 "
 
 ARG DEBIAN_PKGS="\
