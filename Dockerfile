@@ -35,11 +35,18 @@ COPY --link --from=baseimage-common / /
 ARG ALPINE_PKGS
 ARG DEBIAN_PKGS
 RUN \
-    if [ -n "$(which apk)" ]; then \
-        /opt/base/bin/add-pkg ${ALPINE_PKGS}; \
-    else \
-        /opt/base/bin/add-pkg ${DEBIAN_PKGS}; \
-    fi
+    case "$(awk -F= '/^ID=/ {print $2}' /etc/os-release)" in \
+        alpine) \
+            /opt/base/bin/add-pkg ${ALPINE_PKGS}; \
+            ;; \
+        debian|ubuntu) \
+            /opt/base/bin/add-pkg ${DEBIAN_PKGS}; \
+            ;; \
+        *) \
+            echo "ERROR: unknown os ID '$(awk -F= '/^ID=/ {print $2}' /etc/os-release)'"; \
+            exit 1; \
+            ;; \
+    esac
 
 # Load our RC file when logging in to the container.
 RUN \
