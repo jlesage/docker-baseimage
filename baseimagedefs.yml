@@ -17,6 +17,13 @@ baseimage:
     for any long-lived application.
   gui: false
   history:
+    - version: 3.10.4
+      date: 2026-02-13
+      changes:
+        added:
+          - 'Script helper to verify whether a package is installed.'
+        changed:
+          - 'Updated scripts to remove dependencies on certain OS tools.'
     - version: 3.10.3
       date: 2026-01-20
       changes:
