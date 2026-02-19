@@ -17,6 +17,11 @@ baseimage:
     for any long-lived application.
   gui: false
   history:
+    - version: 3.10.5
+      date: 2026-02-18
+      changes:
+        fixed:
+          - '`take-ownership` helper failure when multiple users/groups share the same id.'
     - version: 3.10.4
       date: 2026-02-13
       changes:
