@@ -207,13 +207,17 @@ fi
 # than a signed integer produces an error: instead of using the ID, use the
 # associated user/group name if it exists.
 # See https://savannah.gnu.org/bugs/index.php?64900
-USER_NAME="$(awk -v uid="${USER_ID}" -F: '$3 == uid {print $1}' /etc/passwd)"
-if [ -n "${USER_NAME:-}" ]; then
-    USER_ID="${USER_NAME}"
+if [ "${USER_ID}" -gt 2147483647 ]; then
+    USER_NAME="$(awk -v uid="${USER_ID}" -F: '$3 == uid {print $1;exit}' /etc/passwd)"
+    if [ -n "${USER_NAME:-}" ]; then
+        USER_ID="${USER_NAME}"
+    fi
 fi
-GROUP_NAME="$(awk -v gid="${GROUP_ID}" -F: '$3 == gid {print $1}' /etc/group)"
-if [ -n "${GROUP_NAME:-}" ]; then
-    GROUP_ID="${GROUP_NAME}"
+if [ "${GROUP_ID}" -gt 2147483647 ]; then
+    GROUP_NAME="$(awk -v gid="${GROUP_ID}" -F: '$3 == gid {print $1;exit}' /etc/group)"
+    if [ -n "${GROUP_NAME:-}" ]; then
+        GROUP_ID="${GROUP_NAME}"
+    fi
 fi
 
 # Set ownership on files and folders.
