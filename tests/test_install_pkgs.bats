@@ -26,7 +26,7 @@ teardown() {
 }
 
 @test "Checking that package can be installed successfully..." {
-    docker_run --rm -e "INSTALL_PACKAGES=vlc" -v "$TESTS_WORKDIR"/startapp.sh:/startapp.sh $DOCKER_IMAGE
+    docker_run --rm -e "INSTALL_PACKAGES=xterm" -v "$TESTS_WORKDIR"/startapp.sh:/startapp.sh $DOCKER_IMAGE
     echo "====================================================================="
     echo " OUTPUT"
     echo "====================================================================="
