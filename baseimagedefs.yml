@@ -17,6 +17,11 @@ baseimage:
     for any long-lived application.
   gui: false
   history:
+    - version: 3.11.3
+      date: 2026-05-14
+      changes:
+        fixed:
+          - 'Installation of Debian-based packages during container builds.'
     - version: 3.11.2
       date: 2026-04-12
       changes:
