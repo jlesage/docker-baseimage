@@ -69,8 +69,6 @@ install_pkg_apt() {
     fi
 }
 
-}
-
 #
 # Package manager agnostic functions
 #
