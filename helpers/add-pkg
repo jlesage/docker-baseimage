@@ -15,8 +15,11 @@ die() {
     exit 1
 }
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "${SCRIPT_DIR}/cmn-pkg"
+
 trap : TERM QUIT INT
-trap "cleanup" EXIT
+trap "cleanup_env" EXIT
 
 #
 # APK functions
@@ -35,13 +38,6 @@ install_pkg_apk() {
     fi
 
     apk --no-cache add "$@"
-}
-
-cleanup_apk() {
-    rm -rf \
-        /var/cache/misc/* \
-        /var/log/apk.log \
-
 }
 
 #
@@ -73,15 +69,6 @@ install_pkg_apt() {
     fi
 }
 
-cleanup_apt() {
-    apt-get -q clean
-    rm -rf \
-        /var/cache/apt/* \
-        /var/cache/debconf/* \
-        /var/lib/apt/lists/* \
-        /var/log/dpkg.log \
-        /var/log/alternatives.log \
-        /var/log/apt/*
 }
 
 #
@@ -97,18 +84,11 @@ is_pkg_installed() {
 }
 
 install_pkg() {
+    init_env
     if command -v apk > /dev/null; then
         install_pkg_apk "$@"
     else
         install_pkg_apt "$@"
-    fi
-}
-
-cleanup() {
-    if command -v apk > /dev/null; then
-        cleanup_apk
-    else
-        cleanup_apt
     fi
 }
 

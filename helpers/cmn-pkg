@@ -1,0 +1,124 @@
+#!/bin/sh
+
+#
+# APK functions
+#
+
+init_env_apk() {
+    # Nothing to do.
+    :
+}
+
+cleanup_env_apk() {
+    find /etc -name "*.apk-new" -delete
+    rm -rf \
+        /var/cache/misc/* \
+        /var/log/apk.log
+}
+
+#
+# APT functions
+#
+
+init_env_apt() {
+    # Some package installation scripts require the log folder to exist, along
+    # with user and group database files. These might not exist when this script
+    # is used to build containers.
+
+    [ -d /config ] || {
+        mkdir /config
+        touch /tmp/.config.created
+    }
+    [ -d /config/log ] || {
+        mkdir /config/log
+        touch /tmp/.config.log.created
+    }
+
+    [ -f /tmp/.passwd ] || {
+        cat << EOF > /tmp/.passwd
+_apt::105:65534::/nonexistent:/sbin/nologin
+root::0:0::/root:/sbin/nologin
+EOF
+        chmod 644 /etc/passwd
+        touch /tmp/.passwd.created
+    }
+
+    [ -f /tmp/.group ] || {
+        cat << EOF > /tmp/.group
+nogroup:x:65534:
+staff:x:52:
+shadow:x:42:
+root:x:0:root
+EOF
+        chmod 644 /etc/group
+        touch /tmp/.group.created
+    }
+
+    [ -f /tmp/.shadow ] || {
+        cat << EOF > /tmp/.shadow
+_apt:!::0:::::
+root:!::0:::::
+EOF
+        chown root:shadow /etc/shadow
+        chmod 644 /etc/shadow
+        touch /tmp/.shadow.created
+    }
+}
+
+cleanup_env_apt() {
+    apt-get -q clean
+    rm -rf \
+        /var/cache/apt/* \
+        /var/cache/debconf/* \
+        /var/lib/apt/lists/* \
+        /var/log/dpkg.log \
+        /var/log/alternatives.log \
+        /var/log/apt/*
+    [ ! -f /tmp/.config.log.created ] || {
+        rm -rf \
+            /config/log \
+            /tmp/.config.log.created
+    }
+    [ ! -f /tmp/.config.created ] || {
+        rm -rf \
+            /config \
+            /tmp/.config.created
+    }
+    [ ! -f /tmp/.passwd.created ] || {
+        rm -rf \
+            /tmp/.passwd \
+            /tmp/.passwd.created
+    }
+    [ ! -f /tmp/.group.created ] || {
+        rm -rf \
+            /tmp/.group \
+            /tmp/.group.created
+    }
+    [ ! -f /tmp/.shadow.created ] || {
+        rm -rf \
+            /tmp/.shadow \
+            /tmp/.shadow.created
+    }
+}
+
+#
+# Package manager agnostic functions
+#
+
+init_env() {
+    if command -v apk > /dev/null; then
+        init_env_apk "$@"
+    else
+        init_env_apt "$@"
+    fi
+}
+
+cleanup_env() {
+    if command -v apk > /dev/null; then
+        cleanup_env_apk "$@"
+    else
+        cleanup_env_apt "$@"
+    fi
+}
+
+# vim:ft=sh:ts=4:sw=4:et:sts=4

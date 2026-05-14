@@ -10,16 +10,18 @@ usage() {
     exit 1
 }
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "${SCRIPT_DIR}/cmn-pkg"
+
+trap : TERM QUIT INT
+trap "cleanup_env" EXIT
+
 #
 # APK functions
 #
 
 del_pkg_apk() {
     apk --no-cache --purge del "$@"
-    rm -rf \
-        /var/cache/misc/* \
-        /var/log/apk.log \
-
 }
 
 #
@@ -45,13 +47,6 @@ del_pkg_apt() {
         # shellcheck disable=2086
         apt-get -q purge -y ${pkgs}
         apt-get -q --purge autoremove -y
-        rm -rf \
-            /var/cache/apt/* \
-            /var/cache/debconf/* \
-            /var/lib/apt/lists/* \
-            /var/log/dpkg.log \
-            /var/log/alternatives.log \
-            /var/log/apt/*
     fi
 }
 
@@ -60,6 +55,7 @@ del_pkg_apt() {
 #
 
 del_pkg() {
+    init_env
     if command -v apk > /dev/null; then
         del_pkg_apk "$@"
     else

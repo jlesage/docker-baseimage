@@ -15,8 +15,11 @@ die() {
     exit 1
 }
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "${SCRIPT_DIR}/cmn-pkg"
+
 trap : TERM QUIT INT
-trap "cleanup" EXIT
+trap "cleanup_env" EXIT
 
 #
 # APK functions
@@ -24,14 +27,6 @@ trap "cleanup" EXIT
 
 upgrade_pkg_apk() {
     apk --no-cache upgrade "$@"
-}
-
-cleanup_apk() {
-    find /etc -name "*.apk-new" -delete
-    rm -rf \
-        /var/cache/misc/* \
-        /var/log/apk.log \
-
 }
 
 #
@@ -48,34 +43,16 @@ upgrade_pkg_apt() {
     apt-get -q autoremove -y --purge
 }
 
-cleanup_apt() {
-    apt-get -q clean
-    rm -rf \
-        /var/cache/apt/* \
-        /var/cache/debconf/* \
-        /var/lib/apt/lists/* \
-        /var/log/dpkg.log \
-        /var/log/alternatives.log \
-        /var/log/apt/*
-}
-
 #
 # Package manager agnostic functions
 #
 
 upgrade_pkg() {
+    init_env
     if command -v apk > /dev/null; then
         upgrade_pkg_apk "$@"
     else
         upgrade_pkg_apt "$@"
-    fi
-}
-
-cleanup() {
-    if command -v apk > /dev/null; then
-        cleanup_apk
-    else
-        cleanup_apt
     fi
 }
 
