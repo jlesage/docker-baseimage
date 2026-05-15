@@ -108,6 +108,11 @@ add_group() {
     fi
 
     echo "${name}:x:${gid}:" >> /etc/group
+
+    # Add a corresponding entry to '/etc/gshadow'.
+    if [ -L /etc/gshadow ]; then
+        echo "${name}:*::" >> /etc/gshadow
+    fi
 }
 
 add_user() {
@@ -163,6 +168,9 @@ add_user_to_group() {
 cat /dev/null > /etc/passwd
 cat /dev/null > /etc/group
 cat /dev/null > /etc/shadow
+if [ -L /etc/gshadow ]; then
+    cat /dev/null > /etc/gshadow
+fi
 
 # Add defined groups.
 if [ -d /etc/cont-groups.d ]; then
@@ -248,6 +256,10 @@ echo "${SUP_GROUP_IDS:-},${SUP_GROUP_IDS_INTERNAL:-}" \
 chmod 644 /etc/passwd
 chmod 644 /etc/group
 chown root:shadow /etc/shadow
-chmod 644 /etc/shadow
+chmod 640 /etc/shadow
+if [ -L /etc/gshadow ]; then
+    chown root:shadow /etc/gshadow
+    chmod 640 /etc/gshadow
+fi
 
 # vim:ft=sh:ts=4:sw=4:et:sts=4

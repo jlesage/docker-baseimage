@@ -125,6 +125,9 @@ RUN \
     ln -sf /tmp/.passwd /etc/passwd && \
     ln -sf /tmp/.group /etc/group && \
     ln -sf /tmp/.shadow /etc/shadow  && \
+    if [ -f /etc/gshadow ]; then \
+        ln -sf /tmp/.gshadow /etc/gshadow; \
+    fi && \
     true
 
 # Keep a copy of default packages repository.
