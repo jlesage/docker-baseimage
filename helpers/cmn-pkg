@@ -34,6 +34,11 @@ init_env_apt() {
         touch /tmp/.config.log.created
     }
 
+    [ -d /tmp/run ] || {
+        mkdir /tmp/run
+        touch /tmp/.tmp.run.created
+    }
+
     [ -f /tmp/.passwd ] || {
         cat << EOF > /tmp/.passwd
 _apt::105:65534::/nonexistent:/sbin/nologin
@@ -60,8 +65,20 @@ _apt:!::0:::::
 root:!::0:::::
 EOF
         chown root:shadow /etc/shadow
-        chmod 644 /etc/shadow
+        chmod 640 /etc/shadow
         touch /tmp/.shadow.created
+    }
+
+    [ -f /tmp/.gshadow ] || {
+        cat << EOF > /tmp/.gshadow
+nogroup:*::
+staff:*::
+shadow:*::
+root:*::
+EOF
+        chown root:shadow /etc/gshadow
+        chmod 640 /etc/gshadow
+        touch /tmp/.gshadow.created
     }
 }
 
@@ -84,6 +101,11 @@ cleanup_env_apt() {
             /config \
             /tmp/.config.created
     }
+    [ ! -f /tmp/.tmp.run.created ] || {
+        rm -rf \
+            /tmp/run \
+            /tmp/.tmp.run.created
+    }
     [ ! -f /tmp/.passwd.created ] || {
         rm -rf \
             /tmp/.passwd \
@@ -98,6 +120,11 @@ cleanup_env_apt() {
         rm -rf \
             /tmp/.shadow \
             /tmp/.shadow.created
+    }
+    [ ! -f /tmp/.gshadow.created ] || {
+        rm -rf \
+            /tmp/.gshadow \
+            /tmp/.gshadow.created
     }
 }
 
