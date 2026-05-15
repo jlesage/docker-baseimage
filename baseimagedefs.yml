@@ -17,6 +17,13 @@ baseimage:
     for any long-lived application.
   gui: false
   history:
+    - version: 3.11.4
+      date: 2026-05-15
+      changes:
+        fixed:
+          - 'Installation of Debian-based packages during container builds.'
+        changed:
+          - 'Handle the group shadow password file on distros that support it.'
     - version: 3.11.3
       date: 2026-05-14
       changes:
