@@ -45,8 +45,8 @@ eval fpath="\${$#}"
 fpath="$(realpath "${fpath}")"
 
 tmp_file="$(mktemp)"
-chmod "$(stat -c "%a" "${fpath}")" "$tmp_file"
-chown "$(stat -c "%u:%g" "${fpath}")" "$tmp_file"
+chmod "$(stat -c "%a" "${fpath}")" "${tmp_file}"
+chown "$(stat -c "%u:%g" "${fpath}")" "${tmp_file}"
 
 if [ "$#" -lt 2 ]; then
     usage " Not enough arguments."
