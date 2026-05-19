@@ -1,0 +1,83 @@
+#
+# Disable shell completion support to allow compilation of static binary.
+#
+--- a/Cargo.toml	2026-05-18 11:19:34.503311880 -0400
++++ b/Cargo.toml	2026-05-18 11:25:30.729612986 -0400
+@@ -6,6 +6,7 @@
+ edition.workspace = true
+ rust-version.workspace = true
+ license.workspace = true
++autobins = false
+ authors.workspace = true
+ repository.workspace = true
+ homepage.workspace = true
+@@ -49,8 +50,7 @@
+ shadow-core = { path = "src/shadow-core" }
+ 
+ # CLI
+-clap = { version = "4", features = ["derive", "wrap_help"] }
+-clap_complete = "4"
++clap = { version = "4", features = ["wrap_help"] }
+ 
+ # uutils integration
+ uucore = "0.8"
+@@ -73,7 +73,6 @@
+ 
+ [dependencies]
+ clap = { workspace = true }
+-clap_complete = { workspace = true, optional = true }
+ 
+ # Tool crates (optional, enabled by features)
+ passwd = { optional = true, version = "0.0.1", package = "uu_passwd", path = "src/uu/passwd" }
+@@ -121,18 +120,10 @@
+ # PAM authentication (requires libpam-dev)
+ pam = ["passwd/pam"]
+ 
+-# Shell completions generator
+-completions = ["dep:clap_complete"]
+-
+ [[bin]]
+ name = "shadow-rs"
+ path = "src/bin/shadow-rs.rs"
+ 
+-[[bin]]
+-name = "shadow-rs-completions"
+-path = "src/bin/completions.rs"
+-required-features = ["completions"]
+-
+ [[test]]
+ name = "test_chage"
+ path = "tests/by-util/test_chage.rs"
+--- a/Makefile	2026-05-18 11:19:34.503887331 -0400
++++ b/Makefile	2026-05-18 11:55:25.403220687 -0400
+@@ -19,7 +19,7 @@
+ 	cargo build --release --workspace --bins --exclude shadow-rs
+ 
+ build-multicall:
+-	cargo build --release --bin shadow-rs
++	#cargo build --release --bin shadow-rs
+ 
+ test:
+ 	cargo test --workspace
+@@ -28,10 +28,10 @@
+ # layout matching GNU shadow-utils. Only passwd/chfn/chsh/newgrp are setuid.
+ install: build
+ 	@for tool in $(SETUID_TOOLS); do \
+-		install -Dm4755 target/release/$$tool $(DESTDIR)$(BINDIR)/$$tool || exit 1; \
++		install -Dm4755 target/$(CARGO_BUILD_TARGET)/release/$$tool $(DESTDIR)$(BINDIR)/$$tool || exit 1; \
+ 	done
+ 	@for tool in $(ROOT_TOOLS); do \
+-		install -Dm0755 target/release/$$tool $(DESTDIR)$(BINDIR)/$$tool || exit 1; \
++		install -Dm0755 target/$(CARGO_BUILD_TARGET)/release/$$tool $(DESTDIR)$(BINDIR)/$$tool || exit 1; \
+ 	done
+ 	@echo "Installed $(words $(ALL_TOOLS)) standalone binaries to $(DESTDIR)$(BINDIR)/"
+ 	@echo "  setuid (4755): $(SETUID_TOOLS)"
+@@ -42,7 +42,7 @@
+ # applets run with euid=root when invoked via symlink. Intended for
+ # container/embedded use where disk savings matter and attack surface does not.
+ install-multicall: build-multicall
+-	install -Dm4755 target/release/shadow-rs $(DESTDIR)$(BINDIR)/shadow-rs
++	install -Dm4755 target/$(CARGO_BUILD_TARGET)/release/shadow-rs $(DESTDIR)$(BINDIR)/shadow-rs
+ 	@for tool in $(ALL_TOOLS); do \
+ 		ln -sf shadow-rs $(DESTDIR)$(BINDIR)/$$tool; \
+ 	done
