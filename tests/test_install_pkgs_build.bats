@@ -2,30 +2,13 @@
 
 setup() {
     load setup_common
-
-    echo "#!/bin/sh
-    exit 0" > "$TESTS_WORKDIR"/startapp.sh
-    chmod a+rx "$TESTS_WORKDIR"/startapp.sh
 }
 
 teardown() {
     load teardown_common
 }
 
-@test "Checking that installation of unknown package causes a failure..." {
-    docker_run --rm -e "INSTALL_PACKAGES=nonexistingpackagetest" -v "$TESTS_WORKDIR"/startapp.sh:/startapp.sh $DOCKER_IMAGE
-    echo "====================================================================="
-    echo " OUTPUT"
-    echo "====================================================================="
-    echo "$output"
-    echo "====================================================================="
-    echo " END OUTPUT"
-    echo "====================================================================="
-    echo "STATUS: $status"
-    [ "$status" -ne 0 ]
-}
-
-@test "Checking that package can be installed successfully..." {
+@test "Checking that package can be installed successfully when building container..." {
     docker_run --rm $DOCKER_IMAGE cat /etc/os-release
     [ "$status" -eq 0 ]
 
@@ -49,7 +32,11 @@ teardown() {
             ;;
     esac
 
-    docker_run --rm -e "INSTALL_PACKAGES=$INSTALL_PACKAGES" -v "$TESTS_WORKDIR"/startapp.sh:/startapp.sh $DOCKER_IMAGE
+    echo "FROM $DOCKER_IMAGE
+RUN add-pkg $INSTALL_PACKAGES
+" > "$TESTS_WORKDIR"/Dockerfile.test
+
+    docker buildx build --progress plain -o type=tar,dest=/dev/null -f "$TESTS_WORKDIR"/Dockerfile.test .
     echo "====================================================================="
     echo " OUTPUT"
     echo "====================================================================="

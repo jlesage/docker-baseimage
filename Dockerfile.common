@@ -71,6 +71,18 @@ RUN xx-verify --static /tmp/logrotate-install/usr/sbin/logrotate
 COPY --from=upx /usr/bin/upx /usr/bin/upx
 RUN upx /tmp/logrotate-install/usr/sbin/logrotate
 
+# Build shadow-rs
+FROM --platform=$BUILDPLATFORM alpine:3.20 AS shadow-rs
+ARG TARGETPLATFORM
+ARG SHADOW_RS_VERSION=0.2.0
+ARG SHADOW_RS_URL=https://github.com/uutils/shadow-rs/archive/refs/tags/v${SHADOW_RS_VERSION}.tar.gz
+COPY --from=xx / /
+COPY src/shadow-rs /tmp/build
+RUN /tmp/build/build.sh "${SHADOW_RS_URL}"
+RUN xx-verify --static /tmp/shadow-rs-install/usr/sbin/shadow-rs
+COPY --from=upx /usr/bin/upx /usr/bin/upx
+RUN upx /tmp/shadow-rs-install/usr/sbin/shadow-rs
+
 # Pull the scratch image.
 FROM scratch
 
@@ -85,6 +97,9 @@ COPY --link --from=su-exec /tmp/su-exec/su-exec /opt/base/sbin/su-exec
 
 # Install logrotate.
 COPY --link --from=logrotate /tmp/logrotate-install/usr/sbin/logrotate /opt/base/sbin/
+
+# Install shawdow-rs.
+COPY --link --from=shadow-rs /tmp/shadow-rs-install /shadow-rs/
 
 # Copy helpers.
 COPY helpers/* /opt/base/bin/
