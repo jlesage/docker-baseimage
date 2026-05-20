@@ -39,10 +39,10 @@ teardown() {
 
     case "$OS" in
         debian)
-            INSTALL_PACKAGES="xterm systemd"
+            INSTALL_PACKAGES="xterm systemd xrdp"
             ;;
         ubuntu)
-            INSTALL_PACKAGES="xterm systemd"
+            INSTALL_PACKAGES="xterm systemd xrdp"
             ;;
         *)
             INSTALL_PACKAGES="xterm"

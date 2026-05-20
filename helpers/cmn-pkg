@@ -50,6 +50,7 @@ EOF
 
     [ -f /tmp/.group ] || {
         cat << EOF > /tmp/.group
+adm:x:4:
 nogroup:x:65534:
 staff:x:52:
 shadow:x:42:
