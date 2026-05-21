@@ -78,13 +78,8 @@ RUN \
 # Some old distros include shadow-utils (useradd, passwd, groupadd, etc.) that
 # doesn't work when user and group databases are symlinks.
 RUN \
-    DISTRO="$(cat /etc/os-release | sed -n 's/PRETTY_NAME="\(.*\)"/\1/p')" && \
-    case "$DISTRO" in \
-        Ubuntu\ 22.*) cp -a /shadow-rs/* / ;; \
-        Ubuntu\ 20.*) cp -a /shadow-rs/* / ;; \
-        Ubuntu\ 18.*) cp -a /shadow-rs/* / ;; \
-        Debian\ GNU/Linux\ 11\ *) cp -a /shadow-rs/* / ;; \
-        Debian\ GNU/Linux\ 12\ *) cp -a /shadow-rs/* / ;; \
+    case "$(awk -F= '/^ID=/ {print $2}' /etc/os-release)" in \
+        debian|ubuntu) cp -a /shadow-rs/* / ;; \
     esac && \
     rm -rf /shadow-rs
 
