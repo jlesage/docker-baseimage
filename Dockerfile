@@ -84,6 +84,7 @@ RUN \
         Ubuntu\ 20.*) cp -a /shadow-rs/* / ;; \
         Ubuntu\ 18.*) cp -a /shadow-rs/* / ;; \
         Debian\ GNU/Linux\ 11\ *) cp -a /shadow-rs/* / ;; \
+        Debian\ GNU/Linux\ 12\ *) cp -a /shadow-rs/* / ;; \
     esac && \
     rm -rf /shadow-rs
 
