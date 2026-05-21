@@ -86,6 +86,7 @@ echo "codegen-units = 1" >> /tmp/shadow-rs/.cargo/config.toml
 log "Patching shadow-rs..."
 PATCHES="
     build-fix.patch
+    override-login-defs-argument.patch
 "
 for PATCH in $PATCHES; do
     log "Applying $PATCH..."

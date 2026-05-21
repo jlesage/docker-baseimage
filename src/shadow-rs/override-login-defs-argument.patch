@@ -1,0 +1,117 @@
+#
+# This implements the `-K` argument of `useradd`.
+#
+--- a/src/uu/useradd/src/useradd.rs
++++ b/src/uu/useradd/src/useradd.rs
+@@ -48,6 +48,7 @@ mod options {
+     pub const INACTIVE: &str = "inactive";
+     pub const GID: &str = "gid";
+     pub const GROUPS: &str = "groups";
++    pub const KEY: &str = "key";
+     pub const CREATE_HOME: &str = "create-home";
+     pub const NO_CREATE_HOME: &str = "no-create-home";
+     pub const SKEL: &str = "skel";
+@@ -166,6 +167,7 @@ struct UseraddOptions {
+     inactive: Option<i64>,
+     expire_date: Option<i64>,
+     create_user_group: bool,
++    login_defs_overrides: Vec<(String, String)>,
+     root: SysRoot,
+ }
+ 
+@@ -446,6 +448,18 @@ fn parse_options(matches: &clap::ArgMatches) -> Result<UseraddOptions, UseraddEr
+         false
+     };
+ 
++    // Parse -K KEY=VALUE overrides.
++    let key_values: Vec<&String> = matches
++        .get_many::<String>(options::KEY)
++        .map_or_else(Vec::new, Iterator::collect);
++    let mut login_defs_overrides: Vec<(String, String)> = Vec::new();
++    for kv in &key_values {
++        let (k, v) = kv
++            .split_once('=')
++            .ok_or_else(|| UseraddError::BadArgument(format!("invalid key=value pair: '{kv}'")))?;
++        login_defs_overrides.push((k.to_string(), v.to_string()));
++    }
++
+     Ok(UseraddOptions {
+         login,
+         comment,
+@@ -462,6 +476,7 @@ fn parse_options(matches: &clap::ArgMatches) -> Result<UseraddOptions, UseraddEr
+         inactive,
+         expire_date,
+         create_user_group,
++        login_defs_overrides,
+         root,
+     })
+ }
+@@ -652,7 +667,25 @@ fn determine_uid(
+         }
+         Ok(requested_uid)
+     } else {
+-        let (min, max) = uid_alloc::uid_range(defs, opts.system);
++        let (mut min, mut max) = uid_alloc::uid_range(defs, opts.system);
++
++        // Apply -K overrides for UID range.
++        for (key, val) in &opts.login_defs_overrides {
++            match key.as_str() {
++                "UID_MIN" | "SYS_UID_MIN" => {
++                    if let Ok(v) = val.parse::<u32>() {
++                        min = v;
++                    }
++                }
++                "UID_MAX" | "SYS_UID_MAX" => {
++                    if let Ok(v) = val.parse::<u32>() {
++                        max = v;
++                    }
++                }
++                _ => {}
++            }
++        }
++
+         uid_alloc::next_uid(passwd_entries, min, max)
+             .map_err(|e| UseraddError::CannotUpdatePasswd(format!("{e}")))
+     }
+@@ -691,7 +724,25 @@ fn determine_gid(
+ 
+         // Allocate a GID. Prefer same as UID if available.
+         let gid = if group_entries.iter().any(|g| g.gid == uid) {
+-            let (min, max) = uid_alloc::gid_range(defs, opts.system);
++            let (mut min, mut max) = uid_alloc::gid_range(defs, opts.system);
++
++            // Apply -K overrides for GID range.
++            for (key, val) in &opts.login_defs_overrides {
++                match key.as_str() {
++                    "GID_MIN" | "SYS_GID_MIN" => {
++                        if let Ok(v) = val.parse::<u32>() {
++                            min = v;
++                        }
++                    }
++                    "GID_MAX" | "SYS_GID_MAX" => {
++                        if let Ok(v) = val.parse::<u32>() {
++                            max = v;
++                        }
++                    }
++                    _ => {}
++                }
++            }
++
+             uid_alloc::next_gid(group_entries, min, max)
+                 .map_err(|e| UseraddError::CannotUpdateGroup(format!("{e}")))?
+         } else {
+@@ -1030,6 +1081,14 @@ pub fn uu_app() -> Command {
+                 .value_name("GROUPS")
+                 .help("List of supplementary groups of the new account"),
+         )
++        .arg(
++            Arg::new(options::KEY)
++                .short('K')
++                .long("key")
++                .value_name("KEY=VALUE")
++                .action(ArgAction::Append)
++                .help("Override /etc/login.defs defaults"),
++        )
+         .arg(
+             Arg::new(options::CREATE_HOME)
+                 .short('m')
