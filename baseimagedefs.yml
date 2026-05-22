@@ -531,6 +531,7 @@ container:
     - name: HOME
       description: Home directory.
       type: internal
+      default: /config
     - name: XDG_CONFIG_HOME
       description: >-
         Defines the base directory for user-specific configuration files.

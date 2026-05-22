@@ -62,8 +62,11 @@ load_env_var() {
     # the environment variable only when *unset*. If the variable is
     # already set, with null or a value, we need to skip it.
     # https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_06_02
+    #
+    # Exception for the `HOME` environment variable: it is always set by Docker,
+    # meaning there is no way to know if it was set during continer creation.
     var_test="$(eval echo \$\{"${var_name}"+x\})"
-    if [ -z "${var_test}" ]; then
+    if [ -z "${var_test}" ] || [ "${var_name}" = "HOME" ] ; then
         export "${var_name}"="${var_val}"
         echo "export ${var_name}=\"${var_val}\"" >> /tmp/.cont-env-internal
     fi
