@@ -89,6 +89,12 @@ RUN \
         echo "# Include Docker container definitions." >> /root/.profile && \
         echo ". /root/.docker_rc" >> /root/.profile; \
     fi
+RUN \
+    if [ -f /etc/bash.bashrc ]; then \
+        echo "" >> /etc/bash.bashrc && \
+        echo "# Include Docker container definitions." >> /etc/bash.bashrc && \
+        echo ". /root/.docker_rc" >> /etc/bash.bashrc; \
+    fi
 
 # Make sure all required directory exists.
 RUN \
