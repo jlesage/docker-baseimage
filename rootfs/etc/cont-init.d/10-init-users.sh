@@ -227,7 +227,7 @@ fi
 # NOTE: This user requires special handling, since its user/group ID is
 #       configurable and may match an existing one.
 add_group --allow-duplicate app "${GROUP_ID}"
-add_user --allow-duplicate app "${USER_ID}" "${GROUP_ID}"
+add_user --allow-duplicate app "${USER_ID}" "${GROUP_ID}" "${HOME:-/config}"
 add_user_to_group app app
 
 # Handle supplementary groups of user 'app'.
