@@ -39,10 +39,10 @@ teardown() {
 
     case "$OS" in
         debian)
-            INSTALL_PACKAGES="xterm systemd xrdp"
+            INSTALL_PACKAGES="xterm systemd xrdp pulseaudio"
             ;;
         ubuntu)
-            INSTALL_PACKAGES="xterm systemd xrdp"
+            INSTALL_PACKAGES="xterm systemd xrdp pulseaudio"
             ;;
         *)
             INSTALL_PACKAGES="xterm"

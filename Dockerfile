@@ -75,7 +75,7 @@ RUN \
     esac
 
 # Install shadow-rs if needed.
-# Some old distros include shadow-utils (useradd, passwd, groupadd, etc.) that
+# Some distros include shadow-utils (useradd, passwd, groupadd, etc.) that
 # doesn't work when user and group databases are symlinks.
 RUN \
     case "$(awk -F= '/^ID=/ {print $2}' /etc/os-release)" in \
@@ -139,7 +139,7 @@ RUN \
 RUN \
     ln -sf /tmp/.passwd /etc/passwd && \
     ln -sf /tmp/.group /etc/group && \
-    ln -sf /tmp/.shadow /etc/shadow  && \
+    ln -sf /tmp/.shadow /etc/shadow && \
     if [ -f /etc/gshadow ]; then \
         ln -sf /tmp/.gshadow /etc/gshadow; \
     fi && \

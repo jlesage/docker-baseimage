@@ -39,48 +39,11 @@ init_env_apt() {
         touch /tmp/.tmp.run.created
     }
 
-    [ -f /tmp/.passwd ] || {
-        cat << EOF > /tmp/.passwd
-_apt::105:65534::/nonexistent:/sbin/nologin
-root::0:0::/root:/sbin/nologin
-EOF
-        chmod 644 /etc/passwd
-        touch /tmp/.passwd.created
-    }
-
-    [ -f /tmp/.group ] || {
-        cat << EOF > /tmp/.group
-adm:x:4:
-nogroup:x:65534:
-staff:x:52:
-shadow:x:42:
-root:x:0:root
-EOF
-        chmod 644 /etc/group
-        touch /tmp/.group.created
-    }
-
-    [ -f /tmp/.shadow ] || {
-        cat << EOF > /tmp/.shadow
-_apt:!::0:::::
-root:!::0:::::
-EOF
-        chown root:shadow /etc/shadow
-        chmod 640 /etc/shadow
-        touch /tmp/.shadow.created
-    }
-
-    [ -f /tmp/.gshadow ] || {
-        cat << EOF > /tmp/.gshadow
-nogroup:*::
-staff:*::
-shadow:*::
-root:*::
-EOF
-        chown root:shadow /etc/gshadow
-        chmod 640 /etc/gshadow
-        touch /tmp/.gshadow.created
-    }
+    if [ ! -f /etc/passwd ] && [ ! -f /etc/group ] && [ ! -f /etc/shadow ] && [ ! -f /etc/gshadow ]
+    then
+        /etc/cont-init.d/10-init-users.sh
+        touch /tmp/.user-group-database.created
+    fi
 }
 
 cleanup_env_apt() {
@@ -92,6 +55,14 @@ cleanup_env_apt() {
         /var/log/dpkg.log \
         /var/log/alternatives.log \
         /var/log/apt/*
+    [ ! -f /tmp/.user-group-database.created ] || {
+        rm -f \
+            /tmp/.passwd \
+            /tmp/.group \
+            /tmp/.shadow \
+            /tmp/.gshadow \
+            /tmp/.user-group-database.created
+    }
     [ ! -f /tmp/.config.log.created ] || {
         rm -rf \
             /config/log \
