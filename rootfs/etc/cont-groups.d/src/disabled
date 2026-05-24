@@ -6,7 +6,7 @@ set -u # Treat unset variables as an error.
 # Ubuntu and debian require additional user/group for proper packages
 # installation.
 . /etc/os-release
-case "" in
+case "${ID}" in
     ubuntu | debian)
         echo 0
         ;;
