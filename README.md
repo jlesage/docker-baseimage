@@ -72,6 +72,7 @@ This baseimage is available for multiple Linux distributions:
 | [Ubuntu 20.04 LTS] | ubuntu-20.04-vX.Y.Z   | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-20.04-v3?style=for-the-badge)](#) |
 | [Ubuntu 22.04 LTS] | ubuntu-22.04-vX.Y.Z   | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-22.04-v3?style=for-the-badge)](#) |
 | [Ubuntu 24.04 LTS] | ubuntu-24.04-vX.Y.Z   | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-24.04-v3?style=for-the-badge)](#) |
+| [Ubuntu 26.04 LTS] | ubuntu-26.04-vX.Y.Z   | [![](https://img.shields.io/docker/image-size/jlesage/baseimage/ubuntu-26.04-v3?style=for-the-badge)](#) |
 
 Docker image tags follow this structure:
 
@@ -98,6 +99,7 @@ details.
 [Ubuntu 20.04 LTS]: http://releases.ubuntu.com/20.04/
 [Ubuntu 22.04 LTS]: http://releases.ubuntu.com/22.04/
 [Ubuntu 24.04 LTS]: http://releases.ubuntu.com/24.04/
+[Ubuntu 26.04 LTS]: http://releases.ubuntu.com/26.04/
 
 [Releases]: https://github.com/jlesage/docker-baseimage/releases
 [Docker Hub]: https://hub.docker.com/r/jlesage/baseimage/tags
