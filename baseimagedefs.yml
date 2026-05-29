@@ -17,6 +17,18 @@ baseimage:
     for any long-lived application.
   gui: false
   history:
+    - version: 3.11.5
+      date: 2026-05-29
+      changes:
+        added:
+          - 'Image based on Ubuntu 26.04.'
+          - 'Default group definitions for Debian-based distributions.'
+        fixed:
+          - 'Installation of Debian-based packages at runtime and during container builds.'
+        changed:
+          - 'Set default value for the `HOME` internal environment variable.'
+          - 'Home directory of the `app` user is now set in `/etc/passwd` based on the `HOME` environment variable.'
+          - 'Internal container environment variables are now also loaded when logging in with Bash.'
     - version: 3.11.4
       date: 2026-05-15
       changes:
