@@ -1175,7 +1175,7 @@ static lm_target_t *alloc_target(const char *targets_dir, const char *name)
 
     // Validate config.
     if (IS_SUCCESS(retval)) {
-        if (strlen(target->send) == 0) {
+        if (!target->send || strlen(target->send) == 0) {
             SET_ERROR(retval, "Missing send executable for target defined at '%s'.", target_dir);
         }
     }
@@ -1373,7 +1373,7 @@ static lm_context_t *create_context(const char *cfgdir)
 
 static void usage(void)
 {
-    fprintf(stderr, "Usage: logmonitor [OPTIONS...] FILE [FILE...]\n");
+    fprintf(stderr, "Usage: logmonitor [OPTIONS...]\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "Options:\n");
     fprintf(stderr, "  -c, --configdir         Directory where configuration is stored (default: "DEFAULT_CONFIG_DIR").\n");

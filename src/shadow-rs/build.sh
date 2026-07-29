@@ -14,7 +14,7 @@ log() {
     echo ">>> $*"
 }
 
-SHADOW_RS_URL="$1"
+SHADOW_RS_URL="${1:-}"
 
 if [ -z "$SHADOW_RS_URL" ]; then
     log "ERROR: shadow-rs URL missing."

@@ -88,11 +88,13 @@ int exec_cmd_with_line_callback(exec_cmd_line_callback_t callback, void *callbac
     }
     va_end(arguments);
 
-    // Create the pipe.
+    // Create the pipes.
     if (pipe(stdout_link) != 0) {
         return -1;
     }
-    else if (pipe(stderr_link) != 0) {
+    if (pipe(stderr_link) != 0) {
+        close(stdout_link[0]);
+        close(stdout_link[1]);
         return -1;
     }
 
@@ -311,8 +313,8 @@ int exec_cmd_with_output(char **buf, size_t *bufsize, const char *cmd, ...)
 int exec_cmd(bool disable_output, const char *output_prefix, const char *cmd, ...)
 {
     va_list arguments;
-    int stdout_link[2];
-    int stderr_link[2];
+    int stdout_link[2] = { -1, -1 };
+    int stderr_link[2] = { -1, -1 };
 
     char *argv[MAX_ARGS + 1];
     memset(argv, 0, DIM(argv) * sizeof(char *));
@@ -342,10 +344,12 @@ int exec_cmd(bool disable_output, const char *output_prefix, const char *cmd, ..
     pid_t pid = fork();
     if (pid < 0) {
         // Fork failed.
-        close(stdout_link[0]);
-        close(stdout_link[1]);
-        close(stderr_link[0]);
-        close(stderr_link[1]);
+        if (!disable_output) {
+            close(stdout_link[0]);
+            close(stdout_link[1]);
+            close(stderr_link[0]);
+            close(stderr_link[1]);
+        }
         return -1;
     }
     else if (pid > 0) {

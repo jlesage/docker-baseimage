@@ -102,7 +102,7 @@
 #define SERVICE_DEFAULT_UID 1000
 
 /**
- * Default UID to use for services.
+ * Default GID to use for services.
  */
 #define SERVICE_DEFAULT_GID 1000
 
@@ -199,7 +199,7 @@ typedef struct {
     unsigned int default_srv_ready_timeout; /**< Maximum time (in msec) to wait for a service to be ready. */
 
     uid_t default_srv_uid;                /**< Default UID of services. */
-    gid_t default_srv_gid;                /**< Default UID of services. */
+    gid_t default_srv_gid;                /**< Default GID of services. */
     gid_t default_srv_sgid_list[SERVICE_SGID_LIST_SIZE]; /**< Default supplementary group list of services. */
     size_t default_srv_sgid_list_size;    /**< Size of the default supplementary group list. */
     mode_t default_srv_umask;             /**< Default umask value of services. */
@@ -282,7 +282,7 @@ static void sigchild(int sig)
  */
 static void sigint(int sig)
 {
-    log("SIGTINT received, shutting down...");
+    log("SIGINT received, shutting down...");
     REQUEST_SHUTDOWN();
 }
 
@@ -309,9 +309,9 @@ static const char *signal_to_str(int sig)
     switch (sig) {
         case SIGHUP:    return "SIGHUP";
         case SIGINT:    return "SIGINT";
-        case SIGQUIT:   return "SIGINT";
+        case SIGQUIT:   return "SIGQUIT";
         case SIGILL:    return "SIGILL";
-        case SIGTRAP:   return "SIGILL";
+        case SIGTRAP:   return "SIGTRAP";
         case SIGABRT:   return "SIGABRT";
         case SIGBUS:    return "SIGBUS";
         case SIGFPE:    return "SIGFPE";
@@ -406,11 +406,6 @@ static int msleep(unsigned long msec)
 {
     struct timespec ts;
     int res;
-
-    if (msec < 0) {
-        errno = EINVAL;
-        return -1;
-    }
 
     ts.tv_sec = msec / 1000;
     ts.tv_nsec = (msec % 1000) * 1000000;
@@ -558,7 +553,7 @@ static void chdir_to_service(const char *service)
  */ 
 static int alloc_service_index()
 {
-    for (int sid = 0; sid <= DIM(g_ctx.services); ++sid) {
+    for (int sid = 0; sid < DIM(g_ctx.services); ++sid) {
         if (strlen(SRV(sid).name) == 0) {
             return sid;
         }
@@ -752,8 +747,9 @@ static int load_service(const char *service)
                     }
                     for (int i = 0; i < param_list_size; i++) {
                         if (strlen(param_list[i]) > 0) {
-                            SRV(sid).param_list[i] = strdup(param_list[i]);
-                            if (SRV(sid).param_list[i] == NULL) {
+                            size_t n = SRV(sid).param_list_size;
+                            SRV(sid).param_list[n] = strdup(param_list[i]);
+                            if (SRV(sid).param_list[n] == NULL) {
                                 ThrowMessage("out of memory");
                             }
                             SRV(sid).param_list_size++;
@@ -812,8 +808,9 @@ static int load_service(const char *service)
                                     }
                                 }
                             }
-                            SRV(sid).environment[i] = strdup(environment[i]);
-                            if (SRV(sid).environment[i] == NULL) {
+                            size_t n = SRV(sid).environment_size;
+                            SRV(sid).environment[n] = strdup(environment[i]);
+                            if (SRV(sid).environment[n] == NULL) {
                                 ThrowMessage("out of memory");
                             }
                             SRV(sid).environment_size++;
@@ -833,7 +830,7 @@ static int load_service(const char *service)
                         free(environment);
                     }
                     free(buf);
-                    ThrowMessage("could not load 'params': %s", e.mMessage);
+                    ThrowMessage("could not load 'environment': %s", e.mMessage);
                 }
             }
         }
@@ -878,8 +875,9 @@ static int load_service(const char *service)
                                     }
                                 }
                             }
-                            SRV(sid).environment_extra[i] = strdup(environment[i]);
-                            if (SRV(sid).environment_extra[i] == NULL) {
+                            size_t n = SRV(sid).environment_extra_size;
+                            SRV(sid).environment_extra[n] = strdup(environment[i]);
+                            if (SRV(sid).environment_extra[n] == NULL) {
                                 ThrowMessage("out of memory");
                             }
                             SRV(sid).environment_extra_size++;
@@ -893,7 +891,7 @@ static int load_service(const char *service)
                         free(environment);
                     }
                     free(buf);
-                    ThrowMessage("could not load 'params': %s", e.mMessage);
+                    ThrowMessage("could not load 'environment_extra': %s", e.mMessage);
                 }
             }
         }
@@ -922,7 +920,8 @@ static int load_service(const char *service)
                     }
                     for (int i = 0; i < sgid_list_size; i++) {
                         if (strlen(sgid_list[i]) > 0) {
-                            string_to_gid(sgid_list[i], &SRV(sid).sgid_list[i]);
+                            size_t n = SRV(sid).sgid_list_size;
+                            string_to_gid(sgid_list[i], &SRV(sid).sgid_list[n]);
                             SRV(sid).sgid_list_size++;
                         }
                     }
@@ -1018,8 +1017,9 @@ static pid_t fork_and_exec(int service)
     }
     if (openpty(&pty_stderr[0], &pty_stderr[1], NULL, NULL, NULL) < 0) {
         //ThrowMessageWithErrno("could not create pseudo-terminal for stderr";
+        close_fd(&pty_stdout[0]);
+        close_fd(&pty_stdout[1]);
         return 0;
-        REQUEST_SHUTDOWN();
     }
 #endif
 
@@ -1135,7 +1135,7 @@ static pid_t fork_and_exec(int service)
 
             // Set priority (niceness).
             if (SRV(service).priority != 0) {
-                if (setpriority(0, PRIO_PROCESS, SRV(service).priority) < 0) {
+                if (setpriority(PRIO_PROCESS, 0, SRV(service).priority) < 0) {
                     err(50, "setpriority(%d)", SRV(service).priority);
                 }
             }
@@ -1234,12 +1234,18 @@ static void start_service(int service)
 
             // Create and start the logger thread.
             int *service_arg = malloc(sizeof(int));
+            if (!service_arg) {
+                ThrowMessage("out of memory");
+            }
             *service_arg = service;
             atomic_store(&SRV(service).logger_exit, false);
             int rc = pthread_create(&SRV(service).logger, NULL, service_logger, service_arg);
-            ASSERT_LOG(rc == 0, "Failed to create logger thread of service '%s': %s.",
-                    SRV(service).name,
-                    strerror(errno));
+            if (rc != 0) {
+                free(service_arg);
+                ThrowMessage("Failed to create logger thread of service '%s': %s",
+                        SRV(service).name,
+                        strerror(rc));
+            }
 
             SRV(service).logger_started = true;
             return;
@@ -1558,15 +1564,18 @@ static void handle_killed(pid_t killed, int status)
         // Update service table.
         SRV(sid).pid = 0;
 
-        // Join the logger thread.
-        log_debug("waiting termination of logger thread of service '%s'...",
-                SRV(sid).name);
-        atomic_store(&SRV(sid).logger_exit, true);
-        int rc = pthread_join(SRV(sid).logger, NULL);
-        ASSERT_LOG(rc == 0, "Failed to join logger thread of service '%s': %s.",
-                SRV(sid).name, strerror(rc));
-        log_debug("logger thread of service '%s' successfully terminated.",
-                SRV(sid).name);
+        // Join the logger thread if it was started.
+        if (SRV(sid).logger_started) {
+            log_debug("waiting termination of logger thread of service '%s'...",
+                    SRV(sid).name);
+            atomic_store(&SRV(sid).logger_exit, true);
+            int rc = pthread_join(SRV(sid).logger, NULL);
+            ASSERT_LOG(rc == 0, "Failed to join logger thread of service '%s': %s.",
+                    SRV(sid).name, strerror(rc));
+            log_debug("logger thread of service '%s' successfully terminated.",
+                    SRV(sid).name);
+            SRV(sid).logger_started = false;
+        }
 
         // Close file descriptors.
 #ifdef SINGLE_CHILD_STDOUT_STDERR_STREAM
@@ -1575,8 +1584,6 @@ static void handle_killed(pid_t killed, int status)
         close_fd(&SRV(sid).stdout_fd);
         close_fd(&SRV(sid).stderr_fd);
 #endif
-
-        SRV(sid).logger_started = false;
 
         // Run the service's finish script.
         Try {
@@ -1760,9 +1767,9 @@ static void parse_args(int argc, char *argv[])
             case 'd':
                 g_ctx.debug = true;
                 break;
-              case 'p':
+            case 'p':
                 if (strlen(optarg) >= sizeof(g_ctx.progname)) {
-                    ThrowMessage("Programme namne too long.");
+                    ThrowMessage("Programme name too long.");
                 }
                 else {
                     strcpy(g_ctx.progname, optarg);
@@ -1831,8 +1838,9 @@ static void parse_args(int argc, char *argv[])
                     }
                     for (int i = 0; i < sgid_list_size; i++) {
                         if (strlen(sgid_list[i]) > 0) {
+                            size_t n = g_ctx.default_srv_sgid_list_size;
                             Try {
-                                string_to_gid(sgid_list[i], &g_ctx.default_srv_sgid_list[i]);
+                                string_to_gid(sgid_list[i], &g_ctx.default_srv_sgid_list[n]);
                             }
                             Catch (e) {
                                 ThrowMessage("invalid GID '%s': %s", sgid_list[i], e.mMessage);
@@ -1933,9 +1941,10 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    // Create the named pipe (FIFO).
+    // Create the named pipe (FIFO). Create with no permissions first, then
+    // set ownership and mode to avoid a world-writable window.
     unlink(CMD_FIFO_PATH);
-    if (mkfifo(CMD_FIFO_PATH, 0666) == -1) {
+    if (mkfifo(CMD_FIFO_PATH, 0000) == -1) {
         printf("Could not create named pipe: %s.\n", strerror(errno));
         return EXIT_FAILURE;
     }

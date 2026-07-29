@@ -125,8 +125,12 @@ char *trim_char(char *s, char c)
     char *p = s;
     int l = strlen(p);
 
+    if (l == 0) {
+        return s;
+    }
+
     // Trim the end.
-    while(p[l - 1] == c) p[--l] = 0;
+    while(l > 0 && p[l - 1] == c) p[--l] = 0;
 
     // Trim the beginning.
     while(*p && *p == c) ++p, --l;
@@ -140,8 +144,12 @@ char *trim(char *s)
     char *p = s;
     int l = strlen(p);
 
+    if (l == 0) {
+        return s;
+    }
+
     // Trim the end.
-    while(isspace(p[l - 1])) p[--l] = 0;
+    while(l > 0 && isspace(p[l - 1])) p[--l] = 0;
 
     // Trim the beginning.
     while(*p && isspace(* p)) ++p, --l;
