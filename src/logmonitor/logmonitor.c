@@ -630,13 +630,16 @@ static void handle_line(lm_context_t *ctx, unsigned int mfid, char *buf)
             FOR_EACH_TARGET(notif, target, tidx) {
                 if (target->last_notif_sent[nidx] > 0) {
                     if (target->debouncing == 0) {
+                        // Value of 0: send only once.
                         DEBUG("Ignoring target '%s': debouncing.", target->name);
                         continue;
                     }
-                    else if ((get_time() - target->last_notif_sent[nidx]) < target->debouncing) {
+                    else if (target->debouncing > 0 &&
+                             (get_time() - target->last_notif_sent[nidx]) < target->debouncing) {
                         DEBUG("Ignoring target '%s': debouncing.", target->name);
                         continue;
                     }
+                    // debouncing < 0: not defined, no debouncing applied.
                 }
 
                 // Send the target.
@@ -1086,6 +1089,9 @@ static lm_target_t *alloc_target(const char *targets_dir, const char *name)
         if (!target) {
             SET_ERROR(retval, "Failed to alloc memory for new target.");
         }
+        else {
+            target->debouncing = -1;
+        }
     }
 
     // Set target's name.
@@ -1143,11 +1149,11 @@ static lm_target_t *alloc_target(const char *targets_dir, const char *name)
                     || *end != '\0'
                     || ((LONG_MIN == val || LONG_MAX == val) && ERANGE == errno)
                     || val > INT_MAX
-                    || val < INT_MIN) {
+                    || val < 0) {
                     SET_ERROR(retval, "Invalid debouncing value '%s' defined in %s.", debouncing_str, filepath);
                 }
                 else {
-                    target->debouncing = val;
+                    target->debouncing = (int)val;
                 }
             }
 
