@@ -559,10 +559,10 @@ void string_to_uint(const char *str, unsigned int *result)
 void string_to_interval(const char *str, unsigned int *result)
 {
     if (strcasecmp(str, "yearly") == 0) {
-        *result = 60 * 60 * 24 * 7 * 365;
+        *result = 60 * 60 * 24 * 365;
     }
     else if (strcasecmp(str, "monthly") == 0) {
-        *result = 60 * 60 * 24 * 7 * 30;
+        *result = 60 * 60 * 24 * 30;
     }
     else if (strcasecmp(str, "weekly") == 0) {
         *result = 60 * 60 * 24 * 7;
