@@ -58,6 +58,9 @@ valid_env_var_name() {
 load_env_var() {
     var_name="$1"
     var_val="$2"
+    # Optional third argument: when non-empty, always set the variable
+    # (used for Docker secrets, which take precedence over env vars).
+    force="${3:-}"
     # Use the parameter expansion '${parameter+word}': we want to set
     # the environment variable only when *unset*. If the variable is
     # already set, with null or a value, we need to skip it.
@@ -65,8 +68,9 @@ load_env_var() {
     #
     # Exception for the `HOME` environment variable: it is always set by Docker,
     # meaning there is no way to know if it was set during continer creation.
+    # Exception when force is set: always apply (e.g. secrets).
     var_test="$(eval echo \$\{"${var_name}"+x\})"
-    if [ -z "${var_test}" ] || [ "${var_name}" = "HOME" ] ; then
+    if [ -n "${force}" ] || [ -z "${var_test}" ] || [ "${var_name}" = "HOME" ] ; then
         export "${var_name}"="${var_val}"
         echo "export ${var_name}=\"${var_val}\"" >> /tmp/.cont-env-internal
     fi
@@ -157,7 +161,9 @@ if [ -d /run/secrets ]; then
         fi
 
         echo "loading..." | log_script "${env_var_name}"
-        load_env_var "${env_var_name}" "$(head -n1 < "${fpath}")"
+        # Always apply secrets: they are user-provided and take precedence over
+        # environment variables (including empty image ENV defaults).
+        load_env_var "${env_var_name}" "$(head -n1 < "${fpath}")" force
     done <&3
     exec 3>&- # Close file descriptor.
     rm "${flist}"
