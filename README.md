@@ -338,6 +338,10 @@ they follow the naming convention `CONT_ENV_<environment variable name>`.
 For example, a secret named `CONT_ENV_MY_PASSWORD` creates the environment
 variable `MY_PASSWORD` with the secret's content.
 
+A Docker secret always takes precedence over an environment variable of the
+same name, whether that variable was set by the Dockerfile or by the
+container's operator.
+
 ### User/Group IDs
 
 When mapping data volumes (using the `-v` flag of the `docker run` command),
