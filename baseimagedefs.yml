@@ -17,6 +17,16 @@ baseimage:
     for any long-lived application.
   gui: false
   history:
+    - version: 3.11.9
+      date: 2026-07-31
+      changes:
+        fixed:
+          - 'Incorrect handling of logmonitor target debouncing when it is not set.'
+          - 'Incorrect interval calculation in the container init process for the `yearly` and `monthly` service interval keywords.'
+        changed:
+          - 'Docker secrets now take precedence over environment variables set by other means.'
+          - 'Users definition: password is hashed via stdin so it no longer appears in process listings.'
+          - 'Applied robustness improvements to the container init process.'
     - version: 3.11.8
       date: 2026-07-11
       changes:
