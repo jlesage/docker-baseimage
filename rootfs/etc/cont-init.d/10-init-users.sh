@@ -226,7 +226,7 @@ if [ -d /etc/cont-users.d ]; then
 
         # Handle password.
         if [ -n "${password}" ]; then
-            password_hash="$(/opt/base/bin/mkpasswd "${password}")"
+            password_hash="$(echo "${password}" | /opt/base/bin/mkpasswd)"
         fi
 
         # Add user.
