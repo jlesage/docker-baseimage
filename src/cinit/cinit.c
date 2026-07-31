@@ -1941,10 +1941,9 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    // Create the named pipe (FIFO). Create with no permissions first, then
-    // set ownership and mode to avoid a world-writable window.
+    // Create the named pipe (FIFO).
     unlink(CMD_FIFO_PATH);
-    if (mkfifo(CMD_FIFO_PATH, 0000) == -1) {
+    if (mkfifo(CMD_FIFO_PATH, 0666) == -1) {
         printf("Could not create named pipe: %s.\n", strerror(errno));
         return EXIT_FAILURE;
     }
