@@ -3,7 +3,7 @@
 #
 --- a/src/uu/useradd/src/useradd.rs
 +++ b/src/uu/useradd/src/useradd.rs
-@@ -48,6 +48,7 @@ mod options {
+@@ -48,6 +48,7 @@
      pub const INACTIVE: &str = "inactive";
      pub const GID: &str = "gid";
      pub const GROUPS: &str = "groups";
@@ -11,7 +11,7 @@
      pub const CREATE_HOME: &str = "create-home";
      pub const NO_CREATE_HOME: &str = "no-create-home";
      pub const SKEL: &str = "skel";
-@@ -166,6 +167,7 @@ struct UseraddOptions {
+@@ -162,6 +163,7 @@
      inactive: Option<i64>,
      expire_date: Option<i64>,
      create_user_group: bool,
@@ -19,7 +19,7 @@
      root: SysRoot,
  }
  
-@@ -446,6 +448,18 @@ fn parse_options(matches: &clap::ArgMatches) -> Result<UseraddOptions, UseraddEr
+@@ -429,6 +431,18 @@
          false
      };
  
@@ -38,7 +38,7 @@
      Ok(UseraddOptions {
          login,
          comment,
-@@ -462,6 +476,7 @@ fn parse_options(matches: &clap::ArgMatches) -> Result<UseraddOptions, UseraddEr
+@@ -445,6 +459,7 @@
          inactive,
          expire_date,
          create_user_group,
@@ -46,7 +46,7 @@
          root,
      })
  }
-@@ -652,7 +667,25 @@ fn determine_uid(
+@@ -635,7 +650,25 @@
          }
          Ok(requested_uid)
      } else {
@@ -73,7 +73,7 @@
          uid_alloc::next_uid(passwd_entries, min, max)
              .map_err(|e| UseraddError::CannotUpdatePasswd(format!("{e}")))
      }
-@@ -691,7 +724,25 @@ fn determine_gid(
+@@ -674,7 +707,25 @@
  
          // Allocate a GID. Prefer same as UID if available.
          let gid = if group_entries.iter().any(|g| g.gid == uid) {
@@ -100,11 +100,10 @@
              uid_alloc::next_gid(group_entries, min, max)
                  .map_err(|e| UseraddError::CannotUpdateGroup(format!("{e}")))?
          } else {
-@@ -1030,6 +1081,14 @@ pub fn uu_app() -> Command {
-                 .value_name("GROUPS")
-                 .help("List of supplementary groups of the new account"),
+@@ -1016,6 +1067,14 @@
+                 .help("Comma-separated supplementary groups"),
          )
-+        .arg(
+         .arg(
 +            Arg::new(options::KEY)
 +                .short('K')
 +                .long("key")
@@ -112,6 +111,71 @@
 +                .action(ArgAction::Append)
 +                .help("Override /etc/login.defs defaults"),
 +        )
-         .arg(
++        .arg(
              Arg::new(options::CREATE_HOME)
                  .short('m')
+                 .long("create-home")
+@@ -1729,6 +1788,7 @@
+             inactive: None,
+             expire_date: None,
+             create_user_group: false,
++            login_defs_overrides: Vec::new(),
+             root: root.clone(),
+         };
+ 
+@@ -1872,6 +1932,7 @@
+             inactive: None,
+             expire_date: None,
+             create_user_group: false,
++            login_defs_overrides: Vec::new(),
+             root: SysRoot::default(),
+         };
+ 
+@@ -1906,6 +1967,7 @@
+             inactive: None,
+             expire_date: None,
+             create_user_group: true,
++            login_defs_overrides: Vec::new(),
+             root: SysRoot::default(),
+         };
+ 
+@@ -1944,6 +2006,7 @@
+             inactive: None,
+             expire_date: None,
+             create_user_group: true,
++            login_defs_overrides: Vec::new(),
+             root: SysRoot::default(),
+         };
+ 
+@@ -1972,6 +2035,7 @@
+             inactive: None,
+             expire_date: None,
+             create_user_group: false,
++            login_defs_overrides: Vec::new(),
+             root: SysRoot::default(),
+         };
+ 
+@@ -2006,6 +2070,7 @@
+             inactive: None,
+             expire_date: None,
+             create_user_group: false,
++            login_defs_overrides: Vec::new(),
+             root: SysRoot::default(),
+         };
+ 
+@@ -2042,6 +2107,7 @@
+             inactive: None,
+             expire_date: None,
+             create_user_group: false,
++            login_defs_overrides: Vec::new(),
+             root: SysRoot::default(),
+         };
+ 
+@@ -2078,6 +2144,7 @@
+             inactive: None,
+             expire_date: None,
+             create_user_group: false,
++            login_defs_overrides: Vec::new(),
+             root: SysRoot::default(),
+         };
+ 

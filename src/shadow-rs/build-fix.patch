@@ -1,8 +1,8 @@
 #
 # Disable shell completion support to allow compilation of static binary.
 #
---- a/Cargo.toml	2026-05-18 11:19:34.503311880 -0400
-+++ b/Cargo.toml	2026-05-18 11:25:30.729612986 -0400
+--- a/Cargo.toml
++++ b/Cargo.toml
 @@ -6,6 +6,7 @@
  edition.workspace = true
  rust-version.workspace = true
@@ -12,7 +12,7 @@
  repository.workspace = true
  homepage.workspace = true
 @@ -49,8 +50,7 @@
- shadow-core = { path = "src/shadow-core" }
+ shadow-core = { path = "src/shadow-core", version = "0.2.1" }
  
  # CLI
 -clap = { version = "4", features = ["derive", "wrap_help"] }
@@ -20,16 +20,16 @@
 +clap = { version = "4", features = ["wrap_help"] }
  
  # uutils integration
- uucore = "0.8"
+ uucore = "0.9"
 @@ -73,7 +73,6 @@
  
  [dependencies]
  clap = { workspace = true }
 -clap_complete = { workspace = true, optional = true }
+ shadow-core = { path = "src/shadow-core", version = "0.2.1" }
+ rustix = { workspace = true }
  
- # Tool crates (optional, enabled by features)
- passwd = { optional = true, version = "0.0.1", package = "uu_passwd", path = "src/uu/passwd" }
-@@ -121,18 +120,10 @@
+@@ -123,18 +122,10 @@
  # PAM authentication (requires libpam-dev)
  pam = ["passwd/pam"]
  
@@ -48,10 +48,10 @@
  [[test]]
  name = "test_chage"
  path = "tests/by-util/test_chage.rs"
---- a/Makefile	2026-05-18 11:19:34.503887331 -0400
-+++ b/Makefile	2026-05-18 11:55:25.403220687 -0400
+--- a/Makefile
++++ b/Makefile
 @@ -19,7 +19,7 @@
- 	cargo build --release --workspace --bins --exclude shadow-rs
+ 	cargo build --release --workspace --bins --exclude uu_shadow
  
  build-multicall:
 -	cargo build --release --bin shadow-rs

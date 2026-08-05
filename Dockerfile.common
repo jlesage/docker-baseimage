@@ -74,7 +74,7 @@ RUN upx /tmp/logrotate-install/usr/sbin/logrotate
 # Build shadow-rs
 FROM --platform=$BUILDPLATFORM alpine:3.20 AS shadow-rs
 ARG TARGETPLATFORM
-ARG SHADOW_RS_VERSION=0.2.0
+ARG SHADOW_RS_VERSION=0.2.1
 ARG SHADOW_RS_URL=https://github.com/uutils/shadow-rs/archive/refs/tags/v${SHADOW_RS_VERSION}.tar.gz
 COPY --from=xx / /
 COPY src/shadow-rs /tmp/build
