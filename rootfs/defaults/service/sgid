@@ -14,7 +14,6 @@ echo "${grps}" \
     | tr ',' '\n' \
     | grep -v '^$' \
     | grep -v '^0$' \
-    | grep -vw "${GROUP_ID}" \
     | sort -nub
 
 # vim:ft=sh:ts=4:sw=4:et:sts=4
