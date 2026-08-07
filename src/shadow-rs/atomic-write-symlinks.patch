@@ -1,0 +1,65 @@
+#
+# Make atomic_write follow symlinks so the symlink itself is preserved
+# and the real file behind it is updated.
+#
+--- a/src/shadow-core/src/atomic.rs	2026-08-05 21:09:22.000000000 +0000
++++ b/src/shadow-core/src/atomic.rs	2026-08-07 17:51:19.210249386 +0000
+@@ -10,6 +10,9 @@
+ //! 1. Write to a temporary file in the same directory as the target
+ //! 2. `fsync` the temporary file
+ //! 3. `rename` the temporary file over the target (atomic on POSIX)
++//!
++//! When the target path is a symbolic link, the write is performed against
++//! the link target so the symlink itself is preserved.
+ 
+ use std::fs::{self, File};
+ use std::io::{self, Write};
+@@ -87,6 +90,9 @@
+ /// provided closure, fsyncs, then renames over the target. If any step
+ /// fails, the temporary file is cleaned up and the original is untouched.
+ ///
++/// When `target` is a symbolic link, the real file behind the link is
++/// replaced and the symlink itself is left intact.
++///
+ /// # Errors
+ ///
+ /// Returns `ShadowError` if any I/O operation fails, or if the closure returns an error.
+@@ -94,14 +100,25 @@
+ where
+     F: FnOnce(&mut File) -> Result<(), ShadowError>,
+ {
+-    let dir = target.parent().ok_or_else(|| {
+-        ShadowError::Other(format!("no parent directory for {}", target.display()).into())
++    // Resolve symlinks so rename updates the real file and leaves the link
++    // intact. Fall back to the original path when the target does not exist
++    // yet (new file creation).
++    let write_target = match fs::canonicalize(target) {
++        Ok(p) => p,
++        Err(e) if e.kind() == io::ErrorKind::NotFound => target.to_path_buf(),
++        Err(e) => return Err(ShadowError::IoPath(e, target.to_owned())),
++    };
++
++    let dir = write_target.parent().ok_or_else(|| {
++        ShadowError::Other(format!("no parent directory for {}", write_target.display()).into())
+     })?;
+ 
+-    let tmp_path = tmp_path_for(target);
++    let tmp_path = tmp_path_for(&write_target);
+ 
+     // Determine permissions: preserve original if target exists, otherwise 0600.
+     // Set mode at creation time to avoid any window where the file is world-readable.
++    // metadata() follows symlinks, so this sees the real file's mode when target
++    // is a link.
+     let mode = fs::metadata(target).map_or(0o600, |m| {
+         std::os::unix::fs::PermissionsExt::mode(&m.permissions())
+     });
+@@ -155,7 +172,8 @@
+         .map_err(|e| ShadowError::IoPath(io::Error::from(e), tmp_path.clone()))?;
+ 
+     // Atomic rename.
+-    fs::rename(&tmp_path, target).map_err(|e| ShadowError::IoPath(e, target.to_owned()))?;
++    fs::rename(&tmp_path, &write_target)
++        .map_err(|e| ShadowError::IoPath(e, write_target.clone()))?;
+ 
+     // The rename succeeded — prevent the guard from deleting the (now-gone) tmp file.
+     guard.commit();

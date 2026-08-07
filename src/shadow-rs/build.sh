@@ -87,6 +87,7 @@ log "Patching shadow-rs..."
 PATCHES="
     build-fix.patch
     override-login-defs-argument.patch
+    atomic-write-symlinks.patch
 "
 for PATCH in $PATCHES; do
     log "Applying $PATCH..."
