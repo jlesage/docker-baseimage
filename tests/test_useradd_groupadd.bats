@@ -39,6 +39,13 @@ require_groupadd() {
     fi
 }
 
+# Skip when the multicall account-management binary is not installed.
+require_shadow_tools() {
+    if ! exec_container_daemon sh -c "command -v useradd && command -v chage" >/dev/null 2>&1; then
+        skip "account management tools are not available in this image"
+    fi
+}
+
 # Assert that account databases are currently symlinks (the baseimage layout).
 assert_databases_are_symlinks() {
     run exec_container_daemon sh -c "test -L /etc/passwd"
@@ -52,6 +59,30 @@ assert_databases_are_symlinks() {
     run exec_container_daemon sh -c "test -L /etc/shadow"
     echo "shadow is symlink: $status"
     [ "$status" -eq 0 ]
+}
+
+@test "Checking that /usr/bin account tools resolve to the same binary as /usr/sbin..." {
+    dump_daemon_logs
+    require_shadow_tools
+
+    # Package maintainer scripts often call /usr/bin/chage (etc.) with an
+    # absolute path. Those must not remain the distro binaries when a
+    # replacement under /usr/sbin is installed.
+    for tool in chage passwd chfn chsh newgrp; do
+        run exec_container_daemon sh -c "
+            if [ -e /usr/bin/$tool ] || [ -L /usr/bin/$tool ]; then
+                bin=\$(readlink -f /usr/bin/$tool)
+                sbin=\$(readlink -f /usr/sbin/$tool)
+                echo \"/usr/bin/$tool -> \$bin\"
+                echo \"/usr/sbin/$tool -> \$sbin\"
+                [ -n \"\$bin\" ] && [ \"\$bin\" = \"\$sbin\" ]
+            else
+                echo \"/usr/bin/$tool not present; skipped\"
+            fi
+        "
+        echo "$output"
+        [ "$status" -eq 0 ]
+    done
 }
 
 @test "Checking that user and group databases are symlinks..." {

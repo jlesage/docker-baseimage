@@ -76,10 +76,19 @@ RUN \
 
 # Install shadow-rs if needed.
 # Some distros include shadow-utils (useradd, passwd, groupadd, etc.) that
-# doesn't work when user and group databases are symlinks.
+# don't work when user and group databases are symlinks. shadow-rs installs
+# under /usr/sbin; also replace matching tools under /usr/bin so package
+# scripts that call absolute paths (e.g. /usr/bin/chage) use shadow-rs too.
 RUN \
     case "$(awk -F= '/^ID=/ {print $2}' /etc/os-release)" in \
-        debian|ubuntu) cp -a /shadow-rs/* / ;; \
+        debian|ubuntu) \
+            cp -a /shadow-rs/* / && \
+            for tool in chage passwd chfn chsh newgrp; do \
+                if [ -e "/usr/bin/$tool" ] || [ -L "/usr/bin/$tool" ]; then \
+                    ln -sf ../sbin/shadow-rs "/usr/bin/$tool"; \
+                fi; \
+            done; \
+            ;; \
     esac && \
     rm -rf /shadow-rs
 
