@@ -301,7 +301,9 @@ dump_daemon_logs() {
 }
 
 @test "Checking that service sgid always includes GROUP_ID..." {
-    docker_run --rm --entrypoint /defaults/service/sgid \
+    # Discard docker CLI stderr (platform mismatch warnings under QEMU) so it
+    # does not pollute $output used for an exact comparison.
+    run no_stderr docker run --rm --entrypoint /defaults/service/sgid \
         -e GROUP_ID=3000 \
         "$DOCKER_IMAGE"
     echo "====================================================================="
@@ -317,7 +319,9 @@ dump_daemon_logs() {
 }
 
 @test "Checking that service sgid merges GROUP_ID with SUP_GROUP_IDS..." {
-    docker_run --rm --entrypoint /defaults/service/sgid \
+    # Discard docker CLI stderr (platform mismatch warnings under QEMU) so it
+    # does not pollute $output used for an exact comparison.
+    run no_stderr docker run --rm --entrypoint /defaults/service/sgid \
         -e GROUP_ID=3000 \
         -e SUP_GROUP_IDS=5100,9999 \
         "$DOCKER_IMAGE"
@@ -334,7 +338,9 @@ dump_daemon_logs() {
 }
 
 @test "Checking that service sgid deduplicates GROUP_ID..." {
-    docker_run --rm --entrypoint /defaults/service/sgid \
+    # Discard docker CLI stderr (platform mismatch warnings under QEMU) so it
+    # does not pollute $output used for an exact comparison.
+    run no_stderr docker run --rm --entrypoint /defaults/service/sgid \
         -e GROUP_ID=3000 \
         -e SUP_GROUP_IDS=3000,5100 \
         "$DOCKER_IMAGE"
