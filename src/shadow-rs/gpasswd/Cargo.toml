@@ -1,0 +1,31 @@
+[package]
+name = "uu_gpasswd"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+rust-version.workspace = true
+description = "gpasswd ~ (shadow-rs) administer /etc/group and /etc/gshadow"
+
+[lib]
+path = "src/gpasswd.rs"
+
+[[bin]]
+name = "gpasswd"
+path = "src/main.rs"
+
+[dependencies]
+clap = { workspace = true }
+rustix = { workspace = true }
+shadow-core = { workspace = true, features = ["shadow", "group", "gshadow", "login-defs", "crypt"] }
+uucore = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[lints]
+workspace = true

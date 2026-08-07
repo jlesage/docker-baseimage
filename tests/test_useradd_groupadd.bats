@@ -68,7 +68,7 @@ assert_databases_are_symlinks() {
     # Package maintainer scripts often call /usr/bin/chage (etc.) with an
     # absolute path. Those must not remain the distro binaries when a
     # replacement under /usr/sbin is installed.
-    for tool in chage passwd chfn chsh newgrp; do
+    for tool in chage passwd chfn chsh newgrp gpasswd; do
         run exec_container_daemon sh -c "
             if [ -e /usr/bin/$tool ] || [ -L /usr/bin/$tool ]; then
                 bin=\$(readlink -f /usr/bin/$tool)
@@ -83,6 +83,52 @@ assert_databases_are_symlinks() {
         echo "$output"
         [ "$status" -eq 0 ]
     done
+}
+
+@test "Checking that gpasswd -a works when group database is a symlink..." {
+    dump_daemon_logs
+    require_shadow_tools
+
+    run exec_container_daemon sh -c "command -v gpasswd"
+    if [ "$status" -ne 0 ]; then
+        skip "gpasswd is not available in this image"
+    fi
+
+    run exec_container_daemon sh -c "test -L /etc/group"
+    [ "$status" -eq 0 ]
+
+    run exec_container_daemon sh -c "readlink /etc/group"
+    [ "$status" -eq 0 ]
+    GROUP_TARGET="$output"
+
+    # Create a disposable group and user for membership tests.
+    run exec_container_daemon groupadd -g 6300 gpassgrp
+    echo "groupadd: $status $output"
+    [ "$status" -eq 0 ]
+
+    run exec_container_daemon useradd -u 6300 -g 0 -M -N -s /usr/sbin/nologin gpassuser
+    echo "useradd: $status $output"
+    [ "$status" -eq 0 ]
+
+    run exec_container_daemon gpasswd -a gpassuser gpassgrp
+    echo "gpasswd -a: $status $output"
+    [ "$status" -eq 0 ]
+
+    run exec_container_daemon sh -c "test -L /etc/group"
+    echo "group still symlink: $status"
+    [ "$status" -eq 0 ]
+
+    run exec_container_daemon sh -c "readlink /etc/group"
+    [ "$status" -eq 0 ]
+    [ "$output" = "$GROUP_TARGET" ]
+
+    run exec_container_daemon sh -c "grep -E '^gpassgrp:x:6300:.*gpassuser' /etc/group"
+    echo "membership: $status $output"
+    [ "$status" -eq 0 ]
+
+    run exec_container_daemon sh -c "grep -E '^gpassgrp:x:6300:.*gpassuser' '$GROUP_TARGET'"
+    echo "real group membership: $status"
+    [ "$status" -eq 0 ]
 }
 
 @test "Checking that user and group databases are symlinks..." {

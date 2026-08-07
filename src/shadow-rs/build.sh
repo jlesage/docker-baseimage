@@ -88,11 +88,16 @@ PATCHES="
     build-fix.patch
     override-login-defs-argument.patch
     atomic-write-symlinks.patch
+    add-gpasswd.patch
 "
 for PATCH in $PATCHES; do
     log "Applying $PATCH..."
     patch  -p1 -d /tmp/shadow-rs < "$SCRIPT_DIR"/"$PATCH"
 done
+
+# Install the gpasswd crate sources (referenced by add-gpasswd.patch).
+log "Adding gpasswd crate..."
+cp -a "$SCRIPT_DIR"/gpasswd /tmp/shadow-rs/src/uu/gpasswd
 
 log "Compiling shadow-rs..."
 (

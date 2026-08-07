@@ -83,7 +83,7 @@ RUN \
     case "$(awk -F= '/^ID=/ {print $2}' /etc/os-release)" in \
         debian|ubuntu) \
             cp -a /shadow-rs/* / && \
-            for tool in chage passwd chfn chsh newgrp; do \
+            for tool in chage passwd chfn chsh newgrp gpasswd; do \
                 if [ -e "/usr/bin/$tool" ] || [ -L "/usr/bin/$tool" ]; then \
                     ln -sf ../sbin/shadow-rs "/usr/bin/$tool"; \
                 fi; \

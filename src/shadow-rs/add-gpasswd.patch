@@ -1,0 +1,397 @@
+#
+# Add gpasswd utility to the multicall binary and workspace.
+# The uu_gpasswd crate sources are copied by build.sh separately.
+#
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -32,6 +32,7 @@
+     "src/uu/newgrp",
+     "src/uu/chpasswd",
+     "src/uu/chage",
++    "src/uu/gpasswd",
+ ]
+ 
+ [workspace.package]
+@@ -91,10 +92,11 @@
+ chfn = { optional = true, version = "0.2.1", package = "uu_chfn", path = "src/uu/chfn" }
+ chsh = { optional = true, version = "0.2.1", package = "uu_chsh", path = "src/uu/chsh" }
+ newgrp = { optional = true, version = "0.2.1", package = "uu_newgrp", path = "src/uu/newgrp" }
++gpasswd = { optional = true, version = "0.2.1", package = "uu_gpasswd", path = "src/uu/gpasswd" }
+ 
+ [features]
+ default = ["passwd", "pwck", "useradd", "userdel", "usermod", "chpasswd", "chage",
+-           "groupadd", "groupdel", "groupmod", "grpck", "chfn", "chsh", "newgrp"]
++           "groupadd", "groupdel", "groupmod", "grpck", "chfn", "chsh", "newgrp", "gpasswd"]
+ 
+ # Individual tools
+ feat_passwd = ["passwd"]
+@@ -111,11 +113,12 @@
+ feat_chfn = ["chfn"]
+ feat_chsh = ["chsh"]
+ feat_newgrp = ["newgrp"]
++feat_gpasswd = ["gpasswd"]
+ 
+ # Grouped features
+ feat_phase1 = ["feat_passwd", "feat_pwck"]
+ feat_phase2 = ["feat_useradd", "feat_userdel", "feat_usermod", "feat_chpasswd", "feat_chage"]
+-feat_phase3 = ["feat_groupadd", "feat_groupdel", "feat_groupmod", "feat_grpck", "feat_chfn", "feat_chsh", "feat_newgrp"]
++feat_phase3 = ["feat_groupadd", "feat_groupdel", "feat_groupmod", "feat_grpck", "feat_chfn", "feat_chsh", "feat_newgrp", "feat_gpasswd"]
+ feat_common = ["feat_phase1", "feat_phase2"]
+ feat_common_core = ["feat_phase1", "feat_phase2", "feat_phase3"]
+ 
+@@ -182,6 +185,10 @@
+ name = "test_groupadd"
+ path = "tests/by-util/test_groupadd.rs"
+ 
++[[test]]
++name = "test_gpasswd"
++path = "tests/by-util/test_gpasswd.rs"
++
+ [dev-dependencies]
+ chage = { version = "0.2.1", package = "uu_chage", path = "src/uu/chage" }
+ chfn = { version = "0.2.1", package = "uu_chfn", path = "src/uu/chfn" }
+@@ -197,6 +204,7 @@
+ usermod = { version = "0.2.1", package = "uu_usermod", path = "src/uu/usermod" }
+ pwck = { version = "0.2.1", package = "uu_pwck", path = "src/uu/pwck" }
+ grpck = { version = "0.2.1", package = "uu_grpck", path = "src/uu/grpck" }
++gpasswd = { version = "0.2.1", package = "uu_gpasswd", path = "src/uu/gpasswd" }
+ shadow-core = { path = "src/shadow-core", version = "0.2.1", features = ["shadow"] }
+ rustix = { workspace = true }
+ tempfile = { workspace = true }
+
+--- a/Makefile
++++ b/Makefile
+@@ -3,7 +3,7 @@
+ 
+ # Tools that need setuid-root to allow non-root callers (change own password,
+ # GECOS, shell, effective group).
+-SETUID_TOOLS = passwd chfn chsh newgrp
++SETUID_TOOLS = passwd chfn chsh newgrp gpasswd
+ 
+ # Root-only tools (no setuid; fail at getuid() check for non-root callers).
+ ROOT_TOOLS = useradd userdel usermod chpasswd chage \
+
+--- a/src/bin/shadow-rs.rs
++++ b/src/bin/shadow-rs.rs
+@@ -126,6 +126,8 @@
+         "groupdel" => Some(groupdel::uumain(args.iter().cloned())),
+         #[cfg(feature = "groupmod")]
+         "groupmod" => Some(groupmod::uumain(args.iter().cloned())),
++        #[cfg(feature = "gpasswd")]
++        "gpasswd" => Some(gpasswd::uumain(args.iter().cloned())),
+         #[cfg(feature = "grpck")]
+         "grpck" => Some(grpck::uumain(args.iter().cloned())),
+         #[cfg(feature = "newgrp")]
+@@ -162,6 +164,8 @@
+     let _ = writeln!(out, "  groupdel");
+     #[cfg(feature = "groupmod")]
+     let _ = writeln!(out, "  groupmod");
++    #[cfg(feature = "gpasswd")]
++    let _ = writeln!(out, "  gpasswd");
+     #[cfg(feature = "grpck")]
+     let _ = writeln!(out, "  grpck");
+     #[cfg(feature = "newgrp")]
+
+--- /dev/null
++++ b/tests/by-util/test_gpasswd.rs
+@@ -0,0 +1,300 @@
++// This file is part of the shadow-rs package.
++//
++// For the full copyright and license information, please view the LICENSE
++// file that was distributed with this source code.
++// spell-checker:ignore gpasswd gshadow
++
++//! Integration tests for the `gpasswd` utility.
++//!
++//! Tests that require root are guarded by `common::skip_unless_root()` and run
++//! inside Docker CI containers. Non-root tests exercise clap parsing and error
++//! paths that do not need privilege.
++
++use std::ffi::OsString;
++
++#[path = "../common/mod.rs"]
++mod common;
++
++/// Run `uumain` with the given args, returning the exit code.
++fn run(args: &[&str]) -> i32 {
++    let os_args: Vec<OsString> = args.iter().map(|s| (*s).into()).collect();
++    gpasswd::uumain(os_args.into_iter())
++}
++
++/// Helper to create a temp dir with `etc/group`, `etc/gshadow`, and `etc/passwd`.
++fn setup_prefix() -> tempfile::TempDir {
++    let dir = tempfile::tempdir().expect("failed to create temp dir");
++    let etc = dir.path().join("etc");
++    std::fs::create_dir_all(&etc).expect("failed to create etc dir");
++
++    std::fs::write(etc.join("group"), "root:x:0:\ndevs:x:1000:bob\n")
++        .expect("failed to write group file");
++    std::fs::write(etc.join("gshadow"), "root:!::\ndevs:!::bob\n")
++        .expect("failed to write gshadow file");
++    std::fs::write(
++        etc.join("passwd"),
++        "root:x:0:0:root:/root:/bin/bash\n\
++bob:x:1000:1000::/home/bob:/bin/bash\n\
++alice:x:1001:1001::/home/alice:/bin/bash\n",
++    )
++    .expect("failed to write passwd file");
++
++    dir
++}
++
++/// Run `uumain` with a `--prefix` dir prepended to the args.
++fn run_with_prefix(dir: &tempfile::TempDir, extra_args: &[&str]) -> i32 {
++    let prefix_str = dir.path().to_str().expect("non-UTF-8 temp path");
++    let mut args = vec!["gpasswd", "-P", prefix_str];
++    args.extend_from_slice(extra_args);
++    run(&args)
++}
++
++fn read_group(dir: &tempfile::TempDir) -> String {
++    std::fs::read_to_string(dir.path().join("etc/group")).expect("failed to read group file")
++}
++
++fn read_gshadow(dir: &tempfile::TempDir) -> String {
++    std::fs::read_to_string(dir.path().join("etc/gshadow")).expect("failed to read gshadow file")
++}
++
++// ---------------------------------------------------------------------------
++// Non-root tests -- clap parsing and error paths
++// ---------------------------------------------------------------------------
++
++#[test]
++fn test_help_exits_zero() {
++    let code = run(&["gpasswd", "--help"]);
++    assert_eq!(code, 0, "--help should exit 0");
++}
++
++#[test]
++fn test_missing_group_exits_error() {
++    let code = run(&["gpasswd"]);
++    assert_eq!(code, 2, "missing GROUP should exit 2");
++}
++
++#[test]
++fn test_unknown_flag_exits_error() {
++    let code = run(&["gpasswd", "--bogus", "devs"]);
++    assert_eq!(code, 2, "unknown flag should exit 2");
++}
++
++// ---------------------------------------------------------------------------
++// Root-only tests -- real operations via --prefix
++// ---------------------------------------------------------------------------
++
++#[test]
++fn test_add_user() {
++    if common::skip_unless_root() {
++        return;
++    }
++
++    let dir = setup_prefix();
++    let code = run_with_prefix(&dir, &["-a", "alice", "devs"]);
++    assert_eq!(code, 0, "gpasswd -a should exit 0");
++
++    let group = read_group(&dir);
++    assert!(
++        group.contains("alice"),
++        "alice should appear in /etc/group, got: {group}"
++    );
++    assert!(
++        group.contains("bob"),
++        "bob should remain in /etc/group, got: {group}"
++    );
++
++    let gshadow = read_gshadow(&dir);
++    assert!(
++        gshadow.contains("alice"),
++        "alice should appear in /etc/gshadow, got: {gshadow}"
++    );
++}
++
++#[test]
++fn test_add_user_idempotent() {
++    if common::skip_unless_root() {
++        return;
++    }
++
++    let dir = setup_prefix();
++    assert_eq!(run_with_prefix(&dir, &["-a", "alice", "devs"]), 0);
++    assert_eq!(
++        run_with_prefix(&dir, &["-a", "alice", "devs"]),
++        0,
++        "adding an existing member should still exit 0"
++    );
++
++    let group = read_group(&dir);
++    let count = group.matches("alice").count();
++    assert_eq!(count, 1, "alice should appear only once, got: {group}");
++}
++
++#[test]
++fn test_delete_user() {
++    if common::skip_unless_root() {
++        return;
++    }
++
++    let dir = setup_prefix();
++    let code = run_with_prefix(&dir, &["-d", "bob", "devs"]);
++    assert_eq!(code, 0, "gpasswd -d should exit 0");
++
++    let group = read_group(&dir);
++    assert!(
++        !group.contains("bob"),
++        "bob should be removed from /etc/group, got: {group}"
++    );
++}
++
++#[test]
++fn test_set_members() {
++    if common::skip_unless_root() {
++        return;
++    }
++
++    let dir = setup_prefix();
++    let code = run_with_prefix(&dir, &["-M", "alice,bob", "devs"]);
++    assert_eq!(code, 0, "gpasswd -M should exit 0");
++
++    let group = read_group(&dir);
++    assert!(
++        group.contains("alice") && group.contains("bob"),
++        "both members should be present, got: {group}"
++    );
++}
++
++#[test]
++fn test_set_administrators() {
++    if common::skip_unless_root() {
++        return;
++    }
++
++    let dir = setup_prefix();
++    let code = run_with_prefix(&dir, &["-A", "alice", "devs"]);
++    assert_eq!(code, 0, "gpasswd -A should exit 0");
++
++    let gshadow = read_gshadow(&dir);
++    // admins field is the third field: name:passwd:admins:members
++    let line = gshadow
++        .lines()
++        .find(|l| l.starts_with("devs:"))
++        .expect("devs gshadow entry");
++    let fields: Vec<&str> = line.split(':').collect();
++    assert!(
++        fields.len() >= 3 && fields[2].contains("alice"),
++        "alice should be an admin, got: {line}"
++    );
++}
++
++#[test]
++fn test_remove_password() {
++    if common::skip_unless_root() {
++        return;
++    }
++
++    let dir = setup_prefix();
++    // Seed a non-empty password hash.
++    std::fs::write(
++        dir.path().join("etc/gshadow"),
++        "root:!::\ndevs:$6$salt$hash::bob\n",
++    )
++    .expect("write gshadow");
++
++    let code = run_with_prefix(&dir, &["-r", "devs"]);
++    assert_eq!(code, 0, "gpasswd -r should exit 0");
++
++    let gshadow = read_gshadow(&dir);
++    let line = gshadow
++        .lines()
++        .find(|l| l.starts_with("devs:"))
++        .expect("devs gshadow entry");
++    let fields: Vec<&str> = line.split(':').collect();
++    assert_eq!(fields[1], "", "password field should be empty, got: {line}");
++}
++
++#[test]
++fn test_restrict() {
++    if common::skip_unless_root() {
++        return;
++    }
++
++    let dir = setup_prefix();
++    let code = run_with_prefix(&dir, &["-R", "devs"]);
++    assert_eq!(code, 0, "gpasswd -R should exit 0");
++
++    let gshadow = read_gshadow(&dir);
++    let line = gshadow
++        .lines()
++        .find(|l| l.starts_with("devs:"))
++        .expect("devs gshadow entry");
++    let fields: Vec<&str> = line.split(':').collect();
++    assert_eq!(fields[1], "!", "password should be !, got: {line}");
++}
++
++#[test]
++fn test_nonexistent_group_fails() {
++    if common::skip_unless_root() {
++        return;
++    }
++
++    let dir = setup_prefix();
++    let code = run_with_prefix(&dir, &["-a", "alice", "missing"]);
++    assert_eq!(code, 6, "missing group should exit 6 (GROUP_NOT_FOUND)");
++}
++
++#[test]
++fn test_nonexistent_user_fails() {
++    if common::skip_unless_root() {
++        return;
++    }
++
++    let dir = setup_prefix();
++    let code = run_with_prefix(&dir, &["-a", "nobody", "devs"]);
++    assert_eq!(code, 3, "missing user should exit 3 (BAD_ARGUMENT)");
++}
++
++#[test]
++fn test_preserves_other_entries() {
++    if common::skip_unless_root() {
++        return;
++    }
++
++    let dir = setup_prefix();
++    assert_eq!(run_with_prefix(&dir, &["-a", "alice", "devs"]), 0);
++
++    let group = read_group(&dir);
++    assert!(
++        group.contains("root:x:0:"),
++        "root entry should be preserved, got: {group}"
++    );
++}
++
++#[test]
++fn test_symlink_group_file() {
++    if common::skip_unless_root() {
++        return;
++    }
++
++    let dir = setup_prefix();
++    let etc = dir.path().join("etc");
++    let data = dir.path().join("data");
++    std::fs::create_dir_all(&data).expect("data dir");
++    std::fs::rename(etc.join("group"), data.join("group")).expect("rename group");
++    std::os::unix::fs::symlink(data.join("group"), etc.join("group")).expect("symlink group");
++
++    let code = run_with_prefix(&dir, &["-a", "alice", "devs"]);
++    assert_eq!(code, 0, "gpasswd -a through symlink should exit 0");
++
++    assert!(
++        etc.join("group")
++            .symlink_metadata()
++            .expect("stat group")
++            .file_type()
++            .is_symlink(),
++        "group path must remain a symlink"
++    );
++
++    let group = std::fs::read_to_string(data.join("group")).expect("read real group");
++    assert!(group.contains("alice"), "alice should be written through: {group}");
++}
