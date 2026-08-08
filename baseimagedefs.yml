@@ -17,6 +17,15 @@ baseimage:
     for any long-lived application.
   gui: false
   history:
+    - version: 3.11.10
+      date: 2026-08-08
+      changes:
+        fixed:
+          - 'Account management tools replacing account database symbolic links with regular files.'
+          - 'Installation of Debian-based packages that call account management tools via absolute paths under `/usr/bin`.'
+        changed:
+          - 'Updated shadow-rs to version 0.2.1.'
+          - 'Primary group ID (`GROUP_ID`) is now always included in the service supplementary groups list.'
     - version: 3.11.9
       date: 2026-07-31
       changes:
