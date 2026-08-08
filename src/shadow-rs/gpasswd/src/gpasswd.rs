@@ -321,26 +321,20 @@ fn remove_member_gs(entry: &mut GshadowEntry, user: &str) {
 }
 
 fn prompt_and_hash_password(root: &SysRoot) -> Result<String, GpasswdError> {
-    let stdin = io::stdin();
-    if !rustix::termios::isatty(&stdin) {
-        return Err(GpasswdError::BadSyntax(
-            "setting a group password requires a tty; use -a/-d/-A/-M/-r/-R non-interactively"
-                .into(),
-        ));
-    }
-
-    eprint!("Changing the password for group\nNew Password: ");
+    // Banner on stderr (visible even if /dev/tty prompts are preferred for input).
+    eprintln!("Changing the password for group");
     let _ = io::stderr().flush();
-    let pass1 = read_password().map_err(|e| GpasswdError::CantUpdate(format!("{e}")))?;
-    eprint!("Re-enter new password: ");
-    let _ = io::stderr().flush();
-    let pass2 = read_password().map_err(|e| GpasswdError::CantUpdate(format!("{e}")))?;
 
-    if pass1 != pass2 {
+    let pass1 = read_password("New Password: ")?;
+    let pass2 = read_password("Re-enter new password: ")?;
+
+    if *pass1 != *pass2 {
         return Err(GpasswdError::BadArgument("passwords do not match".into()));
     }
     if pass1.is_empty() {
-        return Err(GpasswdError::BadArgument("empty password not allowed".into()));
+        return Err(GpasswdError::BadArgument(
+            "empty password not allowed".into(),
+        ));
     }
 
     let defs = LoginDefs::load(&root.login_defs_path())
@@ -354,17 +348,98 @@ fn prompt_and_hash_password(root: &SysRoot) -> Result<String, GpasswdError> {
         .map_err(|e| GpasswdError::CantUpdate(format!("cannot hash password: {e}")))
 }
 
-fn read_password() -> io::Result<String> {
-    let mut line = String::new();
-    io::stdin().read_line(&mut line)?;
-    if line.ends_with('\n') {
-        line.pop();
-        if line.ends_with('\r') {
-            line.pop();
-        }
+/// RAII guard that restores terminal echo on drop (same pattern as newgrp).
+struct EchoGuard {
+    tty: std::fs::File,
+    old_termios: rustix::termios::Termios,
+}
+
+impl EchoGuard {
+    /// Disable echo on the given tty file.
+    fn disable(tty: std::fs::File) -> Result<Self, GpasswdError> {
+        use std::os::unix::io::AsFd;
+
+        let old_termios = rustix::termios::tcgetattr(tty.as_fd()).map_err(|e| {
+            GpasswdError::CantUpdate(format!("cannot get terminal attributes: {e}"))
+        })?;
+
+        let mut new_termios = old_termios.clone();
+        new_termios.local_modes &= !rustix::termios::LocalModes::ECHO;
+        rustix::termios::tcsetattr(
+            tty.as_fd(),
+            rustix::termios::OptionalActions::Now,
+            &new_termios,
+        )
+        .map_err(|e| GpasswdError::CantUpdate(format!("cannot disable echo: {e}")))?;
+
+        Ok(Self { tty, old_termios })
     }
-    eprintln!();
-    Ok(line)
+}
+
+impl Drop for EchoGuard {
+    fn drop(&mut self) {
+        use std::os::unix::io::AsFd;
+        let _ = rustix::termios::tcsetattr(
+            self.tty.as_fd(),
+            rustix::termios::OptionalActions::Now,
+            &self.old_termios,
+        );
+    }
+}
+
+/// Read a password from `/dev/tty` with echo disabled.
+///
+/// The returned password is wrapped in `Zeroizing` so it is scrubbed from
+/// memory when dropped.
+fn read_password(prompt: &str) -> Result<zeroize::Zeroizing<String>, GpasswdError> {
+    use std::io::{BufRead, Write as _};
+
+    let tty = std::fs::File::options()
+        .read(true)
+        .write(true)
+        .open("/dev/tty")
+        .map_err(|_| {
+            GpasswdError::BadSyntax(
+                "setting a group password requires a tty; use -a/-d/-A/-M/-r/-R non-interactively"
+                    .into(),
+            )
+        })?;
+
+    if !rustix::termios::isatty(&tty) {
+        return Err(GpasswdError::BadSyntax(
+            "setting a group password requires a tty; use -a/-d/-A/-M/-r/-R non-interactively"
+                .into(),
+        ));
+    }
+
+    (&tty)
+        .write_all(prompt.as_bytes())
+        .map_err(|e| GpasswdError::CantUpdate(format!("cannot write prompt: {e}")))?;
+    (&tty)
+        .flush()
+        .map_err(|e| GpasswdError::CantUpdate(format!("cannot flush prompt: {e}")))?;
+
+    // Clone the tty handle: one for the guard (to restore echo), one for reading.
+    let tty_for_guard = tty
+        .try_clone()
+        .map_err(|e| GpasswdError::CantUpdate(format!("cannot clone tty handle: {e}")))?;
+
+    // Disable echo; restored automatically on drop.
+    let guard = EchoGuard::disable(tty_for_guard)?;
+
+    let mut buf = zeroize::Zeroizing::new(String::new());
+    let mut reader = std::io::BufReader::new(&tty);
+    reader
+        .read_line(&mut buf)
+        .map_err(|e| GpasswdError::CantUpdate(format!("cannot read password: {e}")))?;
+
+    // Echo was off, so print a newline after the user presses Enter.
+    drop(guard);
+    let _ = (&tty).write_all(b"\n");
+
+    Ok(zeroize::Zeroizing::new(
+        buf.trim_end_matches(['\r', '\n']).to_string(),
+    ))
 }
 
 #[must_use]

@@ -61,16 +61,15 @@
 
 --- a/Makefile
 +++ b/Makefile
-@@ -3,7 +3,7 @@
- 
- # Tools that need setuid-root to allow non-root callers (change own password,
- # GECOS, shell, effective group).
--SETUID_TOOLS = passwd chfn chsh newgrp
-+SETUID_TOOLS = passwd chfn chsh newgrp gpasswd
+@@ -7,6 +7,6 @@
  
  # Root-only tools (no setuid; fail at getuid() check for non-root callers).
  ROOT_TOOLS = useradd userdel usermod chpasswd chage \
-
+-             groupadd groupdel groupmod pwck grpck
++             groupadd groupdel groupmod pwck grpck gpasswd
+ 
+ ALL_TOOLS = $(SETUID_TOOLS) $(ROOT_TOOLS)
+ 
 --- a/src/bin/shadow-rs.rs
 +++ b/src/bin/shadow-rs.rs
 @@ -126,6 +126,8 @@
@@ -94,7 +93,7 @@
 
 --- /dev/null
 +++ b/tests/by-util/test_gpasswd.rs
-@@ -0,0 +1,300 @@
+@@ -0,0 +1,303 @@
 +// This file is part of the shadow-rs package.
 +//
 +// For the full copyright and license information, please view the LICENSE
@@ -393,5 +392,8 @@
 +    );
 +
 +    let group = std::fs::read_to_string(data.join("group")).expect("read real group");
-+    assert!(group.contains("alice"), "alice should be written through: {group}");
++    assert!(
++        group.contains("alice"),
++        "alice should be written through: {group}"
++    );
 +}

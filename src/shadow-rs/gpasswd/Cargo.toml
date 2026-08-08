@@ -23,6 +23,7 @@ clap = { workspace = true }
 rustix = { workspace = true }
 shadow-core = { workspace = true, features = ["shadow", "group", "gshadow", "login-defs", "crypt"] }
 uucore = { workspace = true }
+zeroize = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
