@@ -17,6 +17,11 @@ baseimage:
     for any long-lived application.
   gui: false
   history:
+    - version: 3.11.11
+      date: 2026-08-14
+      changes:
+        fixed:
+          - 'logmonitor leaking zombie `send` processes when a matching log line repeats.'
     - version: 3.11.10
       date: 2026-08-08
       changes:
