@@ -417,6 +417,9 @@ static int invoke_exec(const char *exec, const char *args[], unsigned int num_ar
         }
     }
 
+    // Reap async send children that exited while we waited.
+    reap_children();
+
     if (pipefds[0] >= 0) {
         close(pipefds[0]);
     }
@@ -649,6 +652,7 @@ static void handle_line(lm_context_t *ctx, unsigned int mfid, char *buf)
                     desc ? desc : "EXECERROR",
                     level ? level : "EXECERROR");
                 target->last_notif_sent[nidx] = get_time();
+                reap_children();
             }
 
             if (notif->is_title_exe && title) {
@@ -1567,6 +1571,7 @@ int main(int argc, char **argv)
                 }
                 tailbuf[nread] = '\0';
                 handle_read(ctx, i, tailbuf);
+                reap_children();
             }
 
             ctx->monitored_files[i].last_read = get_time();
