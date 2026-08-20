@@ -689,6 +689,15 @@ container:
         English using UTF-8 is `en_AU.UTF-8`.
       type: public
       default: en_US.UTF-8
+      unraid_template:
+        title: Locale
+        description: >-
+          Sets the locale, defining the application's language, if supported.
+          Format is `language[_territory][.codeset]`. For example, Australian
+          English using UTF-8 is `en_AU.UTF-8`.
+        display: advanced
+        required: false
+        mask: false
     - name: TZ
       description: >-
         [TimeZone](http://en.wikipedia.org/wiki/List_of_tz_database_time_zones)
