@@ -4,7 +4,7 @@
 #
 --- a/Cargo.toml
 +++ b/Cargo.toml
-@@ -32,6 +32,7 @@
+@@ -30,6 +30,7 @@
      "src/uu/newgrp",
      "src/uu/chpasswd",
      "src/uu/chage",
@@ -12,11 +12,11 @@
  ]
  
  [workspace.package]
-@@ -91,10 +92,11 @@
- chfn = { optional = true, version = "0.2.1", package = "uu_chfn", path = "src/uu/chfn" }
- chsh = { optional = true, version = "0.2.1", package = "uu_chsh", path = "src/uu/chsh" }
- newgrp = { optional = true, version = "0.2.1", package = "uu_newgrp", path = "src/uu/newgrp" }
-+gpasswd = { optional = true, version = "0.2.1", package = "uu_gpasswd", path = "src/uu/gpasswd" }
+@@ -90,10 +91,11 @@
+ chfn = { optional = true, version = "0.2.2", package = "uu_chfn", path = "src/uu/chfn" }
+ chsh = { optional = true, version = "0.2.2", package = "uu_chsh", path = "src/uu/chsh" }
+ newgrp = { optional = true, version = "0.2.2", package = "uu_newgrp", path = "src/uu/newgrp" }
++gpasswd = { optional = true, version = "0.2.2", package = "uu_gpasswd", path = "src/uu/gpasswd" }
  
  [features]
  default = ["passwd", "pwck", "useradd", "userdel", "usermod", "chpasswd", "chage",
@@ -25,7 +25,7 @@
  
  # Individual tools
  feat_passwd = ["passwd"]
-@@ -111,11 +113,12 @@
+@@ -110,11 +112,12 @@
  feat_chfn = ["chfn"]
  feat_chsh = ["chsh"]
  feat_newgrp = ["newgrp"]
@@ -39,7 +39,7 @@
  feat_common = ["feat_phase1", "feat_phase2"]
  feat_common_core = ["feat_phase1", "feat_phase2", "feat_phase3"]
  
-@@ -182,6 +185,10 @@
+@@ -189,6 +192,10 @@
  name = "test_groupadd"
  path = "tests/by-util/test_groupadd.rs"
  
@@ -48,20 +48,19 @@
 +path = "tests/by-util/test_gpasswd.rs"
 +
  [dev-dependencies]
- chage = { version = "0.2.1", package = "uu_chage", path = "src/uu/chage" }
- chfn = { version = "0.2.1", package = "uu_chfn", path = "src/uu/chfn" }
-@@ -197,6 +204,7 @@
- usermod = { version = "0.2.1", package = "uu_usermod", path = "src/uu/usermod" }
- pwck = { version = "0.2.1", package = "uu_pwck", path = "src/uu/pwck" }
- grpck = { version = "0.2.1", package = "uu_grpck", path = "src/uu/grpck" }
-+gpasswd = { version = "0.2.1", package = "uu_gpasswd", path = "src/uu/gpasswd" }
- shadow-core = { path = "src/shadow-core", version = "0.2.1", features = ["shadow"] }
+ chage = { version = "0.2.2", package = "uu_chage", path = "src/uu/chage" }
+ chfn = { version = "0.2.2", package = "uu_chfn", path = "src/uu/chfn" }
+@@ -204,6 +211,7 @@
+ usermod = { version = "0.2.2", package = "uu_usermod", path = "src/uu/usermod" }
+ pwck = { version = "0.2.2", package = "uu_pwck", path = "src/uu/pwck" }
+ grpck = { version = "0.2.2", package = "uu_grpck", path = "src/uu/grpck" }
++gpasswd = { version = "0.2.2", package = "uu_gpasswd", path = "src/uu/gpasswd" }
+ shadow-core = { path = "src/shadow-core", version = "0.2.2", features = ["shadow"] }
  rustix = { workspace = true }
  tempfile = { workspace = true }
-
 --- a/Makefile
 +++ b/Makefile
-@@ -7,6 +7,6 @@
+@@ -7,7 +7,7 @@
  
  # Root-only tools (no setuid; fail at getuid() check for non-root callers).
  ROOT_TOOLS = useradd userdel usermod chpasswd chage \
@@ -90,7 +89,6 @@
      #[cfg(feature = "grpck")]
      let _ = writeln!(out, "  grpck");
      #[cfg(feature = "newgrp")]
-
 --- /dev/null
 +++ b/tests/by-util/test_gpasswd.rs
 @@ -0,0 +1,303 @@
