@@ -2,7 +2,7 @@
 //
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
-// spell-checker:ignore gpasswd gshadow nscd sysroot
+// spell-checker:ignore gpasswd gshadow nscd sysroot yescrypt
 
 //! `gpasswd` — administer `/etc/group` and `/etc/gshadow`.
 //!
@@ -39,27 +39,30 @@ mod options {
 }
 
 mod exit_codes {
+    pub const FAILURE: i32 = 1;
     pub const BAD_SYNTAX: i32 = 2;
     pub const BAD_ARGUMENT: i32 = 3;
-    pub const GROUP_NOT_FOUND: i32 = 6;
     pub const CANT_UPDATE: i32 = 10;
+    pub const GSHADOW_REQUIRED: i32 = 17;
 }
 
 #[derive(Debug)]
 enum GpasswdError {
+    Failure(String),
     BadSyntax(String),
     BadArgument(String),
-    GroupNotFound(String),
     CantUpdate(String),
+    GshadowRequired(String),
 }
 
 impl fmt::Display for GpasswdError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::BadSyntax(msg)
+            Self::Failure(msg)
+            | Self::BadSyntax(msg)
             | Self::BadArgument(msg)
-            | Self::GroupNotFound(msg)
-            | Self::CantUpdate(msg) => f.write_str(msg),
+            | Self::CantUpdate(msg)
+            | Self::GshadowRequired(msg) => f.write_str(msg),
         }
     }
 }
@@ -69,26 +72,51 @@ impl std::error::Error for GpasswdError {}
 impl UError for GpasswdError {
     fn code(&self) -> i32 {
         match self {
+            Self::Failure(_) => exit_codes::FAILURE,
             Self::BadSyntax(_) => exit_codes::BAD_SYNTAX,
             Self::BadArgument(_) => exit_codes::BAD_ARGUMENT,
-            Self::GroupNotFound(_) => exit_codes::GROUP_NOT_FOUND,
             Self::CantUpdate(_) => exit_codes::CANT_UPDATE,
+            Self::GshadowRequired(_) => exit_codes::GSHADOW_REQUIRED,
         }
     }
 }
 
-// ---------------------------------------------------------------------------
-// Security hardening
-// ---------------------------------------------------------------------------
+/// Parsed request. `-A` and `-M` may be combined; every other action is exclusive.
+struct Request {
+    add_user: Option<String>,
+    del_user: Option<String>,
+    set_admins: Option<Vec<String>>,
+    set_members: Option<Vec<String>>,
+    remove_password: bool,
+    restrict: bool,
+    new_password_hash: Option<String>,
+}
 
-// Hardening functions are now centralized in shadow_core::hardening.
+impl Request {
+    fn touches_group_file(&self) -> bool {
+        self.add_user.is_some()
+            || self.del_user.is_some()
+            || self.set_members.is_some()
+            || self.remove_password
+            || self.restrict
+            || self.new_password_hash.is_some()
+    }
+
+    fn requires_system_admin(&self) -> bool {
+        self.set_admins.is_some() || self.set_members.is_some()
+    }
+}
+
+fn permission_denied() -> UResult<()> {
+    uucore::show_error!("{}", shadow_core::os_error::permission_denied());
+    Err(shadow_core::cli::AlreadyPrinted(1).into())
+}
 
 // ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
 
 #[uucore::main]
-#[allow(clippy::too_many_lines)]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let _clean_env = shadow_core::hardening::harden_process();
 
@@ -97,11 +125,14 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         return Ok(());
     };
 
-    if !shadow_core::hardening::caller_is_root() {
-        uucore::show_error!("{}", shadow_core::os_error::permission_denied());
-        return Err(shadow_core::cli::AlreadyPrinted(1).into());
-    }
+    // Unlike groupadd/groupmod, gpasswd is setuid: a non-root group
+    // administrator may change membership and the group password.
+    do_gpasswd(&matches)
+}
 
+/// Core logic, separated from argument parsing to keep `uumain` short.
+#[allow(clippy::too_many_lines)]
+fn do_gpasswd(matches: &clap::ArgMatches) -> UResult<()> {
     let group_name = matches
         .get_one::<String>(options::GROUP)
         .ok_or_else(|| GpasswdError::BadSyntax("group name required".into()))?
@@ -109,16 +140,29 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 
     let add_user = matches.get_one::<String>(options::ADD).cloned();
     let del_user = matches.get_one::<String>(options::DELETE).cloned();
-    let set_admins = matches.get_one::<String>(options::ADMINISTRATORS).cloned();
-    let set_members = matches.get_one::<String>(options::MEMBERS).cloned();
+    let set_admins = matches
+        .get_one::<String>(options::ADMINISTRATORS)
+        .map(|s| parse_user_list(s));
+    let set_members = matches
+        .get_one::<String>(options::MEMBERS)
+        .map(|s| parse_user_list(s));
     let remove_password = matches.get_flag(options::REMOVE_PASSWORD);
     let restrict = matches.get_flag(options::RESTRICT);
 
     let prefix = matches.get_one::<String>(options::PREFIX).map(Path::new);
     let root_dir = matches.get_one::<String>(options::ROOT).map(Path::new);
-    let root = SysRoot::new(prefix.or(root_dir));
 
-    // Except for -A and -M, the options cannot be combined (GNU gpasswd).
+    if let Some(dir) = root_dir
+        && !dir.is_absolute()
+    {
+        return Err(GpasswdError::BadArgument(format!(
+            "invalid chroot path '{}', only absolute paths are supported.",
+            dir.display()
+        ))
+        .into());
+    }
+
+    // Except for -A and -M, the options cannot be combined (gpasswd(1)).
     let exclusive_count = u8::from(add_user.is_some())
         + u8::from(del_user.is_some())
         + u8::from(remove_password)
@@ -128,25 +172,66 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         return Err(GpasswdError::BadSyntax("invalid combination of options".into()).into());
     }
 
-    // Interactive password change needs the hash before locks are held.
-    let new_password_hash = if exclusive_count == 0 {
-        Some(prompt_and_hash_password(&root)?)
-    } else {
-        None
+    let is_root = shadow_core::hardening::caller_is_root();
+    // Non-setuid callers cannot write the databases. Setuid non-root
+    // callers are group administrators and are checked after the files
+    // are read.
+    if !is_root && !rustix::process::geteuid().is_root() {
+        return permission_denied();
+    }
+
+    let mut req = Request {
+        add_user,
+        del_user,
+        set_admins,
+        set_members,
+        remove_password,
+        restrict,
+        new_password_hash: None,
     };
 
-    // Block signals for the duration of the critical section so a SIGINT
-    // between lock acquisition and atomic_write cannot leave stale lock files.
+    // -A/-M and --root/--prefix are system-administrator operations.
+    if !is_root && (req.requires_system_admin() || prefix.is_some() || root_dir.is_some()) {
+        return permission_denied();
+    }
+
+    let root = SysRoot::new(prefix.or(root_dir));
+
+    // Hash before taking locks so a slow crypt(3) does not stall writers.
+    // Peek gshadow first so a non-admin is not prompted at all.
+    if exclusive_count == 0 {
+        if !is_root && !caller_is_named_admin(&root.gshadow_path(), &group_name)? {
+            return permission_denied();
+        }
+        req.new_password_hash = Some(prompt_and_hash_password(&root, &group_name)?);
+    }
+
     let _signals = shadow_core::hardening::SignalBlocker::block_critical()
         .map_err(|e| GpasswdError::CantUpdate(format!("cannot block signals: {e}")))?;
 
-    // ------------------------------------------------------------------
-    // Lock and update /etc/group
-    // ------------------------------------------------------------------
     let group_path = root.group_path();
+    let gshadow_path = root.gshadow_path();
+    let gshadow_exists = gshadow_path.exists();
+
+    if req.set_admins.is_some() && !gshadow_exists {
+        return Err(
+            GpasswdError::GshadowRequired("shadow group passwords required for -A".into()).into(),
+        );
+    }
+
     let group_lock = FileLock::acquire(&group_path).map_err(|e| {
         GpasswdError::CantUpdate(format!("cannot lock {}: {e}", group_path.display()))
     })?;
+
+    // Hold both locks before writing so a failed gshadow update cannot
+    // leave membership only half-applied.
+    let gs_lock = if gshadow_exists {
+        Some(FileLock::acquire(&gshadow_path).map_err(|e| {
+            GpasswdError::CantUpdate(format!("cannot lock {}: {e}", gshadow_path.display()))
+        })?)
+    } else {
+        None
+    };
 
     let mut group_entries = group::read_group_file(&group_path).map_err(|e| {
         GpasswdError::CantUpdate(format!("cannot read {}: {e}", group_path.display()))
@@ -156,10 +241,28 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         .iter()
         .position(|g| g.name == group_name)
         .ok_or_else(|| {
-            GpasswdError::GroupNotFound(format!("group '{group_name}' does not exist"))
+            GpasswdError::BadArgument(format!("group '{group_name}' does not exist in /etc/group"))
         })?;
 
-    // Validate usernames against /etc/passwd when required.
+    let mut gs_entries = if gshadow_exists {
+        gshadow::read_gshadow_file(&gshadow_path).map_err(|e| {
+            GpasswdError::CantUpdate(format!("cannot read {}: {e}", gshadow_path.display()))
+        })?
+    } else {
+        Vec::new()
+    };
+
+    if !is_root {
+        let caller = current_caller_name()?;
+        let is_admin = gs_entries
+            .iter()
+            .find(|g| g.name == group_name)
+            .is_some_and(|g| is_group_admin(&caller, &g.admins));
+        if !is_admin {
+            return permission_denied();
+        }
+    }
+
     let passwd_path = root.passwd_path();
     let passwd_entries = if passwd_path.exists() {
         passwd::read_passwd_file(&passwd_path).map_err(|e| {
@@ -170,123 +273,115 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     };
     let user_exists = |name: &str| passwd_entries.iter().any(|p| p.name == name);
 
-    if let Some(ref user) = add_user {
-        if !user_exists(user) {
-            drop(group_lock);
-            return Err(GpasswdError::BadArgument(format!("user '{user}' does not exist")).into());
-        }
-        add_member(&mut group_entries[idx], user);
-    } else if let Some(ref user) = del_user {
-        remove_member(&mut group_entries[idx], user);
-    } else if let Some(ref list) = set_members {
-        let users = parse_user_list(list);
-        for user in &users {
-            if !user_exists(user) {
-                drop(group_lock);
-                return Err(
-                    GpasswdError::BadArgument(format!("user '{user}' does not exist")).into(),
-                );
-            }
-        }
-        group_entries[idx].members = users;
-    } else if remove_password || restrict || new_password_hash.is_some() {
-        // Group password lives in gshadow; keep the group field as 'x'.
-        group_entries[idx].passwd = "x".to_string();
+    if let Some(ref user) = req.add_user {
+        require_user_exists(user, user_exists)?;
     }
-
-    // -A only touches gshadow admins; group file is unchanged unless -M also set.
-    if let Some(ref list) = set_admins {
-        for user in parse_user_list(list) {
-            if !user_exists(&user) {
-                drop(group_lock);
-                return Err(
-                    GpasswdError::BadArgument(format!("user '{user}' does not exist")).into(),
-                );
-            }
+    if let Some(ref users) = req.set_members {
+        for user in users {
+            require_user_exists(user, user_exists)?;
+        }
+    }
+    if let Some(ref users) = req.set_admins {
+        for user in users {
+            require_user_exists(user, user_exists)?;
         }
     }
 
+    // GNU gpasswd always prints the removing line for -d, then fails if the
+    // user is not already a member (including names absent from passwd).
+    if let Some(ref user) = req.del_user
+        && !group_entries[idx].members.iter().any(|m| m == user)
+    {
+        println!("Removing user {user} from group {group_name}");
+        return Err(GpasswdError::BadArgument(format!(
+            "user '{user}' is not a member of '{group_name}'"
+        ))
+        .into());
+    }
+
+    let old_group_passwd = group_entries[idx].passwd.clone();
+    apply_group_changes(&mut group_entries[idx], &req, gshadow_exists);
     let modified_gid = group_entries[idx].gid;
     let members_for_gshadow = group_entries[idx].members.clone();
 
-    atomic::atomic_write(&group_path, |f| group::write_group(&group_entries, f)).map_err(|e| {
-        GpasswdError::CantUpdate(format!("cannot write {}: {e}", group_path.display()))
-    })?;
-
-    drop(group_lock);
-
-    // ------------------------------------------------------------------
-    // Update /etc/gshadow when present (same pattern as groupmod/groupdel)
-    // ------------------------------------------------------------------
-    let gshadow_path = root.gshadow_path();
-    let needs_gshadow = add_user.is_some()
-        || del_user.is_some()
-        || set_admins.is_some()
-        || set_members.is_some()
-        || remove_password
-        || restrict
-        || new_password_hash.is_some();
-
-    if gshadow_path.exists() && needs_gshadow {
-        let gs_lock = FileLock::acquire(&gshadow_path).map_err(|e| {
-            GpasswdError::CantUpdate(format!("cannot lock {}: {e}", gshadow_path.display()))
-        })?;
-
-        let mut gs_entries = gshadow::read_gshadow_file(&gshadow_path).map_err(|e| {
-            GpasswdError::CantUpdate(format!("cannot read {}: {e}", gshadow_path.display()))
-        })?;
-
-        // Create a gshadow line if the group exists only in /etc/group.
-        if !gs_entries.iter().any(|g| g.name == group_name) {
-            gs_entries.push(GshadowEntry {
-                name: group_name.clone(),
-                passwd: "!".to_string(),
-                admins: Vec::new(),
-                members: members_for_gshadow,
-            });
+    let mut created_gshadow_line = false;
+    if gshadow_exists {
+        created_gshadow_line = !gs_entries.iter().any(|g| g.name == group_name);
+        let gs = ensure_gshadow_entry(
+            &mut gs_entries,
+            &group_name,
+            &members_for_gshadow,
+            &old_group_passwd,
+        );
+        apply_gshadow_changes(gs, &req);
+        // Password now lives in gshadow, matching GNU when it creates the line.
+        if created_gshadow_line {
+            group_entries[idx].passwd = "x".to_string();
         }
+    }
 
-        if let Some(gs) = gs_entries.iter_mut().find(|g| g.name == group_name) {
-            if let Some(ref user) = add_user {
-                add_member_gs(gs, user);
-            }
-            if let Some(ref user) = del_user {
-                remove_member_gs(gs, user);
-            }
-            if let Some(ref list) = set_members {
-                gs.members = parse_user_list(list);
-            }
-            if let Some(ref list) = set_admins {
-                gs.admins = parse_user_list(list);
-            }
-            if remove_password {
-                gs.passwd.clear();
-            }
-            if restrict {
-                gs.passwd = "!".to_string();
-            }
-            if let Some(ref hash) = new_password_hash {
-                gs.passwd.clone_from(hash);
-            }
-        }
+    if req.touches_group_file() || created_gshadow_line {
+        atomic::atomic_write(&group_path, |f| group::write_group(&group_entries, f)).map_err(
+            |e| GpasswdError::CantUpdate(format!("cannot write {}: {e}", group_path.display())),
+        )?;
+    }
 
+    if gshadow_exists {
         atomic::atomic_write(&gshadow_path, |f| gshadow::write_gshadow(&gs_entries, f)).map_err(
             |e| GpasswdError::CantUpdate(format!("cannot write {}: {e}", gshadow_path.display())),
         )?;
-
-        drop(gs_lock);
     }
 
-    nscd::invalidate_cache("group");
+    drop(gs_lock);
+    drop(group_lock);
 
-    audit::log_user_event("CHG_GROUP", &group_name, modified_gid, true);
+    nscd::invalidate_cache("group");
+    audit::log_user_event("MOD_GROUP", &group_name, modified_gid, true);
+
+    if let Some(ref user) = req.add_user {
+        println!("Adding user {user} to group {group_name}");
+    }
+    if let Some(ref user) = req.del_user {
+        println!("Removing user {user} from group {group_name}");
+    }
 
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+fn require_user_exists(user: &str, user_exists: impl Fn(&str) -> bool) -> Result<(), GpasswdError> {
+    if user_exists(user) {
+        Ok(())
+    } else {
+        Err(GpasswdError::BadArgument(format!(
+            "user '{user}' does not exist"
+        )))
+    }
+}
+
+fn is_group_admin(username: &str, admins: &[String]) -> bool {
+    admins.iter().any(|a| a == username)
+}
+
+fn current_caller_name() -> Result<String, GpasswdError> {
+    shadow_core::hardening::current_username()
+        .map_err(|e| GpasswdError::CantUpdate(format!("cannot determine caller: {e}")))
+}
+
+/// Best-effort admin check used before the password prompt so a non-admin
+/// is not asked for a password. The locked path re-checks after re-read.
+fn caller_is_named_admin(gshadow_path: &Path, group_name: &str) -> Result<bool, GpasswdError> {
+    if !gshadow_path.exists() {
+        return Ok(false);
+    }
+    let caller = current_caller_name()?;
+    let entries = gshadow::read_gshadow_file(gshadow_path).map_err(|e| {
+        GpasswdError::CantUpdate(format!("cannot read {}: {e}", gshadow_path.display()))
+    })?;
+    Ok(entries
+        .iter()
+        .find(|g| g.name == group_name)
+        .is_some_and(|g| is_group_admin(&caller, &g.admins)))
+}
 
 fn parse_user_list(s: &str) -> Vec<String> {
     if s.is_empty() {
@@ -299,52 +394,128 @@ fn parse_user_list(s: &str) -> Vec<String> {
         .collect()
 }
 
-fn add_member(entry: &mut GroupEntry, user: &str) {
-    if !entry.members.iter().any(|m| m == user) {
-        entry.members.push(user.to_string());
+fn add_unique(list: &mut Vec<String>, user: &str) {
+    if !list.iter().any(|m| m == user) {
+        list.push(user.to_string());
     }
 }
 
-fn remove_member(entry: &mut GroupEntry, user: &str) {
-    entry.members.retain(|m| m != user);
-}
-
-fn add_member_gs(entry: &mut GshadowEntry, user: &str) {
-    if !entry.members.iter().any(|m| m == user) {
-        entry.members.push(user.to_string());
+fn apply_group_changes(entry: &mut GroupEntry, req: &Request, has_gshadow: bool) {
+    if let Some(ref user) = req.add_user {
+        add_unique(&mut entry.members, user);
+    }
+    if let Some(ref user) = req.del_user {
+        entry.members.retain(|m| m != user);
+    }
+    if let Some(ref members) = req.set_members {
+        entry.members.clone_from(members);
+    }
+    if req.remove_password || req.restrict || req.new_password_hash.is_some() {
+        if has_gshadow {
+            entry.passwd = "x".to_string();
+        } else if req.remove_password {
+            entry.passwd.clear();
+        } else if req.restrict {
+            entry.passwd = "!".to_string();
+        } else if let Some(ref hash) = req.new_password_hash {
+            entry.passwd.clone_from(hash);
+        }
     }
 }
 
-fn remove_member_gs(entry: &mut GshadowEntry, user: &str) {
-    entry.members.retain(|m| m != user);
-    entry.admins.retain(|m| m != user);
+fn apply_gshadow_changes(entry: &mut GshadowEntry, req: &Request) {
+    if let Some(ref user) = req.add_user {
+        add_unique(&mut entry.members, user);
+    }
+    if let Some(ref user) = req.del_user {
+        entry.members.retain(|m| m != user);
+    }
+    if let Some(ref members) = req.set_members {
+        entry.members.clone_from(members);
+    }
+    if let Some(ref admins) = req.set_admins {
+        entry.admins.clone_from(admins);
+    }
+    if req.remove_password {
+        entry.passwd.clear();
+    }
+    if req.restrict {
+        entry.passwd = "!".to_string();
+    }
+    if let Some(ref hash) = req.new_password_hash {
+        entry.passwd.clone_from(hash);
+    }
 }
 
-fn prompt_and_hash_password(root: &SysRoot) -> Result<String, GpasswdError> {
-    // Banner on stderr (visible even if /dev/tty prompts are preferred for input).
-    eprintln!("Changing the password for group");
-    let _ = io::stderr().flush();
-
-    let pass1 = read_password("New Password: ")?;
-    let pass2 = read_password("Re-enter new password: ")?;
-
-    if *pass1 != *pass2 {
-        return Err(GpasswdError::BadArgument("passwords do not match".into()));
+fn ensure_gshadow_entry<'a>(
+    entries: &'a mut Vec<GshadowEntry>,
+    name: &str,
+    members: &[String],
+    passwd: &str,
+) -> &'a mut GshadowEntry {
+    if let Some(i) = entries.iter().position(|g| g.name == name) {
+        return &mut entries[i];
     }
-    if pass1.is_empty() {
-        return Err(GpasswdError::BadArgument(
-            "empty password not allowed".into(),
-        ));
-    }
+    entries.push(GshadowEntry {
+        name: name.to_string(),
+        passwd: passwd.to_string(),
+        admins: Vec::new(),
+        members: members.to_vec(),
+    });
+    let i = entries.len() - 1;
+    &mut entries[i]
+}
 
-    let defs = LoginDefs::load(&root.login_defs_path())
-        .map_err(|e| GpasswdError::CantUpdate(format!("cannot read login.defs: {e}")))?;
-    let method = match defs.get("ENCRYPT_METHOD").unwrap_or("SHA512") {
+/// SHA crypt round count from login.defs, per gpasswd(1).
+///
+/// Unspecified → libc default (`None`). A single bound is used as-is.
+/// If both are set, the higher value is used (the man page's rule when
+/// `MIN > MAX`, and the stronger of the two otherwise).
+fn sha_crypt_rounds(defs: &LoginDefs) -> Option<u32> {
+    const ROUNDS_MIN: i64 = 1000;
+    const ROUNDS_MAX: i64 = 999_999_999;
+    let clamp = |n: i64| u32::try_from(n.clamp(ROUNDS_MIN, ROUNDS_MAX)).unwrap_or(5000);
+    match (
+        defs.get_i64("SHA_CRYPT_MIN_ROUNDS"),
+        defs.get_i64("SHA_CRYPT_MAX_ROUNDS"),
+    ) {
+        (None, None) => None,
+        (Some(n), None) | (None, Some(n)) => Some(clamp(n)),
+        (Some(a), Some(b)) => Some(clamp(a.max(b))),
+    }
+}
+
+fn crypt_method(defs: &LoginDefs) -> crypt::CryptMethod {
+    match defs.get("ENCRYPT_METHOD").unwrap_or("SHA512") {
         "SHA256" => crypt::CryptMethod::Sha256,
         "YESCRYPT" => crypt::CryptMethod::Yescrypt,
         _ => crypt::CryptMethod::Sha512,
+    }
+}
+
+fn prompt_and_hash_password(root: &SysRoot, group_name: &str) -> Result<String, GpasswdError> {
+    eprintln!("Changing the password for group {group_name}");
+    let _ = io::stderr().flush();
+
+    let password = loop {
+        let pass1 = read_password("New Password: ")?;
+        let pass2 = read_password("Re-enter new password: ")?;
+        if *pass1 == *pass2 {
+            break pass1;
+        }
+        // GNU gpasswd retries instead of exiting on a mismatch.
+        eprintln!("They don't match; try again");
+        let _ = io::stderr().flush();
     };
-    crypt::hash_password(&pass1, method, None)
+
+    let defs = LoginDefs::load(&root.login_defs_path())
+        .map_err(|e| GpasswdError::CantUpdate(format!("cannot read login.defs: {e}")))?;
+    let method = crypt_method(&defs);
+    let rounds = match method {
+        crypt::CryptMethod::Sha256 | crypt::CryptMethod::Sha512 => sha_crypt_rounds(&defs),
+        crypt::CryptMethod::Yescrypt => None,
+    };
+    crypt::hash_password(&password, method, rounds)
         .map_err(|e| GpasswdError::CantUpdate(format!("cannot hash password: {e}")))
 }
 
@@ -398,18 +569,10 @@ fn read_password(prompt: &str) -> Result<zeroize::Zeroizing<String>, GpasswdErro
         .read(true)
         .write(true)
         .open("/dev/tty")
-        .map_err(|_| {
-            GpasswdError::BadSyntax(
-                "setting a group password requires a tty; use -a/-d/-A/-M/-r/-R non-interactively"
-                    .into(),
-            )
-        })?;
+        .map_err(|_| GpasswdError::Failure("Not a tty".into()))?;
 
     if !rustix::termios::isatty(&tty) {
-        return Err(GpasswdError::BadSyntax(
-            "setting a group password requires a tty; use -a/-d/-A/-M/-r/-R non-interactively"
-                .into(),
-        ));
+        return Err(GpasswdError::Failure("Not a tty".into()));
     }
 
     (&tty)
@@ -424,7 +587,6 @@ fn read_password(prompt: &str) -> Result<zeroize::Zeroizing<String>, GpasswdErro
         .try_clone()
         .map_err(|e| GpasswdError::CantUpdate(format!("cannot clone tty handle: {e}")))?;
 
-    // Disable echo; restored automatically on drop.
     let guard = EchoGuard::disable(tty_for_guard)?;
 
     let mut buf = zeroize::Zeroizing::new(String::new());
@@ -433,7 +595,6 @@ fn read_password(prompt: &str) -> Result<zeroize::Zeroizing<String>, GpasswdErro
         .read_line(&mut buf)
         .map_err(|e| GpasswdError::CantUpdate(format!("cannot read password: {e}")))?;
 
-    // Echo was off, so print a newline after the user presses Enter.
     drop(guard);
     let _ = (&tty).write_all(b"\n");
 
@@ -497,7 +658,7 @@ pub fn uu_app() -> Command {
                 .short('Q')
                 .long("root")
                 .value_name("CHROOT_DIR")
-                .help("Apply changes in the CHROOT_DIR directory"),
+                .help("Locate the system files under CHROOT_DIR instead of /"),
         )
         .arg(
             Arg::new(options::PREFIX)
@@ -527,6 +688,7 @@ pub fn uu_app() -> Command {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::Path;
 
     #[test]
     fn test_app_builds() {
@@ -576,12 +738,90 @@ mod tests {
     }
 
     #[test]
+    fn test_admins_and_members_may_combine() {
+        let m = uu_app()
+            .try_get_matches_from(["gpasswd", "-A", "alice", "-M", "alice,bob", "devs"])
+            .expect("-A and -M may be combined");
+        assert_eq!(
+            m.get_one::<String>(options::ADMINISTRATORS)
+                .map(String::as_str),
+            Some("alice")
+        );
+        assert_eq!(
+            m.get_one::<String>(options::MEMBERS).map(String::as_str),
+            Some("alice,bob")
+        );
+    }
+
+    #[test]
+    fn test_add_and_restrict_are_exclusive() {
+        assert!(
+            uu_app()
+                .try_get_matches_from(["gpasswd", "-a", "alice", "-R", "devs"])
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn test_root_short_flag_is_q() {
+        let m = uu_app()
+            .try_get_matches_from(["gpasswd", "-Q", "/chroot", "-r", "devs"])
+            .expect("valid args");
+        assert_eq!(
+            m.get_one::<String>(options::ROOT).map(String::as_str),
+            Some("/chroot")
+        );
+        assert!(m.get_flag(options::REMOVE_PASSWORD));
+    }
+
+    #[test]
     fn test_parse_user_list() {
         assert_eq!(
             parse_user_list("a,b,c"),
             vec!["a".to_string(), "b".to_string(), "c".to_string()]
         );
+        assert_eq!(
+            parse_user_list("a, b ,c"),
+            vec!["a".to_string(), "b".to_string(), "c".to_string()]
+        );
         assert!(parse_user_list("").is_empty());
+        assert!(parse_user_list(",,").is_empty());
+    }
+
+    #[test]
+    fn test_is_group_admin() {
+        let admins = vec!["alice".to_string(), "bob".to_string()];
+        assert!(is_group_admin("alice", &admins));
+        assert!(!is_group_admin("carol", &admins));
+        assert!(!is_group_admin("alice", &[]));
+    }
+
+    #[test]
+    fn test_sha_crypt_rounds() {
+        let empty = LoginDefs::load(Path::new("/nonexistent/login.defs")).expect("missing is ok");
+        assert_eq!(sha_crypt_rounds(&empty), None);
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("login.defs");
+        std::fs::write(
+            &path,
+            "SHA_CRYPT_MIN_ROUNDS 2000\nSHA_CRYPT_MAX_ROUNDS 8000\n",
+        )
+        .expect("write login.defs");
+        let defs = LoginDefs::load(&path).expect("load");
+        assert_eq!(sha_crypt_rounds(&defs), Some(8000));
+
+        std::fs::write(&path, "SHA_CRYPT_MIN_ROUNDS 4000\n").expect("write login.defs");
+        let defs = LoginDefs::load(&path).expect("load");
+        assert_eq!(sha_crypt_rounds(&defs), Some(4000));
+    }
+
+    #[test]
+    fn test_add_unique() {
+        let mut members = vec!["bob".to_string()];
+        add_unique(&mut members, "alice");
+        add_unique(&mut members, "alice");
+        assert_eq!(members, vec!["bob".to_string(), "alice".to_string()]);
     }
 
     fn skip_unless_root() -> bool {

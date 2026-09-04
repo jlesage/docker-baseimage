@@ -1,13 +1,23 @@
-#
-# Implement useradd -K/--key KEY=VALUE (override /etc/login.defs defaults).
-#
-# Overrides are merged into the in-memory LoginDefs table so every later
-# defs.get* / uid_range / gid_range call sees them, matching the man-page
-# behavior of overriding login.defs defaults for the invocation.
-#
---- a/src/shadow-core/src/login_defs.rs	2026-08-05 21:09:22.000000000 +0000
-+++ b/src/shadow-core/src/login_defs.rs	2026-08-08 01:43:41.129891748 +0000
-@@ -72,6 +72,24 @@
+commit 3c5acdcf2218494d8d603640629724bab9edf8e3
+Author: Jocelyn Le Sage <jocelyn@le-sage.com>
+Date:   Thu Sep 3 10:17:28 2026 -0400
+
+    useradd: implemented useradd -K/--key KEY=VALUE (override /etc/login.defs defaults) (#211)
+    
+    * useradd: implemented useradd -K/--key KEY=VALUE (override /etc/login.defs defaults)
+    
+    * useradd: apply -K overrides when printing -D defaults
+    
+    cmd_defaults loaded login.defs but dropped -K/--key, so
+    `useradd -D -K HOME=...` printed the file values. Apply
+    overrides before printing, and honor --root so -R -D
+    uses the chroot login.defs.
+
+diff --git a/src/shadow-core/src/login_defs.rs b/src/shadow-core/src/login_defs.rs
+index 96d09a9..8576c5d 100644
+--- a/src/shadow-core/src/login_defs.rs
++++ b/src/shadow-core/src/login_defs.rs
+@@ -72,6 +72,24 @@ impl LoginDefs {
      pub fn get_i64(&self, key: &str) -> Option<i64> {
          self.entries.get(key).and_then(|v| v.parse().ok())
      }
@@ -32,7 +42,7 @@
  }
  
  #[cfg(test)]
-@@ -138,6 +156,32 @@
+@@ -138,6 +156,32 @@ mod tests {
          assert_eq!(defs.get_i64("ENCRYPT_METHOD"), None);
      }
  
@@ -65,10 +75,19 @@
      // -------------------------------------------------------------------
      // Issue #16: parser edge case tests
      // -------------------------------------------------------------------
-
---- a/src/uu/useradd/src/useradd.rs	2026-08-05 21:09:22.000000000 +0000
-+++ b/src/uu/useradd/src/useradd.rs	2026-08-08 01:43:41.130154105 +0000
-@@ -48,6 +48,7 @@
+diff --git a/src/uu/useradd/src/useradd.rs b/src/uu/useradd/src/useradd.rs
+index c7213bc..36bc82c 100644
+--- a/src/uu/useradd/src/useradd.rs
++++ b/src/uu/useradd/src/useradd.rs
+@@ -14,7 +14,6 @@
+ //! directory and populate it from `/etc/skel`.
+ 
+ use std::fmt;
+-use std::io::Write as _;
+ use std::os::unix::fs::DirBuilderExt;
+ use std::path::Path;
+ 
+@@ -48,6 +47,7 @@ mod options {
      pub const INACTIVE: &str = "inactive";
      pub const GID: &str = "gid";
      pub const GROUPS: &str = "groups";
@@ -76,7 +95,7 @@
      pub const CREATE_HOME: &str = "create-home";
      pub const NO_CREATE_HOME: &str = "no-create-home";
      pub const SKEL: &str = "skel";
-@@ -162,6 +163,7 @@
+@@ -162,6 +162,7 @@ struct UseraddOptions {
      inactive: Option<i64>,
      expire_date: Option<i64>,
      create_user_group: bool,
@@ -84,7 +103,37 @@
      root: SysRoot,
  }
  
-@@ -338,8 +340,12 @@
+@@ -291,11 +292,17 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
+ // ---------------------------------------------------------------------------
+ 
+ /// Handle `useradd -D` -- print default values.
+-fn cmd_defaults(_matches: &clap::ArgMatches) -> UResult<()> {
+-    // Read login.defs for defaults.
+-    let root = SysRoot::default();
+-    let defs = LoginDefs::load(&root.login_defs_path())
++fn cmd_defaults(matches: &clap::ArgMatches) -> UResult<()> {
++    write_defaults(matches, &mut std::io::stdout().lock())
++}
++
++/// Load login.defs under `-R`, apply `-K` overrides, and write the `useradd -D` report.
++fn write_defaults(matches: &clap::ArgMatches, out: &mut dyn std::io::Write) -> UResult<()> {
++    let root_dir = matches.get_one::<String>(options::ROOT);
++    let root = SysRoot::new(root_dir.map(Path::new));
++    let mut defs = LoginDefs::load(&root.login_defs_path())
+         .map_err(|e| UseraddError::CannotUpdatePasswd(format!("{e}")))?;
++    apply_login_defs_overrides(&mut defs, &parse_login_defs_overrides(matches)?);
+ 
+     let default_home = defs.get("HOME").unwrap_or("/home");
+     let default_inactive = defs.get("INACTIVE").unwrap_or("-1");
+@@ -304,7 +311,6 @@ fn cmd_defaults(_matches: &clap::ArgMatches) -> UResult<()> {
+     let default_skel = defs.get("SKEL").unwrap_or("/etc/skel");
+     let default_create_mail = defs.get("CREATE_MAIL_SPOOL").unwrap_or("no");
+ 
+-    let mut out = std::io::stdout().lock();
+     let _ = writeln!(out, "GROUP=100");
+     let _ = writeln!(out, "HOME={default_home}");
+     let _ = writeln!(out, "INACTIVE={default_inactive}");
+@@ -338,8 +344,12 @@ fn parse_options(matches: &clap::ArgMatches) -> Result<UseraddOptions, UseraddEr
  
      let home_dir = matches.get_one::<String>(options::HOME_DIR).cloned();
  
@@ -98,7 +147,7 @@
  
      let shell = matches
          .get_one::<String>(options::SHELL)
-@@ -445,6 +451,7 @@
+@@ -445,6 +455,7 @@ fn parse_options(matches: &clap::ArgMatches) -> Result<UseraddOptions, UseraddEr
          inactive,
          expire_date,
          create_user_group,
@@ -106,7 +155,7 @@
          root,
      })
  }
-@@ -487,9 +494,11 @@
+@@ -487,9 +498,11 @@ fn do_useradd(opts: &UseraddOptions) -> UResult<()> {
          );
      }
  
@@ -120,10 +169,11 @@
  
      // Step 5: Determine UID.
      let uid = determine_uid(opts, &passwd_entries, &defs)?;
-@@ -617,6 +626,37 @@
+@@ -616,6 +629,37 @@ fn do_useradd(opts: &UseraddOptions) -> UResult<()> {
+     Ok(())
  }
  
- // ---------------------------------------------------------------------------
++// ---------------------------------------------------------------------------
 +// login.defs -K overrides
 +// ---------------------------------------------------------------------------
 +
@@ -154,14 +204,14 @@
 +    defs.apply_overrides(overrides.iter().map(|(k, v)| (k.as_str(), v.as_str())));
 +}
 +
-+// ---------------------------------------------------------------------------
+ // ---------------------------------------------------------------------------
  // UID determination
  // ---------------------------------------------------------------------------
- 
-@@ -1016,6 +1056,14 @@
+@@ -1015,6 +1059,14 @@ pub fn uu_app() -> Command {
+                 .value_name("GROUPS")
                  .help("Comma-separated supplementary groups"),
          )
-         .arg(
++        .arg(
 +            Arg::new(options::KEY)
 +                .short('K')
 +                .long("key")
@@ -169,11 +219,38 @@
 +                .action(ArgAction::Append)
 +                .help("Override /etc/login.defs defaults (KEY=VALUE; may be repeated)"),
 +        )
-+        .arg(
+         .arg(
              Arg::new(options::CREATE_HOME)
                  .short('m')
-                 .long("create-home")
-@@ -1312,6 +1360,26 @@
+@@ -1143,6 +1195,27 @@ mod tests {
+         assert!(m.get_flag(options::DEFAULTS));
+     }
+ 
++    #[test]
++    fn test_clap_defaults_with_key() {
++        let m = uu_app()
++            .try_get_matches_from([
++                "useradd",
++                "-D",
++                "-K",
++                "HOME=/OVERRIDDEN",
++                "-K",
++                "SHELL=/bin/zsh",
++            ])
++            .expect("should parse -D -K");
++        assert!(m.get_flag(options::DEFAULTS));
++        let keys: Vec<&str> = m
++            .get_many::<String>(options::KEY)
++            .expect("KEY present")
++            .map(String::as_str)
++            .collect();
++        assert_eq!(keys, ["HOME=/OVERRIDDEN", "SHELL=/bin/zsh"]);
++    }
++
+     #[test]
+     fn test_clap_all_short_flags() {
+         let m = uu_app()
+@@ -1312,6 +1385,26 @@ mod tests {
          assert!(m.get_flag(options::NO_USER_GROUP));
      }
  
@@ -200,7 +277,7 @@
      // -----------------------------------------------------------------------
      // Date parsing tests
      // -----------------------------------------------------------------------
-@@ -1729,6 +1797,7 @@
+@@ -1729,6 +1822,7 @@ mod tests {
              inactive: None,
              expire_date: None,
              create_user_group: false,
@@ -208,7 +285,7 @@
              root: root.clone(),
          };
  
-@@ -1872,6 +1941,7 @@
+@@ -1872,6 +1966,7 @@ mod tests {
              inactive: None,
              expire_date: None,
              create_user_group: false,
@@ -216,7 +293,7 @@
              root: SysRoot::default(),
          };
  
-@@ -1906,6 +1976,7 @@
+@@ -1906,6 +2001,7 @@ mod tests {
              inactive: None,
              expire_date: None,
              create_user_group: true,
@@ -224,7 +301,7 @@
              root: SysRoot::default(),
          };
  
-@@ -1944,6 +2015,7 @@
+@@ -1944,6 +2040,7 @@ mod tests {
              inactive: None,
              expire_date: None,
              create_user_group: true,
@@ -232,7 +309,7 @@
              root: SysRoot::default(),
          };
  
-@@ -1972,6 +2044,7 @@
+@@ -1972,6 +2069,7 @@ mod tests {
              inactive: None,
              expire_date: None,
              create_user_group: false,
@@ -240,7 +317,7 @@
              root: SysRoot::default(),
          };
  
-@@ -2006,6 +2079,7 @@
+@@ -2006,6 +2104,7 @@ mod tests {
              inactive: None,
              expire_date: None,
              create_user_group: false,
@@ -248,7 +325,7 @@
              root: SysRoot::default(),
          };
  
-@@ -2042,6 +2116,7 @@
+@@ -2042,6 +2141,7 @@ mod tests {
              inactive: None,
              expire_date: None,
              create_user_group: false,
@@ -256,7 +333,7 @@
              root: SysRoot::default(),
          };
  
-@@ -2078,10 +2153,185 @@
+@@ -2078,10 +2178,219 @@ mod tests {
              inactive: None,
              expire_date: None,
              create_user_group: false,
@@ -336,6 +413,40 @@
 +            .expect("clap accepts raw value");
 +        let err = parse_login_defs_overrides(&m).expect_err("empty key");
 +        assert!(matches!(err, UseraddError::BadArgument(_)));
++    }
++
++    #[test]
++    fn test_defaults_honors_key_overrides() {
++        let dir = tempfile::tempdir().expect("temp dir");
++        let etc = dir.path().join("etc");
++        fs::create_dir_all(&etc).expect("etc dir");
++        fs::write(etc.join("login.defs"), "HOME /home\nSHELL /bin/sh\n").expect("login.defs");
++
++        let root = dir.path().to_str().expect("utf-8 temp path");
++        let m = uu_app()
++            .try_get_matches_from([
++                "useradd",
++                "-R",
++                root,
++                "-D",
++                "-K",
++                "HOME=/OVERRIDDEN",
++                "-K",
++                "SHELL=/bin/zsh",
++            ])
++            .expect("parse -D -K");
++
++        let mut buf = Vec::new();
++        write_defaults(&m, &mut buf).expect("write defaults");
++        let output = String::from_utf8(buf).expect("utf-8 defaults output");
++        assert!(
++            output.lines().any(|l| l == "HOME=/OVERRIDDEN"),
++            "expected HOME override in -D output, got: {output}"
++        );
++        assert!(
++            output.lines().any(|l| l == "SHELL=/bin/zsh"),
++            "expected SHELL override in -D output, got: {output}"
++        );
 +    }
 +
 +    #[test]
@@ -442,10 +553,43 @@
 +        assert!(new_group.is_some());
 +    }
  }
-
---- a/tests/by-util/test_useradd.rs	2026-08-05 21:09:22.000000000 +0000
-+++ b/tests/by-util/test_useradd.rs	2026-08-08 01:46:11.121908200 +0000
-@@ -366,3 +366,164 @@
+diff --git a/tests/by-util/test_useradd.rs b/tests/by-util/test_useradd.rs
+index 9b11aef..78c6c36 100644
+--- a/tests/by-util/test_useradd.rs
++++ b/tests/by-util/test_useradd.rs
+@@ -117,6 +117,31 @@ fn test_defaults_flag() {
+     }
+ }
+ 
++#[test]
++fn test_defaults_flag_honors_key_overrides() {
++    if common::skip_unless_root() {
++        return;
++    }
++
++    let dir = setup_root_dir();
++    let code = run_with_root(
++        &dir,
++        &["-D", "-K", "HOME=/OVERRIDDEN", "-K", "SHELL=/bin/zsh"],
++    );
++    assert_eq!(code, 0, "useradd -D -K should exit 0");
++}
++
++#[test]
++fn test_defaults_flag_invalid_key_exits_error() {
++    if common::skip_unless_root() {
++        return;
++    }
++
++    let dir = setup_root_dir();
++    let code = run_with_root(&dir, &["-D", "-K", "UID_MIN"]);
++    assert_eq!(code, 3, "useradd -D with invalid KEY=VALUE should exit 3");
++}
++
+ #[test]
+ fn test_conflicting_create_no_create_home() {
+     let code = run(&["useradd", "-m", "-M", "testuser"]);
+@@ -366,3 +391,164 @@ fn test_create_user_with_home_dir_flag() {
          "passwd should contain custom home path, got: {passwd}"
      );
  }
