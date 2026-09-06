@@ -86,23 +86,18 @@ echo "codegen-units = 1" >> /tmp/shadow-rs/.cargo/config.toml
 log "Patching shadow-rs..."
 PATCHES="
     build-fix.patch
-    override-login-defs-argument.patch
-    atomic-write-symlinks.patch
-    add-gpasswd.patch
 "
 for PATCH in $PATCHES; do
     log "Applying $PATCH..."
     patch  -p1 -d /tmp/shadow-rs < "$SCRIPT_DIR"/"$PATCH"
 done
 
-# Install the gpasswd crate sources (referenced by add-gpasswd.patch).
-log "Adding gpasswd crate..."
-cp -a "$SCRIPT_DIR"/gpasswd /tmp/shadow-rs/src/uu/gpasswd
-
 log "Compiling shadow-rs..."
 (
     cd /tmp/shadow-rs
-    xx-cargo build --release --bin shadow-rs --no-default-features --features feat_common_core
+    # Default features enable every applet. pam is omitted: Linux-PAM
+    # cannot be used from a static musl binary.
+    xx-cargo build --release --bin shadow-rs
 )
 
 log "Installing shadow-rs..."
