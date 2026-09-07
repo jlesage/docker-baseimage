@@ -1333,7 +1333,7 @@ static void load_service_with_deps(const char *service, int dependent)
         }
 
         while ((dir = readdir(dirstream)) != NULL) {
-            bool depends;
+            bool depends = false;
 
             if (strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0) {
                 continue;
@@ -1358,6 +1358,7 @@ static void load_service_with_deps(const char *service, int dependent)
 
             // Load service.
             load_service_with_deps(dir->d_name, sid);
+            chdir_to_service(service);
         }
         closedir(dirstream);
     }
