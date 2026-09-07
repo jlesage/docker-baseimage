@@ -104,3 +104,6 @@ log "Installing shadow-rs..."
 mkdir /tmp/shadow-rs-install
 CARGO_BUILD_TARGET=$(xx-cargo --print-target-triple) DESTDIR=/tmp/shadow-rs-install make -C /tmp/shadow-rs install-multicall PREFIX=/usr
 chmod 755 /tmp/shadow-rs-install/usr/sbin/shadow-rs
+# login requires PAM, which this static build does not include. Leave the
+# distro login in place (Debian/Ubuntu ship util-linux's).
+rm -f /tmp/shadow-rs-install/usr/bin/login /tmp/shadow-rs-install/usr/sbin/login

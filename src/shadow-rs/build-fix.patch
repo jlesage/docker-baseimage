@@ -6,8 +6,8 @@
 #
 --- a/Makefile
 +++ b/Makefile
-@@ -33,7 +33,7 @@
- 		--features uu_passwd/pam,uu_chfn/pam,uu_chsh/pam
+@@ -40,7 +40,7 @@
+ 		--features uu_passwd/pam,uu_chfn/pam,uu_chsh/pam,uu_login/pam,uu_expiry/pam
  
  build-multicall:
 -	cargo build --release --bin shadow-rs --features pam
@@ -15,9 +15,9 @@
  
  # Static musl archive, published as a release asset next to the glibc one
  # (dist-workspace.toml runs this target; see issue #224). Built without `pam`:
-@@ -104,12 +104,12 @@
- # other applets drop back to the caller's uid before running, so the privilege
- # model matches the per-tool layout. Intended for container/embedded use.
+@@ -166,12 +166,12 @@
+ # drop back to the caller's uid before running, so the privilege model matches
+ # the per-tool layout. Intended for container/embedded use.
  install-multicall: build-multicall
 -	install -Dm4755 target/release/shadow-rs $(DESTDIR)$(SBINDIR)/shadow-rs
 +	install -Dm4755 target/$(CARGO_BUILD_TARGET)/release/shadow-rs $(DESTDIR)$(SBINDIR)/shadow-rs

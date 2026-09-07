@@ -68,7 +68,7 @@ assert_databases_are_symlinks() {
     # Package maintainer scripts often call /usr/bin/chage (etc.) with an
     # absolute path. Those must not remain the distro binaries when a
     # replacement under /usr/sbin is installed.
-    for tool in chage passwd chfn chsh newgrp gpasswd; do
+    for tool in chage passwd chfn chsh newgrp gpasswd sg expiry newuidmap newgidmap; do
         run exec_container_daemon sh -c "
             if [ -e /usr/bin/$tool ] || [ -L /usr/bin/$tool ]; then
                 bin=\$(readlink -f /usr/bin/$tool)
