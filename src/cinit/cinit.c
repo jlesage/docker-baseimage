@@ -1904,6 +1904,7 @@ static void usage(const char *progname)
     printf("  -h, --help                                  Display this help and exit.\n");
 }
 
+#ifndef CINIT_TESTING
 int main(int argc, char *argv[])
 {
     CEXCEPTION_T e;
@@ -2178,3 +2179,4 @@ int main(int argc, char *argv[])
 
     ASSERT_UNREACHABLE_POINT();
 }
+#endif /* CINIT_TESTING */

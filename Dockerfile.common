@@ -23,10 +23,12 @@ FROM --platform=$BUILDPLATFORM alpine:3.20 AS cinit
 ARG TARGETPLATFORM
 COPY --from=xx / /
 COPY src/cinit /tmp/cinit
-RUN apk --no-cache add make clang lld
+RUN apk --no-cache add make clang lld musl-dev
 RUN xx-apk --no-cache add gcc musl-dev
 RUN CC=xx-clang \
     make -C /tmp/cinit
+RUN CC=clang \
+    make -C /tmp/cinit test
 RUN xx-verify --static /tmp/cinit/cinit
 COPY --from=upx /usr/bin/upx /usr/bin/upx
 RUN upx /tmp/cinit/cinit

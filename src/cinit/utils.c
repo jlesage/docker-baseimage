@@ -8,6 +8,7 @@
 #include <pwd.h>
 #include <grp.h>
 #include <poll.h>
+#include <assert.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
