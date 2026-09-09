@@ -90,62 +90,62 @@ get_group_name_from_group_id() {
 }
 
 add_group() {
-    duplicate_check=true
-    if [ "$1" = "--allow-duplicate" ]; then
-        duplicate_check=false
+    ag_allow_duplicate_id=false
+    if [ "$1" = "--allow-duplicate-id" ]; then
+        ag_allow_duplicate_id=true
         shift
     fi
 
-    name="$1"
-    gid="$2"
+    ag_name="$1"
+    ag_gid="$2"
 
-    if ${duplicate_check} && group_id_exists "${gid}"; then
-        err "group ID '${gid}' already exists."
+    if group_name_exists "${ag_name}"; then
+        err "group '${ag_name}' already exists."
         return 1
-    elif ${duplicate_check} && group_name_exists "${name}"; then
-        err "group '${name}' already exists."
+    elif ! ${ag_allow_duplicate_id} && group_id_exists "${ag_gid}"; then
+        err "group ID '${ag_gid}' already exists."
         return 1
     fi
 
-    echo "${name}:x:${gid}:" >> /etc/group
+    echo "${ag_name}:x:${ag_gid}:" >> /etc/group
 
     # Add a corresponding entry to '/etc/gshadow'.
     if [ -L /etc/gshadow ]; then
-        echo "${name}:*::" >> /etc/gshadow
+        echo "${ag_name}:*::" >> /etc/gshadow
     fi
 }
 
 add_user() {
-    duplicate_check=true
-    if [ "$1" = "--allow-duplicate" ]; then
-        duplicate_check=false
+    au_allow_duplicate_id=false
+    if [ "$1" = "--allow-duplicate-id" ]; then
+        au_allow_duplicate_id=true
         shift
     fi
 
-    name="$1"
-    uid="$2"
-    gid="$3"
-    homedir="${4:-/dev/null}"
-    password_hash="${5:-}"
+    au_name="$1"
+    au_uid="$2"
+    au_gid="$3"
+    au_homedir="${4:-/dev/null}"
+    au_password_hash="${5:-}"
 
-    [ -n "${password_hash}" ] || password_hash="!"
+    [ -n "${au_password_hash}" ] || au_password_hash="!"
 
-    if ${duplicate_check} && user_id_exists "${uid}"; then
-        err "user ID '${uid}' already exists."
+    if user_name_exists "${au_name}"; then
+        err "user '${au_name}' already exists."
         return 1
-    elif ${duplicate_check} && user_name_exists "${name}"; then
-        err "user '${name}' already exists."
+    elif ! ${au_allow_duplicate_id} && user_id_exists "${au_uid}"; then
+        err "user ID '${au_uid}' already exists."
         return 1
-    elif ! group_id_exists "${gid}"; then
-        err "group ID '${gid}' doesn't exist."
+    elif ! group_id_exists "${au_gid}"; then
+        err "group ID '${au_gid}' doesn't exist."
         return 1
     fi
 
     # Add the user to '/etc/passwd'.
-    echo "${name}:x:${uid}:${gid}::${homedir}:/sbin/nologin" >> /etc/passwd
+    echo "${au_name}:x:${au_uid}:${au_gid}::${au_homedir}:/sbin/nologin" >> /etc/passwd
 
     # Add a corresponding entry to '/etc/shadow'.
-    echo "${name}:${password_hash}::0:::::" >> /etc/shadow
+    echo "${au_name}:${au_password_hash}::0:::::" >> /etc/shadow
 }
 
 add_user_to_group() {
@@ -160,6 +160,11 @@ add_user_to_group() {
         exit 1
     fi
 
+    members="$(grep "^${gname}:" /etc/group | head -n1 | cut -d: -f4)"
+    if printf '%s\n' "${members}" | tr ',' '\n' | grep -qx "${uname}"; then
+        return 0
+    fi
+
     if grep -q "^${gname}:.*:$" /etc/group; then
         sed-patch "/^${gname}:/ s/$/${uname}/" /etc/group
     else
@@ -167,25 +172,41 @@ add_user_to_group() {
     fi
 }
 
-# Initialize files.
-cat /dev/null > /etc/passwd
-cat /dev/null > /etc/group
-cat /dev/null > /etc/shadow
-if [ -L /etc/gshadow ]; then
-    cat /dev/null > /etc/gshadow
-fi
+add_user_to_group_id() {
+    uname="$1"
+    extra_gid="$2"
+
+    if ! group_id_exists "${extra_gid}"; then
+        add_group "grp${extra_gid}" "${extra_gid}"
+        add_user_to_group "${uname}" "grp${extra_gid}"
+    else
+        add_user_to_group "${uname}" "$(get_group_name_from_group_id "${extra_gid}")"
+    fi
+}
 
 # Add defined groups.
-if [ -d /etc/cont-groups.d ]; then
-    find /etc/cont-groups.d -type d -mindepth 1 -maxdepth 1 | while read -r entry; do
-        # Get attributes.
-        name="$(get_content "${entry}"/name)"
-        disabled="$(get_content "${entry}"/disabled boolean)"
-        id="$(get_content "${entry}"/id)"
+process_groups() {
+    allow_dup_pass="$1"
 
+    if [ ! -d /etc/cont-groups.d ]; then
+        return 0
+    fi
+
+    find /etc/cont-groups.d -type d -mindepth 1 -maxdepth 1 | while read -r entry; do
+        disabled="$(get_content "${entry}"/disabled boolean)"
         if is-bool-val-true "${disabled:-0}"; then
             continue
         fi
+
+        allow_duplicate_id="$(get_content "${entry}"/allow_duplicate_id boolean)"
+        has_dup=false
+        if is-bool-val-true "${allow_duplicate_id:-0}"; then
+            has_dup=true
+        fi
+        [ "${has_dup}" = "${allow_dup_pass}" ] || continue
+
+        name="$(get_content "${entry}"/name)"
+        id="$(get_content "${entry}"/id)"
 
         # Fallback to directory name if group name not explicitly set.
         [ -n "${name}" ] || name="$(basename "${entry}")"
@@ -194,27 +215,43 @@ if [ -d /etc/cont-groups.d ]; then
         group_name_valid "${name}" || die "group name defined at ${entry} is not valid."
         group_id_valid "${id}" || die "group id defined at ${entry} is not valid."
 
-        # Add group.
-        add_group "${name}" "${id}"
+        if [ "${has_dup}" = "true" ]; then
+            add_group --allow-duplicate-id "${name}" "${id}"
+        else
+            add_group "${name}" "${id}"
+        fi
     done
-fi
+}
 
 # Add defined users.
-if [ -d /etc/cont-users.d ]; then
+process_users() {
+    allow_dup_pass="$1"
+
+    if [ ! -d /etc/cont-users.d ]; then
+        return 0
+    fi
+
     find /etc/cont-users.d -type d -mindepth 1 -maxdepth 1 | while read -r entry; do
-        # Get attributes.
-        name="$(get_content "${entry}"/name)"
         disabled="$(get_content "${entry}"/disabled boolean)"
+        if is-bool-val-true "${disabled:-0}"; then
+            continue
+        fi
+
+        allow_duplicate_id="$(get_content "${entry}"/allow_duplicate_id boolean)"
+        has_dup=false
+        if is-bool-val-true "${allow_duplicate_id:-0}"; then
+            has_dup=true
+        fi
+        [ "${has_dup}" = "${allow_dup_pass}" ] || continue
+
+        name="$(get_content "${entry}"/name)"
         uid="$(get_content "${entry}"/id)"
         gid="$(get_content "${entry}"/gid)"
         home="$(get_content "${entry}"/home)"
         grps="$(get_content "${entry}"/grps)"
+        gids="$(get_content "${entry}"/gids)"
         password="$(get_content "${entry}"/password)"
         password_hash="$(get_content "${entry}"/password_hash)"
-
-        if is-bool-val-true "${disabled:-0}"; then
-            continue
-        fi
 
         # Fallback to directory name if user name not explicitly set.
         [ -n "${name}" ] || name="$(basename "${entry}")"
@@ -229,44 +266,43 @@ if [ -d /etc/cont-users.d ]; then
             password_hash="$(echo "${password}" | /opt/base/bin/mkpasswd)"
         fi
 
-        # Add user.
-        add_user "${name}" "${uid}" "${gid}" "${home}" "${password_hash}"
+        if [ "${has_dup}" = "true" ]; then
+            add_user --allow-duplicate-id "${name}" "${uid}" "${gid}" "${home}" "${password_hash}"
+        else
+            add_user "${name}" "${uid}" "${gid}" "${home}" "${password_hash}"
+        fi
+        usr_name="${name}"
+        usr_gid="${gid}"
         printf "%s\n" "${grps}" | while read -r grp; do
             [ -n "${grp}" ] || continue
             group_name_valid "${grp}" || err "group name '${grp}' defined at ${entry} is not valid."
-            add_user_to_group "${name}" "${grp}"
+            add_user_to_group "${usr_name}" "${grp}"
+        done
+        printf "%s\n" "${gids}" | while read -r extra_gid; do
+            [ -n "${extra_gid}" ] || continue
+            [ "${extra_gid}" != "0" ] || continue
+            [ "${extra_gid}" != "${usr_gid}" ] || continue
+            group_id_valid "${extra_gid}" || die "supplementary group ID '${extra_gid}' defined at ${entry} is not valid."
+            add_user_to_group_id "${usr_name}" "${extra_gid}"
         done
     done
+}
+
+# Initialize files.
+cat /dev/null > /etc/passwd
+cat /dev/null > /etc/group
+cat /dev/null > /etc/shadow
+if [ -L /etc/gshadow ]; then
+    cat /dev/null > /etc/gshadow
 fi
 
-# Add the 'app' user.
-# NOTE: This user requires special handling, since its user/group ID is
-#       configurable and may match an existing one.
-add_group --allow-duplicate app "${GROUP_ID}"
-add_user --allow-duplicate app "${USER_ID}" "${GROUP_ID}" "${HOME:-/config}"
-add_user_to_group app app
-
-# Handle supplementary groups of user 'app'.
-echo "${SUP_GROUP_IDS:-},${SUP_GROUP_IDS_INTERNAL:-}" \
-    | tr ',' '\n' \
-    | grep -v '^$' \
-    | grep -v '^0$' \
-    | grep -vw "${GROUP_ID}" \
-    | sort -nub \
-    | while read -r gid; do
-        case "${gid}" in
-            '' | *[!0-9]*)
-                err "SUP_GROUP_IDS contains invalid groupd ID '${gid}'."
-                exit 1
-                ;;
-        esac
-        if ! group_id_exists "${gid}"; then
-            add_group "grp${gid}" "${gid}"
-            add_user_to_group app "grp${gid}"
-        else
-            add_user_to_group app "$(get_group_name_from_group_id "${gid}")"
-        fi
-    done
+# Groups before users. For each, create entries without allow_duplicate_id
+# first so a runtime ID (e.g. app from USER_ID/GROUP_ID) cannot take an ID
+# that a defined account such as root or cinit requires.
+process_groups false
+process_groups true
+process_users false
+process_users true
 
 # Finally, set correct permissions on files.
 chmod 644 /etc/passwd
