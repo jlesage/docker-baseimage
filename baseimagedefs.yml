@@ -17,6 +17,20 @@ baseimage:
     for any long-lived application.
   gui: false
   history:
+    - version: 3.11.12
+      date: 2026-09-12
+      changes:
+        added:
+          - 'Users and groups definition: `allow_duplicate_id` attribute to allow numeric ID collisions.'
+          - 'Users definition: `gids` attribute for numeric supplementary group IDs.'
+        changed:
+          - 'The `app` user and group are now defined via `/etc/cont-users.d/` and `/etc/cont-groups.d/`, like other accounts.'
+          - 'Updated shadow-rs to version 0.5.0.'
+        fixed:
+          - 'Supplementary groups from `SUP_GROUP_IDS_INTERNAL_*` were not added to the `app` user in `/etc/group`.'
+          - 'Incorrect loading of subsequent service dependencies in the container init process.'
+        removed:
+          - 'Image based on Debian 11 (reached end of support on 2026-08-31).'
     - version: 3.11.11
       date: 2026-08-14
       changes:
