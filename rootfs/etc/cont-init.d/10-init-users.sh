@@ -184,108 +184,144 @@ add_user_to_group_id() {
     fi
 }
 
-# Add defined groups.
-process_groups() {
-    allow_dup_pass="$1"
+create_group() {
+    cg_entry="$1"
+    cg_allow_dup="$2"
 
-    if [ ! -d /etc/cont-groups.d ]; then
-        return 0
+    name="$(get_content "${cg_entry}"/name)"
+    id="$(get_content "${cg_entry}"/id)"
+
+    # Fallback to directory name if group name not explicitly set.
+    [ -n "${name}" ] || name="$(basename "${cg_entry}")"
+
+    # Validate attributes.
+    group_name_valid "${name}" || die "group name defined at ${cg_entry} is not valid."
+    group_id_valid "${id}" || die "group id defined at ${cg_entry} is not valid."
+
+    if [ "${cg_allow_dup}" = "true" ]; then
+        add_group --allow-duplicate-id "${name}" "${id}"
+    else
+        add_group "${name}" "${id}"
+    fi
+}
+
+create_user() {
+    cu_entry="$1"
+    cu_allow_dup="$2"
+
+    name="$(get_content "${cu_entry}"/name)"
+    uid="$(get_content "${cu_entry}"/id)"
+    gid="$(get_content "${cu_entry}"/gid)"
+    home="$(get_content "${cu_entry}"/home)"
+    grps="$(get_content "${cu_entry}"/grps)"
+    gids="$(get_content "${cu_entry}"/gids)"
+    password="$(get_content "${cu_entry}"/password)"
+    password_hash="$(get_content "${cu_entry}"/password_hash)"
+
+    # Fallback to directory name if user name not explicitly set.
+    [ -n "${name}" ] || name="$(basename "${cu_entry}")"
+
+    # Validate attributes.
+    user_name_valid "${name}" || die "user name defined at ${cu_entry} is not valid."
+    user_id_valid "${uid}" || die "user id defined at ${cu_entry} is not valid."
+    group_id_valid "${gid}" || die "group id defined at ${cu_entry} is not valid."
+
+    # Handle password.
+    if [ -n "${password}" ]; then
+        password_hash="$(echo "${password}" | /opt/base/bin/mkpasswd)"
     fi
 
-    find /etc/cont-groups.d -type d -mindepth 1 -maxdepth 1 | while read -r entry; do
+    if [ "${cu_allow_dup}" = "true" ]; then
+        add_user --allow-duplicate-id "${name}" "${uid}" "${gid}" "${home}" "${password_hash}"
+    else
+        add_user "${name}" "${uid}" "${gid}" "${home}" "${password_hash}"
+    fi
+    usr_name="${name}"
+    usr_gid="${gid}"
+    printf "%s\n" "${grps}" | while read -r grp; do
+        [ -n "${grp}" ] || continue
+        group_name_valid "${grp}" || err "group name '${grp}' defined at ${cu_entry} is not valid."
+        add_user_to_group "${usr_name}" "${grp}"
+    done
+    printf "%s\n" "${gids}" | while read -r extra_gid; do
+        [ -n "${extra_gid}" ] || continue
+        [ "${extra_gid}" != "0" ] || continue
+        [ "${extra_gid}" != "${usr_gid}" ] || continue
+        group_id_valid "${extra_gid}" || die "supplementary group ID '${extra_gid}' defined at ${cu_entry} is not valid."
+        add_user_to_group_id "${usr_name}" "${extra_gid}"
+    done
+}
+
+# Classify entries from DIR into two lists: without allow_duplicate_id, and
+# with it. Disabled entries are skipped. Each definition is inspected once.
+classify_entries() {
+    ce_dir="$1"
+    ce_nodup_list="$2"
+    ce_dup_list="$3"
+
+    find "${ce_dir}" -type d -mindepth 1 -maxdepth 1 | while read -r entry; do
         disabled="$(get_content "${entry}"/disabled boolean)"
         if is-bool-val-true "${disabled:-0}"; then
             continue
         fi
 
         allow_duplicate_id="$(get_content "${entry}"/allow_duplicate_id boolean)"
-        has_dup=false
         if is-bool-val-true "${allow_duplicate_id:-0}"; then
-            has_dup=true
-        fi
-        [ "${has_dup}" = "${allow_dup_pass}" ] || continue
-
-        name="$(get_content "${entry}"/name)"
-        id="$(get_content "${entry}"/id)"
-
-        # Fallback to directory name if group name not explicitly set.
-        [ -n "${name}" ] || name="$(basename "${entry}")"
-
-        # Validate attributes.
-        group_name_valid "${name}" || die "group name defined at ${entry} is not valid."
-        group_id_valid "${id}" || die "group id defined at ${entry} is not valid."
-
-        if [ "${has_dup}" = "true" ]; then
-            add_group --allow-duplicate-id "${name}" "${id}"
+            printf '%s\n' "${entry}" >> "${ce_dup_list}"
         else
-            add_group "${name}" "${id}"
+            printf '%s\n' "${entry}" >> "${ce_nodup_list}"
         fi
     done
 }
 
+# Add defined groups.
+process_groups() {
+    if [ ! -d /etc/cont-groups.d ]; then
+        return 0
+    fi
+
+    nodup_list="$(mktemp)"
+    dup_list="$(mktemp)"
+    classify_entries /etc/cont-groups.d "${nodup_list}" "${dup_list}"
+
+    # Create groups that don't allow duplicate IDs.
+    while IFS= read -r entry; do
+        [ -n "${entry}" ] || continue
+        create_group "${entry}" false
+    done < "${nodup_list}"
+
+    # Create groups that allow duplicate IDs.
+    while IFS= read -r entry; do
+        [ -n "${entry}" ] || continue
+        create_group "${entry}" true
+    done < "${dup_list}"
+
+    rm -f "${nodup_list}" "${dup_list}"
+}
+
 # Add defined users.
 process_users() {
-    allow_dup_pass="$1"
-
     if [ ! -d /etc/cont-users.d ]; then
         return 0
     fi
 
-    find /etc/cont-users.d -type d -mindepth 1 -maxdepth 1 | while read -r entry; do
-        disabled="$(get_content "${entry}"/disabled boolean)"
-        if is-bool-val-true "${disabled:-0}"; then
-            continue
-        fi
+    nodup_list="$(mktemp)"
+    dup_list="$(mktemp)"
+    classify_entries /etc/cont-users.d "${nodup_list}" "${dup_list}"
 
-        allow_duplicate_id="$(get_content "${entry}"/allow_duplicate_id boolean)"
-        has_dup=false
-        if is-bool-val-true "${allow_duplicate_id:-0}"; then
-            has_dup=true
-        fi
-        [ "${has_dup}" = "${allow_dup_pass}" ] || continue
+    # Create users that don't allow duplicate IDs.
+    while IFS= read -r entry; do
+        [ -n "${entry}" ] || continue
+        create_user "${entry}" false
+    done < "${nodup_list}"
 
-        name="$(get_content "${entry}"/name)"
-        uid="$(get_content "${entry}"/id)"
-        gid="$(get_content "${entry}"/gid)"
-        home="$(get_content "${entry}"/home)"
-        grps="$(get_content "${entry}"/grps)"
-        gids="$(get_content "${entry}"/gids)"
-        password="$(get_content "${entry}"/password)"
-        password_hash="$(get_content "${entry}"/password_hash)"
+    # Create users that allow duplicate IDs.
+    while IFS= read -r entry; do
+        [ -n "${entry}" ] || continue
+        create_user "${entry}" true
+    done < "${dup_list}"
 
-        # Fallback to directory name if user name not explicitly set.
-        [ -n "${name}" ] || name="$(basename "${entry}")"
-
-        # Validate attributes.
-        user_name_valid "${name}" || die "user name defined at ${entry} is not valid."
-        user_id_valid "${uid}" || die "user id defined at ${entry} is not valid."
-        group_id_valid "${gid}" || die "group id defined at ${entry} is not valid."
-
-        # Handle password.
-        if [ -n "${password}" ]; then
-            password_hash="$(echo "${password}" | /opt/base/bin/mkpasswd)"
-        fi
-
-        if [ "${has_dup}" = "true" ]; then
-            add_user --allow-duplicate-id "${name}" "${uid}" "${gid}" "${home}" "${password_hash}"
-        else
-            add_user "${name}" "${uid}" "${gid}" "${home}" "${password_hash}"
-        fi
-        usr_name="${name}"
-        usr_gid="${gid}"
-        printf "%s\n" "${grps}" | while read -r grp; do
-            [ -n "${grp}" ] || continue
-            group_name_valid "${grp}" || err "group name '${grp}' defined at ${entry} is not valid."
-            add_user_to_group "${usr_name}" "${grp}"
-        done
-        printf "%s\n" "${gids}" | while read -r extra_gid; do
-            [ -n "${extra_gid}" ] || continue
-            [ "${extra_gid}" != "0" ] || continue
-            [ "${extra_gid}" != "${usr_gid}" ] || continue
-            group_id_valid "${extra_gid}" || die "supplementary group ID '${extra_gid}' defined at ${entry} is not valid."
-            add_user_to_group_id "${usr_name}" "${extra_gid}"
-        done
-    done
+    rm -f "${nodup_list}" "${dup_list}"
 }
 
 # Initialize files.
@@ -296,13 +332,11 @@ if [ -L /etc/gshadow ]; then
     cat /dev/null > /etc/gshadow
 fi
 
-# Groups before users. For each, create entries without allow_duplicate_id
-# first so a runtime ID (e.g. app from USER_ID/GROUP_ID) cannot take an ID
-# that a defined account such as root or cinit requires.
-process_groups false
-process_groups true
-process_users false
-process_users true
+# Groups before users. Entries without allow_duplicate_id are created
+# first so app (USER_ID/GROUP_ID) cannot claim an ID that root or cinit
+# requires.
+process_groups
+process_users
 
 # Finally, set correct permissions on files.
 chmod 644 /etc/passwd
