@@ -6,7 +6,7 @@
 #
 --- a/Makefile
 +++ b/Makefile
-@@ -40,7 +40,7 @@
+@@ -60,7 +60,7 @@
  		--features uu_passwd/pam,uu_chfn/pam,uu_chsh/pam,uu_login/pam,uu_expiry/pam
  
  build-multicall:
@@ -15,7 +15,7 @@
  
  # Static musl archive, published as a release asset next to the glibc one
  # (dist-workspace.toml runs this target; see issue #224). Built without `pam`:
-@@ -166,12 +166,12 @@
+@@ -194,12 +194,12 @@
  # drop back to the caller's uid before running, so the privilege model matches
  # the per-tool layout. Intended for container/embedded use.
  install-multicall: build-multicall
