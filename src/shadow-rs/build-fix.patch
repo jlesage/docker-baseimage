@@ -15,7 +15,7 @@
  
  # Static musl archive, published as a release asset next to the glibc one
  # (dist-workspace.toml runs this target; see issue #224). Built without `pam`:
-@@ -194,12 +194,12 @@
+@@ -195,12 +195,12 @@
  # drop back to the caller's uid before running, so the privilege model matches
  # the per-tool layout. Intended for container/embedded use.
  install-multicall: build-multicall
