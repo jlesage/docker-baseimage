@@ -1,0 +1,230 @@
+#!/bin/sh
+#
+# Download a file from one or more URLs and write it to standard output.
+#
+# The payload is written to standard output so it can be piped, or saved to a
+# file with --output. When --sha256 is set, the file is written out only if
+# its checksum matches. Progress and errors are written to standard error.
+#
+
+set -e # Exit immediately if a command exits with a non-zero status.
+set -u # Treat unset variables as an error.
+
+usage() {
+    if [ -n "${1:-}" ]; then
+        echo "ERROR: ${*}" >&2
+        echo "" >&2
+    fi
+
+    echo "usage: $(basename "${0}") [--retry COUNT] [-o FILE] [--sha256 CHECKSUM] URL [URL...]
+
+Download a file and write it to standard output, or save it to a file.
+
+Without --output, the payload is written to standard output and can be piped.
+Progress and errors are written to standard error.
+
+URLs are tried in order until one succeeds. A failed URL is retried COUNT
+times before the next URL is tried. COUNT defaults to 2. When --sha256 is
+set, a checksum mismatch counts as a failed attempt.
+
+Options:
+
+    --retry COUNT      Number of retries for each URL. Default: 2.
+    -o, --output FILE  Save the downloaded file to FILE.
+    --sha256 CHECKSUM  Require the file to match this SHA256 checksum.
+
+Arguments:
+
+    URL                URL to download. Repeat to try more than one URL.
+
+Examples:
+
+    download -o /tmp/pkg.tar.gz https://example.com/pkg.tar.gz
+    download --sha256 CHECKSUM -o /tmp/pkg.tar.gz https://example.com/pkg.tar.gz
+    download https://example.com/pkg.tar.gz | tar -xz -C /tmp/pkg
+    download --retry 5 https://mirror1.example/pkg.tar.gz \\
+        https://mirror2.example/pkg.tar.gz | tar -xz -C /tmp/pkg
+" >&2
+    exit 1
+}
+
+die() {
+    echo "ERROR: ${*}" >&2
+    exit 1
+}
+
+# Return 0 when no checksum was requested or the file matches SHA256.
+# SHA256 is already normalized to lowercase hex.
+checksum_ok() {
+    if [ -z "${SHA256}" ]; then
+        return 0
+    fi
+
+    actual="$(sha256sum "${1}")" || return 1
+    actual="${actual%% *}"
+    if [ "${actual}" = "${SHA256}" ]; then
+        return 0
+    fi
+
+    echo "ERROR: SHA256 mismatch for '${2}'." >&2
+    echo "ERROR: Expected ${SHA256}, got ${actual}." >&2
+    return 1
+}
+
+RETRIES=2
+OUTPUT=
+SHA256=
+
+while [ "$#" -gt 0 ]; do
+    case "${1}" in
+        --help | -h)
+            usage
+            ;;
+        --retry)
+            if [ -n "${2-}" ]; then
+                RETRIES="${2}"
+            else
+                usage "Retry count not set."
+            fi
+            shift
+            ;;
+        --output | -o)
+            if [ -n "${2-}" ]; then
+                OUTPUT="${2}"
+            else
+                usage "Output file not set."
+            fi
+            shift
+            ;;
+        --sha256)
+            if [ -n "${2-}" ]; then
+                SHA256="${2}"
+            else
+                usage "SHA256 checksum not set."
+            fi
+            shift
+            ;;
+        --)
+            shift
+            break
+            ;;
+        --* | -*)
+            usage "Unknown option '${1}'."
+            ;;
+        *)
+            break
+            ;;
+    esac
+    shift
+done
+
+if [ "$#" -eq 0 ]; then
+    usage "URL missing."
+fi
+
+case "${RETRIES}" in
+    "" | *[!0-9]*)
+        die "Invalid retry count '${RETRIES}'."
+        ;;
+esac
+
+# A leading zero makes shell arithmetic treat the value as octal.
+while :; do
+    case "${RETRIES}" in
+        0)
+            break
+            ;;
+        0*)
+            RETRIES="${RETRIES#0}"
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+if ! command -v curl > /dev/null 2>&1; then
+    die "curl command not found."
+fi
+
+if [ -n "${SHA256}" ]; then
+    case "${SHA256}" in
+        *[!0-9A-Fa-f]*)
+            die "Invalid SHA256 checksum '${SHA256}'."
+            ;;
+    esac
+    if [ "${#SHA256}" -ne 64 ]; then
+        die "Invalid SHA256 checksum '${SHA256}'."
+    fi
+    SHA256="$(printf '%s' "${SHA256}" | tr '[:upper:]' '[:lower:]')"
+
+    if ! command -v sha256sum > /dev/null 2>&1; then
+        die "sha256sum command not found."
+    fi
+fi
+
+# Keep the payload in a temporary file until the download succeeds and, when
+# requested, the SHA256 checksum matches. A failed attempt must not leave
+# partial content in a pipe or at the output path.
+if [ -n "${OUTPUT}" ]; then
+    case "${OUTPUT}" in
+        */)
+            die "Output path is a directory: ${OUTPUT}."
+            ;;
+    esac
+    if [ -d "${OUTPUT}" ]; then
+        die "Output path is a directory: ${OUTPUT}."
+    fi
+
+    output_dir="$(dirname -- "${OUTPUT}")"
+    if [ ! -d "${output_dir}" ]; then
+        die "Output directory not found: ${output_dir}."
+    fi
+
+    # Same directory as the destination so the final rename stays on one
+    # filesystem and replaces the previous file only after a full download.
+    tmp_file="$(mktemp "${output_dir}/.download.XXXXXXXX")"
+else
+    tmp_file="$(mktemp)"
+fi
+trap 'rm -f "${tmp_file}"' EXIT
+
+success=0
+for url in "${@}"; do
+    attempt=0
+    while [ "${attempt}" -le "${RETRIES}" ]; do
+        if [ "${attempt}" -gt 0 ]; then
+            echo "Retrying '${url}' (${attempt}/${RETRIES})..." >&2
+            sleep 1
+        fi
+
+        if curl -# -L -f "${url}" > "${tmp_file}" && checksum_ok "${tmp_file}" "${url}"; then
+            success=1
+            break
+        fi
+
+        attempt=$((attempt + 1))
+    done
+
+    if [ "${success}" -eq 1 ]; then
+        break
+    fi
+
+    echo "ERROR: Failed to download '${url}'." >&2
+done
+
+if [ "${success}" -eq 0 ]; then
+    exit 1
+fi
+
+if [ -n "${OUTPUT}" ]; then
+    # mktemp creates the file mode 600. Apply the process umask so the saved
+    # file matches a normal shell redirection.
+    umask_val="$(umask)"
+    chmod "$(printf '%04o' $((0666 & ~umask_val)))" "${tmp_file}"
+    mv -f -- "${tmp_file}" "${OUTPUT}"
+else
+    cat "${tmp_file}"
+fi
+
+# vim:ft=sh:ts=4:sw=4:et:sts=4
