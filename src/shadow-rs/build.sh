@@ -14,6 +14,9 @@ log() {
     echo ">>> $*"
 }
 
+# Define software checksums.
+SHADOW_RS_SHA256=8f7946cc4ee0709d0946a8f5dea65c4b691b214ee2d5bf5d02822153d13787fc
+
 SHADOW_RS_URL="${1:-}"
 
 if [ -z "$SHADOW_RS_URL" ]; then
@@ -65,7 +68,7 @@ fi
 
 log "Downloading shadow-rs..."
 mkdir /tmp/shadow-rs
-curl -# -L -f ${SHADOW_RS_URL} | tar xz --strip 1 -C /tmp/shadow-rs
+download --sha256 ${SHADOW_RS_SHA256} ${SHADOW_RS_URL} | tar xz --strip 1 -C /tmp/shadow-rs
 
 #
 # Compile shadow-rs.

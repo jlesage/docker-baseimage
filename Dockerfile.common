@@ -68,6 +68,7 @@ FROM --platform=$BUILDPLATFORM alpine:3.20 AS logrotate
 ARG TARGETPLATFORM
 COPY --from=xx / /
 COPY src/logrotate /tmp/build
+COPY helpers/download /usr/local/bin/download
 RUN /tmp/build/build.sh
 RUN xx-verify --static /tmp/logrotate-install/usr/sbin/logrotate
 COPY --from=upx /usr/bin/upx /usr/bin/upx
@@ -80,6 +81,7 @@ ARG SHADOW_RS_VERSION=0.6.0
 ARG SHADOW_RS_URL=https://github.com/uutils/shadow/archive/refs/tags/${SHADOW_RS_VERSION}.tar.gz
 COPY --from=xx / /
 COPY src/shadow-rs /tmp/build
+COPY helpers/download /usr/local/bin/download
 RUN /tmp/build/build.sh "${SHADOW_RS_URL}"
 RUN xx-verify --static /tmp/shadow-rs-install/usr/sbin/shadow-rs
 COPY --from=upx /usr/bin/upx /usr/bin/upx

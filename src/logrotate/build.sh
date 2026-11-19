@@ -18,6 +18,10 @@ POPT_VERSION=1.19
 LOGROTATE_URL=https://github.com/logrotate/logrotate/releases/download/${LOGROTATE_VERSION}/logrotate-${LOGROTATE_VERSION}.tar.xz
 POPT_URL=https://ftp.osuosl.org/pub/rpm/popt/releases/popt-1.x/popt-${POPT_VERSION}.tar.gz
 
+# Define software checksums.
+LOGROTATE_SHA256=8fa12015e3b8415c121fc9c0ca53aa872f7b0702f543afda7e32b6c4900f6516
+POPT_SHA256=c25a4838fc8e4c1c8aacb8bd620edb3084a3d63bf8987fdad3ca2758c63240f9
+
 # Set same default compilation flags as abuild.
 export CFLAGS="-Os -fomit-frame-pointer"
 export CXXFLAGS="$CFLAGS"
@@ -52,7 +56,7 @@ xx-apk --no-cache --no-scripts add \
 
 mkdir /tmp/popt
 log "Downloading popt..."
-curl -# -L -f ${POPT_URL} | tar -xz --strip 1 -C /tmp/popt
+download --sha256 ${POPT_SHA256} ${POPT_URL} | tar -xz --strip 1 -C /tmp/popt
 
 log "Configuring popt..."
 (
@@ -77,7 +81,7 @@ make DESTDIR=$(xx-info sysroot) -C /tmp/popt install
 
 mkdir /tmp/logrotate
 log "Downloading logrotate..."
-curl -# -L -f ${LOGROTATE_URL} | tar -xJ --strip 1 -C /tmp/logrotate
+download --sha256 ${LOGROTATE_SHA256} ${LOGROTATE_URL} | tar -xJ --strip 1 -C /tmp/logrotate
 
 log "Patching logrotate..."
 patch -p1 -d /tmp/logrotate < "$SCRIPT_DIR"/messages-fix.patch
